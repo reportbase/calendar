@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dial Calendar</title>
+<!-- THE DIAL CALENDAR — the navigation dial (geometry.html, city-dial.html) put to work as a calendar.
+
+     The list is a century of milliseconds from 2000. The needle's angle from the apex is the sweep g;
+     the gold needle is a rate that pushes the hyperbolic angle ζ, the blue needle is the place it has
+     reached, and the value is the tangent: index = centre + unit · tan θ. The radius r sets the window,
+     N^r, and the unit, the window over 2^6 (half the window is 2^5 units), which is the 45° corner: one unit from home.
+
+     THE RADIUS RESTS ON CALENDAR UNITS. A wheel, a pinch or ↑ ↓ moves it, and when the hand stops it
+     settles on the nearest unit people count in: second, minute, hour, day, week, month, year, or the
+     whole century. The corner then reads exactly one of that unit, the corners beyond it 2, 4 … 32 of
+     them, and the halvings before it ½, ¼ … of it. The radius is a logarithm of scale and the units are
+     its detents.
+
+     NOTES ARE MARKS ON THE ARC. A note belongs to a half hour, as in calendar.html (keys 'YYYY-MM-DD-HHMM',
+     local time). Each is drawn at the angle the needle would have to reach to land on it, atan(Δ/unit),
+     so the marks crowd toward the horizon exactly as the records do; notes beyond the window are counted
+     at the two horizons. Tap a mark to go to it; [ and ] step to the previous and next note.
+     Notes are kept in this browser's storage for this page. -->
+<style>
+  :root{--bg:#0b0d12;--panel:#12151c;--line:#2b2e36;--gold:#e8c86a;--teal:#1D9E75;--blue:#6aa8e8;--note:#e0876a;
+        --ink:#c9c7be;--hi:#f1efe6;--dim:#8a909b;--mono:"SF Mono",Menlo,Consolas,monospace;
+        --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;color-scheme:dark}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans);overflow:hidden;overscroll-behavior:none}
+  #app{height:100%;display:flex;flex-direction:column}
+  canvas{display:block;flex:1;min-height:0;width:100%;touch-action:none;cursor:crosshair}
+  .dock{padding:10px 16px calc(12px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px;background:var(--panel);border-top:1px solid var(--line)}
+  .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .units{display:flex;flex-wrap:wrap;gap:6px}
+  button{font:12px var(--mono);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 9px;cursor:pointer}
+  button:hover{border-color:var(--dim)}
+  button[aria-pressed="true"]{border-color:var(--gold);color:var(--gold)}
+  button:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  #note{flex:1;min-width:0;font:15px var(--sans);color:var(--hi);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+  #note::placeholder{color:#4a505c}
+  .slot{font:12px var(--mono);color:var(--dim);white-space:nowrap}
+  .count{font:12px var(--mono);color:var(--dim);margin-left:auto}
+  #file{display:none}
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="cv" aria-label="The dial. Pan away from the hub to move through time; wheel or pinch to change the scale; tap a note mark to go to it."></canvas>
+  <div class="dock">
+    <div class="row units" role="group" aria-label="Scale: what one unit is">
+      <button class="u" type="button" data-u="second">second</button><button class="u" type="button" data-u="minute">minute</button>
+      <button class="u" type="button" data-u="hour">hour</button><button class="u" type="button" data-u="day">day</button>
+      <button class="u" type="button" data-u="week">week</button><button class="u" type="button" data-u="month">month</button>
+      <button class="u" type="button" data-u="year">year</button><button class="u" type="button" data-u="century">century</button>
+    </div>
+    <div class="row">
+      <span class="slot" id="slot"></span>
+      <input id="note" type="text" autocomplete="off" placeholder="a note for this half hour…" aria-label="Note for the half hour under the needle">
+    </div>
+    <div class="row">
+      <button id="prev" type="button" title="previous note ([)">◀ note</button><button id="next" type="button" title="next note (])">note ▶</button>
+      <button id="today" type="button" title="now (t)">now</button><button id="imp" type="button">import notes…</button>
+      <span class="count" id="count"></span>
+      <input type="file" id="file" accept="application/json">
+    </div>
+  </div>
+</div>
+<script>
+const PI = Math.PI, K = 5, CAP = Math.atan(2 ** K), ZMAX = Math.asinh(2 ** K);
+const THRUST = 0.4, SPRING_MS = 150, TAP_PX = 6;
+const T0 = Date.UTC(2000, 0, 1), N = 3155760000000;
+const GOLD = '#e8c86a', TEAL = '#1D9E75', BLUE = '#6aa8e8', NOTE = '#e0876a', INK = '#c9c7be', HI = '#f1efe6', DIM = '#8a909b', BG = '#0b0d12';
+const MONO = getComputedStyle(document.documentElement).getPropertyValue('--mono');
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+// ── THE UNITS, AND THE RADIUS AT WHICH EACH IS THE CORNER ────────────────────────────────────────
+const UNITS = { second: 1e3, minute: 6e4, hour: 36e5, day: 864e5, week: 6048e5, month: 26298e5, year: 315576e5 };
+const reachFor = u => u === 'century' ? 1 : Math.min(1, Math.log(UNITS[u] * 2 * 2 ** K) / Math.log(N));   // window = 2·2^K units
+const DETENTS = Object.keys(UNITS).concat('century').map(u => [u, reachFor(u)]);
+// ── THE DIAL'S STATE ─────────────────────────────────────────────────────────────────────────────
+let index = clamp(Date.now() - T0, 0, N - 1), centre = index, reach = reachFor('day'), zeta = 0;
+let gold = 0, held = false, thrusting = false, springAt = -1, last = 0, settle = null, settleTimer = 0;
+const span = () => Math.max(1, Math.pow(N, reach));
+const unit = s => s / 2 / 2 ** K;
+const theta = () => Math.atan(Math.sinh(zeta));
+function read(){ index = clamp(centre + unit(span()) * Math.sinh(zeta), 0, N - 1); }
+function recentre(){ const s = span(); centre = clamp(index, s / 2, N - s / 2); zeta = clamp(Math.asinh((index - centre) / unit(s)), -ZMAX, ZMAX); }
+function rezoom(){ const s = span(), c = clamp(centre, s / 2, N - s / 2);
+  if (Math.abs(index - c) <= s / 2) { centre = c; zeta = clamp(Math.asinh((index - c) / unit(s)), -ZMAX, ZMAX); } else recentre(); }
+function liveGold(now){ if (held) return thrusting ? gold : 0;
+  if (springAt >= 0) { const t = (now - springAt) / SPRING_MS; if (t >= 1) { springAt = -1; return 0; } return gold * Math.pow(1 - t, 3); } return 0; }
+const nearestDetent = r => DETENTS.reduce((b, d) => Math.abs(d[1] - r) < Math.abs(b[1] - r) ? d : b);
+function settleSoon(){ clearTimeout(settleTimer); settleTimer = setTimeout(() => { settle = { from: reach, to: nearestDetent(reach)[1], t0: performance.now() }; }, 220); }
+function goToDetent(dir){ const i = DETENTS.findIndex(d => d[0] === nearestDetent(reach)[0]); const j = clamp(i + dir, 0, DETENTS.length - 1);
+  settle = { from: reach, to: DETENTS[j][1], t0: performance.now() }; }
+// ── NOTES, BY HALF HOUR, AS calendar.html KEEPS THEM ─────────────────────────────────────────────
+const store = { load(){ try { return JSON.parse(localStorage.getItem('calendar-notes') || '{}'); } catch { return {}; } },
+                save(n){ try { localStorage.setItem('calendar-notes', JSON.stringify(n)); } catch {} } };
+let notes = store.load(), noteTimes = [];
+const p2 = n => String(n).padStart(2, '0');
+const slotOf = i => { const d = new Date(T0 + Math.round(i)); d.setMinutes(d.getMinutes() < 30 ? 0 : 30, 0, 0); return d; };
+const keyOf = d => d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()) + '-' + p2(d.getHours()) + (d.getMinutes() ? '30' : '00');
+function indexNotes(){ noteTimes = Object.keys(notes).map(k => { const m = /^(\d{4})-(\d{2})-(\d{2})-(\d{2})(\d{2})$/.exec(k); if (!m) return null;
+  return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]).getTime() - T0 + 15 * 6e4; }).filter(t => t !== null && t >= 0 && t < N).sort((a, b) => a - b); }
+// ── THE READOUT: the record's fields, coloured by what this radius reaches ───────────────────────
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], WD = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+function fields(i){ const d = new Date(T0 + Math.round(i));
+  return [[[WD[d.getDay()] + ' ', 864e5], [p2(d.getDate()) + ' ', 864e5], [MON[d.getMonth()] + ' ', 26298e5], [String(d.getFullYear()), 315576e5]],
+          [[p2(d.getHours()) + ':', 36e5], [p2(d.getMinutes()) + ':', 6e4], [p2(d.getSeconds()), 1e3]]]; }
+const band = mag => { const s = span(); return mag <= unit(s) ? TEAL : mag <= s / 2 ? BLUE : GOLD; };
+function fmtUnits(ms){
+  const names = [[315576e5, 'year'], [26298e5, 'month'], [6048e5, 'week'], [864e5, 'day'], [36e5, 'hour'], [6e4, 'minute'], [1e3, 'second'], [1, 'ms']];
+  for (const [u, n] of names) if (ms >= u * 0.999) { const v = ms / u, t = Math.abs(v - Math.round(v)) < 0.01 ? String(Math.round(v)) : v < 10 ? v.toFixed(1) : String(Math.round(v)); return t + ' ' + n + (t === '1' ? '' : 's'); }
+  return ms.toPrecision(2) + ' ms';
+}
+// ── DRAWING: only when something moved, on a back canvas copied across once ──────────────────────
+const cv = document.getElementById('cv'), vis = cv.getContext('2d'), back = document.createElement('canvas'), ctx = back.getContext('2d');
+let W = 0, H = 0, D = 0, lastKey = '', force = true, cx = 0, cy = 0, R = 1, markHits = [];
+function draw(now){
+  const w = Math.round(cv.clientWidth), h = Math.round(cv.clientHeight), d = Math.min(2, devicePixelRatio || 1);
+  if (!w || !h) return;
+  if (Math.abs(w - W) > 1 || Math.abs(h - H) > 1 || d !== D) { W = w; H = h; D = d; cv.width = back.width = W * D; cv.height = back.height = H * D; force = true; }
+  const g = liveGold(now), key = [Math.round(index / 1000), zeta.toFixed(6), g.toFixed(4), reach.toFixed(5), W, H, noteTimes.length].join();
+  if (key === lastKey && !force) return; lastKey = key; force = false;
+  // the dial as large as the width allows; on a tall narrow screen it sits in the middle, not at the foot
+  R = Math.max(60, Math.min(W * 0.46, H - 108)); cx = W / 2; cy = Math.min(H - 84, (H + R) / 2 + 10);
+  ctx.setTransform(D, 0, 0, D, 0, 0); ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H); ctx.lineCap = 'round';
+  const s = span(), u = unit(s), at = (a, r) => [cx + r * Math.sin(a), cy - r * Math.cos(a)];
+  ctx.strokeStyle = 'rgba(201,199,190,.18)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(cx - R - 14, cy); ctx.lineTo(cx + R + 14, cy); ctx.stroke();
+  ctx.strokeStyle = 'rgba(232,200,106,.25)'; ctx.beginPath(); ctx.arc(cx, cy, R, -PI, 0); ctx.stroke();
+  // the corners, labelled in the unit this radius rests on: ½, ¼ … before the corner, 1, 2 … 2^K past it
+  const rr = R * 0.78;
+  ctx.font = '11px ' + MONO; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (let k = -3; k <= K; k++) for (const sg of [-1, 1]) {
+    const a = sg * Math.atan(2 ** k), [x1, y1] = at(a, rr - 7), [x2, y2] = at(a, rr + 7);
+    ctx.strokeStyle = k === 0 ? GOLD : k > 0 ? 'rgba(232,200,106,.55)' : 'rgba(29,158,117,.7)'; ctx.lineWidth = k === 0 ? 2 : 1.2;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    if (sg > 0 && (k === 0 || k === 2 || k === -1)) { const [lx, ly] = at(a, rr - 24);
+      ctx.fillStyle = k === 0 ? GOLD : DIM; ctx.fillText((k === -1 ? '½ ' : '') + (k === -1 ? fmtUnits(u).replace(/^1 /, '') : fmtUnits(u * 2 ** k)), lx, ly); }
+  }
+  ctx.strokeStyle = 'rgba(232,200,106,.45)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, rr, -PI, 0); ctx.stroke();
+  // the notes, as marks on the rim at the angle that reaches them; beyond the window, counted at the horizons
+  markHits = []; let beyondL = 0, beyondR = 0;
+  for (const t of noteTimes) {
+    const dlt = t - centre; if (Math.abs(dlt) > s / 2) { if (dlt < 0) beyondL++; else beyondR++; continue; }
+    const a = Math.atan(dlt / u), [x1, y1] = at(a, R - 10), [x2, y2] = at(a, R + 10);
+    ctx.strokeStyle = NOTE; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    markHits.push({ t, x: (x1 + x2) / 2, y: (y1 + y2) / 2 });
+  }
+  ctx.fillStyle = NOTE; ctx.font = '12px ' + MONO;
+  if (beyondL) { ctx.textAlign = 'left'; ctx.fillText('◀ ' + beyondL, cx - R - 10, cy - 14); }
+  if (beyondR) { ctx.textAlign = 'right'; ctx.fillText(beyondR + ' ▶', cx + R + 10, cy - 14); }
+  // the needles
+  const needle = (a, col, wdt) => { const [x, y] = at(a, R); ctx.strokeStyle = col; ctx.lineWidth = wdt; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(x, y); ctx.stroke(); };
+  needle(g, GOLD, 2.5);
+  if (Math.abs(zeta) > 1e-9) { needle(theta(), BLUE, 2.5); const [x, y] = at(theta(), R); ctx.fillStyle = BLUE; ctx.beginPath(); ctx.arc(x, y, 4, 0, 2 * PI); ctx.fill(); }
+  ctx.fillStyle = GOLD; ctx.beginPath(); ctx.arc(cx, cy, 4, 0, 2 * PI); ctx.fill();
+  // the record
+  const [date, time] = fields(index), line = (parts, y) => { const w = parts.reduce((t, [p]) => t + ctx.measureText(p).width, 0); let x = cx - w / 2;
+    ctx.textAlign = 'left'; for (const [p, mag] of parts) { ctx.fillStyle = band(mag); ctx.fillText(p, x, y); x += ctx.measureText(p).width; } };
+  ctx.textBaseline = 'alphabetic';
+  ctx.font = '20px ' + MONO; line(date, cy + 30); ctx.font = '15px ' + MONO; line(time, cy + 52);
+  ctx.font = '12px ' + MONO; ctx.fillStyle = DIM; ctx.textAlign = 'center';
+  ctx.fillText('the corner is ' + fmtUnits(u) + ' · the window ' + fmtUnits(s), cx, cy + 74);
+  vis.globalCompositeOperation = 'copy'; vis.drawImage(back, 0, 0);
+}
+function step(now){
+  const dt = Math.min(0.05, (now - (last || now)) / 1000); last = now;
+  if (held && thrusting) { zeta = clamp(zeta + Math.tan(gold) * THRUST * dt, -ZMAX, ZMAX); read(); }
+  if (settle) { const t = Math.min(1, (now - settle.t0) / 260), e = 1 - Math.pow(1 - t, 3);
+    reach = settle.from + (settle.to - settle.from) * e; rezoom(); read(); if (t >= 1) { settle = null; dock(); } }
+  draw(now); dockLive(); requestAnimationFrame(step);
+}
+// ── THE DOCK ─────────────────────────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id), noteEl = $('note');
+let shownSlot = '';
+function dockLive(){                                                    // the note field follows the half hour under the needle
+  const k = keyOf(slotOf(index));
+  if (k !== shownSlot && document.activeElement !== noteEl) { shownSlot = k; const d = slotOf(index);
+    $('slot').textContent = WD[d.getDay()] + ' ' + p2(d.getDate()) + ' ' + MON[d.getMonth()] + ' ' + d.getFullYear() + ', ' + p2(d.getHours()) + ':' + p2(d.getMinutes());
+    noteEl.value = notes[k] || ''; }
+}
+function dock(){
+  const cur = nearestDetent(reach)[0];
+  document.querySelectorAll('.u').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.u === cur && Math.abs(reach - reachFor(cur)) < 1e-6)));
+  $('count').textContent = noteTimes.length + (noteTimes.length === 1 ? ' note' : ' notes');
+}
+noteEl.addEventListener('input', () => { const k = shownSlot; if (noteEl.value.trim()) notes[k] = noteEl.value; else delete notes[k];
+  store.save(notes); indexNotes(); dock(); });
+noteEl.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === 'Escape') noteEl.blur(); e.stopPropagation(); });
+noteEl.addEventListener('blur', () => { shownSlot = ''; });
+document.querySelectorAll('.u').forEach(b => b.onclick = () => { settle = { from: reach, to: reachFor(b.dataset.u), t0: performance.now() }; });
+function goTo(t){ index = clamp(t, 0, N - 1); recentre(); force = true; }
+function stepNote(dir){ const here = index; const t = dir > 0 ? noteTimes.find(x => x > here + 1) : [...noteTimes].reverse().find(x => x < here - 1); if (t !== undefined) goTo(t); }
+$('prev').onclick = () => stepNote(-1); $('next').onclick = () => stepNote(1);
+$('today').onclick = () => goTo(Date.now() - T0);
+$('imp').onclick = () => $('file').click();
+$('file').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return;
+  try { const got = JSON.parse(await f.text()); notes = { ...notes, ...got }; store.save(notes); indexNotes(); dock(); force = true; } catch {}
+  e.target.value = ''; });
+// ── HANDS ────────────────────────────────────────────────────────────────────────────────────────
+const local = e => { const b = cv.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
+const touching = new Map(); let pinch = null, x0 = 0, y0 = 0;
+const fingers = () => { const [a, b] = [...touching.values()]; return Math.max(8, Math.hypot(a.x - b.x, a.y - b.y)); };
+function letGo(){ if (held) { held = false; if (thrusting) springAt = performance.now(); thrusting = false; recentre(); } }
+cv.addEventListener('pointerdown', e => {
+  cv.setPointerCapture(e.pointerId); touching.set(e.pointerId, { x: e.clientX, y: e.clientY }); settle = null; clearTimeout(settleTimer);
+  if (touching.size === 2) { letGo(); pinch = { d0: fingers(), r0: reach }; return; }
+  [x0, y0] = local(e); held = true; thrusting = false; springAt = -1;
+});
+cv.addEventListener('pointermove', e => {
+  if (!touching.has(e.pointerId)) return; touching.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pinch && touching.size === 2) { reach = clamp(pinch.r0 + Math.log2(fingers() / pinch.d0) * 0.25, 0, 1); rezoom(); read(); return; }
+  if (!held) return; const [x, y] = local(e);
+  if (!thrusting && Math.hypot(x - x0, y - y0) > TAP_PX) thrusting = true;
+  if (thrusting) gold = clamp(Math.atan2(x - cx, Math.max(0, cy - y)), -CAP, CAP);
+});
+const up = e => { touching.delete(e.pointerId);
+  if (pinch) { if (touching.size < 2) { pinch = null; settleSoon(); } return; }
+  if (held && !thrusting) {                                             // a tap: on a note mark it goes there, anywhere else nothing
+    const [x, y] = local(e); let best = null, bd = 18;
+    for (const m of markHits) { const dd = Math.hypot(m.x - x, m.y - y); if (dd < bd) { bd = dd; best = m; } }
+    held = false; if (best) goTo(best.t); return; }
+  letGo(); };
+cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+cv.addEventListener('wheel', e => { const f = e.deltaMode === 1 ? 16 : 1; settle = null;
+  if (e.deltaX) { zeta = clamp(zeta + e.deltaX * f / 2000, -ZMAX, ZMAX); read(); }
+  // gentler than city-dial's: here a wheel notch should be about one calendar unit, not three
+  if (e.deltaY) { reach = clamp(reach + (e.ctrlKey ? -e.deltaY / 700 : e.deltaY / 1700) * f, 0, 1); rezoom(); read(); settleSoon(); }
+  e.preventDefault(); }, { passive: false });
+addEventListener('keydown', e => {
+  if (document.activeElement === noteEl) return;
+  if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.repeat) { held = true; thrusting = true; springAt = -1; gold = (e.key === 'ArrowLeft' ? -1 : 1) * PI / 4; }
+  if (e.key === 'ArrowUp') goToDetent(1); if (e.key === 'ArrowDown') goToDetent(-1);
+  if (e.key === '[') stepNote(-1); if (e.key === ']') stepNote(1); if (e.key === 't') $('today').onclick();
+  if (e.key === 'n') { noteEl.focus(); e.preventDefault(); }
+  if (e.key.startsWith('Arrow')) e.preventDefault();
+});
+addEventListener('keyup', e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') letGo(); });
+addEventListener('resize', () => { force = true; });
+indexNotes(); rezoom(); dock(); requestAnimationFrame(step);
+</script>
+</body>
+</html>
