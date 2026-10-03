@@ -41,6 +41,7 @@ Standalone pages, one idea each, pulled out of the draw project's labs. See [dem
 | [fisheye-sweep.html](https://reportbase.github.io/calendar/dials/fisheye-sweep.html) | The situated reader's sweep: proportion from home to the corner, then one step per doubling. |
 | [breadth-sweep.html](https://reportbase.github.io/calendar/dials/breadth-sweep.html) | Known breadths with one, two, four or eight facings: quarter circle, semicircle, circle, sphere. |
 | [grow-or-slide.html](https://reportbase.github.io/calendar/dials/grow-or-slide.html) | Two things alike in outline; follow the address back to see which grows and which slides. |
+| [pivot-and-sweep.html](https://reportbase.github.io/calendar/dials/pivot-and-sweep.html) | The reader as the pivot: a bar of 1 turned from home to the horizon, with g, the flip, and carrying out one octave at a time. |
 
 ## Vocabulary
 

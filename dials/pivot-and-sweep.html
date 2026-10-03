@@ -1,0 +1,130 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Pivot and Sweep</title>
+<style>
+:root{
+  --bg:#f6f5f1; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#8a8984; --rule:#dedcd5;
+  --front:#2a78d6; --back:#eb6834; --pivot:#0b0b0b; --accent:#0b0b0b;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#121211; --surface:#1a1a19; --ink:#ffffff; --ink2:#c3c2b7; --muted:#8f8e86; --rule:#33332f;
+  --front:#3987e5; --back:#d95926; --pivot:#ffffff; --accent:#ffffff; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#121211; --surface:#1a1a19; --ink:#ffffff; --ink2:#c3c2b7; --muted:#8f8e86; --rule:#33332f;
+  --front:#3987e5; --back:#d95926; --pivot:#ffffff; --accent:#ffffff; color-scheme:dark }
+body{background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:860px;margin:0 auto;padding-inline:16px;padding-block:18px 40px;display:flex;flex-direction:column;gap:16px}
+h1{font-size:20px;margin:0}
+p{margin:0;color:var(--ink2);max-width:66ch}
+.controls{display:flex;flex-wrap:wrap;gap:10px}
+button{font:inherit;font-size:14px;padding:8px 14px;border-radius:8px;border:1px solid var(--rule);background:var(--surface);color:var(--ink);cursor:pointer;touch-action:manipulation;min-height:40px}
+svg{width:100%;height:auto;margin-inline:auto;display:block;background:var(--surface);border:1px solid var(--rule);border-radius:8px;touch-action:none;user-select:none;-webkit-user-select:none}
+.lab{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.read{display:flex;flex-wrap:wrap;gap:4px 20px;font-variant-numeric:tabular-nums;color:var(--ink2);font-size:14px}
+.read b{color:var(--ink);font-weight:600}
+section{display:flex;flex-direction:column;gap:6px}
+text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+#bar{max-width:520px}
+</style>
+
+<div class="wrap">
+  <h1>Pivot and Sweep</h1>
+  <p>The reader is the pivot. A bar of 1 turns about it from pure horizontal to pure vertical, and the reader points along it. Home is where the sweep starts, the corner is where v equals h, the horizon is where it ends. Drag the bar's end, or sweep it from home in equal steps.</p>
+
+  <div class="controls">
+    <button id="sweep">sweep from home</button>
+    <button id="flip">flip</button>
+    <button id="carry">carry out one octave</button>
+    <button id="corner">to the corner</button>
+  </div>
+
+  <section>
+    <svg id="bar" viewBox="0 0 420 420" aria-label="the sweeping bar"></svg>
+    <div class="read" id="read"></div>
+  </section>
+
+  <section>
+    <div class="lab">g, the sweep · the quarter turn on [0, 1]</div>
+    <svg id="gstrip" viewBox="0 0 820 84" aria-label="g"></svg>
+  </section>
+
+  <section>
+    <div class="lab">The octaves · counted out from the corner on both sides, each another [0, 1]</div>
+    <svg id="oct" viewBox="0 0 820 132" aria-label="octaves"></svg>
+  </section>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const NS='http://www.w3.org/2000/svg', Q=Math.PI/2;
+const el=(tag,attrs,parent,txt)=>{ const e=document.createElementNS(NS,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); if(txt!=null) e.textContent=txt; parent&&parent.appendChild(e); return e; };
+let turn=Math.PI/8, playing=null;
+
+// octave edges found by sweeping: step the turn from home and note where v/h passes 1/2^k and 2^k
+const EDGES=(()=>{ const want=[]; for(let k=-5;k<=5;k++) want.push(2**k); const out=[]; let i=0; const N=200000;
+  for(let n=1;n<=N && i<want.length;n++){ const a=n/N*Q, s=Math.sin(a)/Math.cos(a); while(i<want.length && s>=want[i]){ out.push({s:want[i],turn:a}); i++; } }
+  return out; })();
+function readingOf(a){ const h=Math.cos(a), v=Math.sin(a); return {h,v,s: h<1e-12?Infinity:v/h}; }
+function parts(a){ const {h,v,s}=readingOf(a); const g=a/Q; const near=Math.abs(s-1)<1e-9;
+  const side= near?'at the corner': s<1?'front':'back'; const q=Math.min(s,1/s);
+  const k= q<=0?Infinity:Math.max(0,Math.floor(-Math.log2(q)+1e-12)); const t= isFinite(k)? Math.min(1,2**(k+1)*q-1):0;
+  return {h,v,s,g,side,q,k,t}; }
+function turnForReading(s){ let lo=0,hi=Q; for(let i=0;i<60;i++){ const m=(lo+hi)/2; (Math.tan(m)<s)?lo=m:hi=m; } return (lo+hi)/2; }  // stepping the turn until v/h reaches s
+
+function draw(){
+  const P=parts(turn), css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const front=css('--front'), back=css('--back'), ink=css('--ink'), mut=css('--muted'), rule=css('--rule'), ink2=css('--ink2');
+  // the bar
+  const B=$('bar'); B.innerHTML=''; const ox=50, oy=380, R=320, X=a=>ox+R*Math.cos(a), Y=a=>oy-R*Math.sin(a);
+  const arc=(a0,a1,c,w)=>el('path',{d:`M${X(a0)} ${Y(a0)} A${R} ${R} 0 0 0 ${X(a1)} ${Y(a1)}`,fill:'none',stroke:c,'stroke-width':w},B);
+  arc(0,Q/2,front,6); arc(Q/2,Q,back,6);
+  el('line',{x1:ox,y1:oy,x2:X(0),y2:Y(0),stroke:rule},B); el('line',{x1:ox,y1:oy,x2:ox,y2:Y(Q),stroke:rule},B);
+  for(const e of EDGES){ const a=e.turn, in1=R-10, out1=R+10; el('line',{x1:ox+in1*Math.cos(a),y1:oy-in1*Math.sin(a),x2:ox+out1*Math.cos(a),y2:oy-out1*Math.sin(a),stroke:Math.abs(e.s-1)<1e-9?ink:mut,'stroke-width':Math.abs(e.s-1)<1e-9?2:1},B); }
+  const lab=(a,t,dx,dy,anchor)=>el('text',{x:X(a)+dx,y:Y(a)+dy,'font-size':13,fill:ink2,'text-anchor':anchor},B,t);
+  lab(0,'home · pure horizontal',-4,24,'end'); lab(Q/2,'the corner',14,-6,'start'); lab(Q,'the horizon · pure vertical',8,-10,'start');
+  for(const e of EDGES){ if(e.s===2||e.s===0.5){ const a=e.turn; el('text',{x:ox+(R+16)*Math.cos(a),y:oy-(R+16)*Math.sin(a)+4,'font-size':11,fill:mut,'text-anchor':'start'},B, e.s===2?'v = 2h':'v = ½h'); } }
+  // h and v of the bar
+  el('line',{x1:ox,y1:oy,x2:X(turn),y2:oy,stroke:mut,'stroke-dasharray':'4 4'},B); el('line',{x1:X(turn),y1:oy,x2:X(turn),y2:Y(turn),stroke:mut,'stroke-dasharray':'4 4'},B);
+  el('text',{x:(ox+X(turn))/2,y:oy-6,'font-size':12,fill:mut,'text-anchor':'middle'},B,'h');
+  el('text',{x:X(turn)+6,y:(oy+Y(turn))/2,'font-size':12,fill:mut},B,'v');
+  el('line',{x1:ox,y1:oy,x2:X(turn),y2:Y(turn),stroke:ink,'stroke-width':3,'stroke-linecap':'round'},B);
+  el('circle',{cx:X(turn),cy:Y(turn),r:10,fill:P.side==='back'?back:front,stroke:css('--surface'),'stroke-width':2},B);
+  el('circle',{cx:ox,cy:oy,r:6,fill:css('--pivot')},B); el('text',{x:ox-8,y:oy+24,'font-size':13,fill:ink2,'text-anchor':'start'},B,'the reader, the pivot');
+  // readout
+  const sTxt=!isFinite(P.s)?'without end':P.s<0.001?P.s.toExponential(1):P.s.toFixed(3);
+  $('read').innerHTML=`<span>g <b>${P.g.toFixed(3)}</b></span><span>v/h <b>${sTxt}</b></span><span>side <b>${P.side}</b></span>`+
+    (isFinite(P.k)?`<span>octave <b>${P.k}</b></span><span>share in the octave <b>${P.t.toFixed(3)}</b></span>`:`<span>octave <b>beyond any count</b></span>`);
+  // g strip
+  const G=$('gstrip'); G.innerHTML=''; const gx=g=>20+g*780;
+  el('rect',{x:gx(0),y:22,width:gx(.5)-gx(0),height:14,fill:front,opacity:.35},G); el('rect',{x:gx(.5),y:22,width:gx(1)-gx(.5),height:14,fill:back,opacity:.35},G);
+  for(const e of EDGES){ const x=gx(e.turn/Q); el('line',{x1:x,y1:18,x2:x,y2:40,stroke:Math.abs(e.s-1)<1e-9?ink:mut,'stroke-width':Math.abs(e.s-1)<1e-9?2:1},G); }
+  el('text',{x:gx(0),y:68,'font-size':20,fill:mut},G,'0 home'); el('text',{x:gx(.5),y:68,'font-size':20,fill:ink2,'text-anchor':'middle'},G,'½ the corner'); el('text',{x:gx(1),y:68,'font-size':20,fill:mut,'text-anchor':'end'},G,'1 the horizon');
+  el('line',{x1:gx(P.g),y1:12,x2:gx(P.g),y2:46,stroke:ink,'stroke-width':3},G);
+  // octave strip
+  const O=$('oct'); O.innerHTML=''; const cx=410, w=72, KM=5;
+  for(let k=0;k<KM;k++){ el('rect',{x:cx-(k+1)*w+1,y:22,width:w-2,height:30,fill:front,opacity:.18+.1*(k===0)},O); el('rect',{x:cx+k*w+1,y:22,width:w-2,height:30,fill:back,opacity:.18+.1*(k===0)},O);
+    el('text',{x:cx-(k+.5)*w,y:74,'font-size':20,fill:mut,'text-anchor':'middle'},O,String(k)); el('text',{x:cx+(k+.5)*w,y:74,'font-size':20,fill:mut,'text-anchor':'middle'},O,String(k)); }
+  el('line',{x1:cx,y1:18,x2:cx,y2:56,stroke:ink,'stroke-width':2},O);
+  el('text',{x:cx,y:122,'font-size':20,fill:ink2,'text-anchor':'middle'},O,'the corner');
+  el('text',{x:cx-KM*w,y:12,'font-size':18,fill:mut},O,'← home'); el('text',{x:cx+KM*w,y:12,'font-size':18,fill:mut,'text-anchor':'end'},O,'horizon →');
+  el('text',{x:cx-w*KM/2,y:100,'font-size':18,fill:mut,'text-anchor':'middle'},O,'front: v of h'); el('text',{x:cx+w*KM/2,y:100,'font-size':18,fill:mut,'text-anchor':'middle'},O,'back: h of v');
+  if(isFinite(P.k) && P.k<KM){ const off=(P.k+1-P.t)*w, x= P.side==='back'? cx+off : cx-off; el('line',{x1:x,y1:16,x2:x,y2:58,stroke:ink,'stroke-width':4},O); }
+}
+// dragging the bar's end (mouse or touch)
+const B=$('bar');
+function setFromPointer(ev){ const r=B.getBoundingClientRect(), sx=420/r.width, x=(ev.clientX-r.left)*sx-50, y=380-(ev.clientY-r.top)*sx;
+  let a=Math.atan2(Math.max(y,0),Math.max(x,0)); turn=Math.min(Q,Math.max(0,a)); draw(); }   // the pointer's direction from the pivot
+B.addEventListener('pointerdown',e=>{ stop(); B.setPointerCapture(e.pointerId); setFromPointer(e); });
+B.addEventListener('pointermove',e=>{ if(B.hasPointerCapture(e.pointerId)) setFromPointer(e); });
+function stop(){ if(playing){ clearInterval(playing); playing=null; $('sweep').textContent='sweep from home'; } }
+$('sweep').onclick=()=>{ if(playing){ stop(); return; } turn=0; let n=0; const N=90; $('sweep').textContent='stop';
+  playing=setInterval(()=>{ n++; turn=n/N*Q; draw(); if(n>=N) stop(); },70); draw(); };
+$('flip').onclick=()=>{ stop(); turn=Q-turn; draw(); };                         // v and h read the other way round
+$('carry').onclick=()=>{ stop(); const P=parts(turn); if(!isFinite(P.s)||P.s===0) return;
+  const s2= P.s>1? P.s*2 : P.s<1? P.s/2 : 2; turn=turnForReading(s2); draw(); }; // out one octave on its side
+$('corner').onclick=()=>{ stop(); turn=Q/2; draw(); };
+addEventListener('resize',draw); matchMedia('(prefers-color-scheme: dark)').addEventListener('change',draw);
+new MutationObserver(draw).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+draw();
+</script>
+
+</body></html>
