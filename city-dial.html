@@ -1,0 +1,1765 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One dial, one pathological shape</title>
+<!-- THE DIAL READS A DEPTH — an example of the dial, not a change to it.
+     The dial below is outputs/fisheye-ladder-shape.html, byte for byte: same markup, same style,
+     same script, nothing added and nothing taken away. It browses a list; here the list is a road.
+
+     THE ROAD, AND WHERE YOU ARE ON IT. An eye one and a half standoffs above the ground, looking
+     down an endless straight road with a sleeper across it at every standoff. THE DIAL'S RECORD IS
+     WHERE YOU STAND: panning walks you along the road, the sleepers stream toward you and pass
+     underfoot, and the radius decides whether a pan moves you a standoff or a thousand.
+
+     THE PERSPECTIVE IS A DIVIDE AND NOTHING ELSE. A point at depth Z lands at
+         across  = f · X / Z        down = f · eye / Z below the horizon
+     so every length on the road is divided by its own depth. That single divide is the whole of
+     what a picture does, and it is the same divide the dial's tangent performs — which is why the
+     ties, laid down at equal steps in the world, arrive on the screen in the reader's own rungs.
+
+     AND THE COUNTRY EITHER SIDE IS MADE OUT OF THE ADDRESSES. Nothing is stored: the land at record
+     i is a function OF i, so the road can be nine quadrillion long, leapt across in a single pan,
+     and the same hills are in the same places whenever you come back. It is octaves summed from
+     coarser and coarser shifts of the address, which is what makes it country rather than noise —
+     neighbours resemble each other and large features span thousands of records — and each record is
+     read at only the octaves its depth can show, so a thing that is never reached never costs its
+     last octave.
+
+     WHAT IS MARKED. The rails, and the road's own sleepers — one at every record, lying where they
+     were laid, each carrying its record where there is room to write it. They are laid evenly in the
+     world and arrive on the screen in doublings: the sleeper at twice the distance sits halfway from
+     the one before it to the vanishing point, so a road of equal steps crowds there and never
+     reaches it. Walking brings each sleeper up the screen, past the dial and underfoot. Nothing is
+     marked for the record you are on: it is underfoot and out of the frame, and the digits under the
+     dial say it. The vanishing point is the horizon: the road's own address for a depth it never
+     reaches, and the ties crowd into it without end.
+
+     THE ROAD IS THE SCREEN. Its centre line is the dial's own vertical, so the vanishing point is
+     straight above the dial's hub, and the rails run from there to the two bottom corners — the
+     eye's own place, where the blue needle starts. Nothing is drawn off the sides. The dial is drawn
+     over the road, not beside it, and the two are one instrument: the road's near end is the dial's
+     hub, and the road's far end is the dial's horizon.
+
+     THE SPACE BAR WALKS IT, and on a touch screen a DOUBLE TAP on the road does the same. The road
+     rolls toward you at a steady rate in standoffs — even in the world, and therefore never even on
+     the screen: sleepers arrive quickly at the horizon and slowly at your feet. The space bar toggles
+     it; a touch starts it with two taps and stops it with one, since a hand on the road stops the
+     roll the moment it lands.
+
+     A LONG PRESS PUTS BOTH AXES IN THE HAND: held still for a third of a second, a press stops being
+     a walk, and then UP AND DOWN IS THE EYE'S PITCH while LEFT AND RIGHT IS THE DIAL — the hand
+     becomes the gold thumb and runs the list. Pitching carries the vanishing point down the screen
+     and back up — more sky and less road, or the road climbing out of the top of the frame altogether,
+     which is the eye pitched down at the ground by its own feet. It rests at the top edge and has
+     room in both directions from there.
+
+     THE ROAD CAN BE DRAGGED FROM ANYWHERE ABOVE THE DIAL'S HUB, and what decides between the road
+     and the dial's thumb is the DIRECTION of the first movement: up and down walks the road,
+     sideways swings the thumb. Below the hub is the dial's outright — the digits and the scale. A pull down the whole height of the
+     road walks ninety standoffs, the same rate wherever it is grabbed and whatever the window's
+     shape, so up and down match and pulling further always walks further. The drag moves the
+     record and nothing else — the radius is the reader's own setting and the walk does not touch it,
+     so the dial keeps its rung whatever the hand does on the road. Everything below that line is the
+     dial's, and its own gestures are untouched.
+
+     ONE RECORD, ONE SLEEPER, and the road keeps the fraction between them. A double near nine
+     quadrillion cannot step by less than a whole record, so if the road's position were the record
+     alone, every step would land on an identical view and nothing would seem to move. The road
+     remembers where it stands BETWEEN sleepers and hands the dial only the whole ones: the view
+     moves smoothly and the record counts one at a time.
+-->
+<!-- ONE DIAL — the navigation dial. A point in the half-disc is a reader: the DIRECTION is the
+     angle, the DISTANCE is its radius. Two needles. The GOLD is the thumb and a RATE: hold it off the
+     apex and it adds rapidity by the tangent of its angle — gently just off the apex, harder toward
+     the horizon; let go and it springs back. The BLUE is where the reader points and a PLACE: its
+     angle is the gudermannian of the rapidity, so it nears the horizon and never arrives. THE VALUE IS
+     READ OFF THE BLUE THROUGH THE FISHEYE — the window's centre plus half the window times tan(blue),
+     the corner at 45 degrees being ONE READER'S UNIT and the window's end the fifth corner beyond
+     it — so the value barely moves near the apex, one unit at the corner, and reaches the end of the
+     window at the fifth doubling; the horizon is further, where the corners never stop. At full radius the window is the
+     whole list and the arc IS the dataset. A CLICK sets the radius where it lands, puts the window on
+     the record, and brings the blue home; a press that pans is the gold, and leaves the radius alone.
+     TWO FINGERS ARE THE WHEEL: fingers apart opens the radius out toward the whole list, fingers
+     together closes it onto the record — the wheel's own control, for a screen that has no wheel.
+     UNDER THE RECORD IS THE SCALE: a run with a dot on it, at the place this radius holds between
+     the whole list at the LEFT end and a single record at the right. PAN IT to set the radius. No number is written there — the dot
+     is the scale, and the record's own colours already say what this radius reaches. A TAP CHANGES
+     NOTHING ANYWHERE — the dial moves only when something is panned, pinched or wheeled.
+     THE BLUE IS ONLY A GUIDE (Tom, Sep 12) and is drawn only while the pan is on: when panning has
+     stopped it has no meaning, so it is not there. Letting go rests the window on the record the pan
+     reached, which leaves a record and a radius and no angle over.
+     The digits this radius can reach are in the other colour. The slider is the list's size, none to
+     The list is MAX_INT (2^53 − 1) long. CLICKING A DIGIT of the record sets
+     the reader's unit to that place value — the tens, the thousands, the billions — and the radius
+     follows, so the colours of the digits are also the control that sets them.
+
+THERE WAS A LINE CHART ABOVE IT, AND IT IS GONE (Tom, Sep 12): "remove the line chart on top."
+     What it drew is worth keeping on the record, because it is what the angle query is for. The
+     layout puts record i at θ = π(i+½)/N — a half turn, the range alone deciding it. The lens is
+     ψ = atan(k·tan θ), the reader's angle out. A chart column ran both backwards: ψ → θ →
+     i = round(θ·N/π), mod N, one arctan and a rounding, no scan, whatever N is — and the mod is
+     what makes the list a RING. THE RADIUS IS THE WINDOW, and the window the chart showed was the
+     same one the needle travels, so the two agreed at every setting; ψ₁ = 2/π carries the reader's
+     turn into that window's own count of records. The dial is now the whole instrument. Nothing
+     here is a reading — the array is in hand. -->
+<style>
+  :root{--bg:#0b0d12;--gold:#e8c86a;--teal:#1D9E75}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--gold);
+            overflow:hidden;overscroll-behavior:none;touch-action:none;user-select:none;-webkit-user-select:none}
+  body{background:radial-gradient(ellipse at 50% 100%, #141823 0%, var(--bg) 70%)}
+  canvas{display:block;width:100%;height:100%;cursor:crosshair}
+</style>
+</head>
+<body>
+<canvas id="dial"></canvas>
+<script>
+// ── THE NAVIGATION DIAL'S LOGIC ──────────────────────────────────────────────────────────────
+// Two needles, and the tangent between each pair of things. The GOLD needle is the thumb, and it is a
+// RATE: holding it off the apex adds RAPIDITY ζ at tan θ · 0.4 per second — gently just off the apex,
+// 0.4 a second at 45 degrees, hard near the horizon — and letting go springs it back to the apex. The
+// BLUE needle is where the reader points, and it is a PLACE: its angle is the gudermannian of the
+// rapidity, sin(blue) = tanh ζ, so it nears the horizon for as long as you push and never quite gets
+// there — and the rapidity stops at the horizon, so a push held past it piles up nothing and the way
+// back is as short as the way out. THE VALUE IS READ OFF THE BLUE NEEDLE THROUGH THE FISHEYE: the record is the window's centre
+// plus half the window times tan(blue), normalised so the horizon is the window's end — so the value
+// barely moves while the blue is near the apex, moves gently out to 45 degrees, and reaches the end
+// of the window only as the blue reaches the horizon. At full radius the window is the whole list and
+// the blue is an absolute place on it; at smaller radii the window is where the last click put it.
+// A CLICK (a press that does not move) re-centres: the window is put on the record under the blue at
+// the radius where the click landed, and the blue returns to the apex. A press that pans is the gold.
+const PI = Math.PI, SPRING_MS = 150, TAP_PX = 6, THRUST = 0.4;
+// THE CORNER. At 45 degrees tan is one: the blue has moved exactly ONE READER'S UNIT from home.
+// The window's half is K doublings of that unit — corners at tan = 1, 2, 4 … 2^K, angles 45°,
+// 63°, 76°, 83°, 86°, EVENLY SPACED IN THE DOUBLINGS, one rung apart by construction (corrected
+// Sep 12: this said "evenly spaced in rapidity", and in the dial's own ζ = asinh(tan θ) they are
+// not — the gaps run 0.5623, 0.6511, 0.6818, 0.6902, 0.6924 against ln 2 = 0.6931, so ζ is 18.9%
+// short at the first gap and within 0.11% by the fifth. The two coordinates the dial carries agree
+// far out and part company AT THE CORNER, which is the one landmark it has without a number: the
+// corners live in the rung coordinate, ln tan θ, and the thrust is driven in ζ) — and the window's END is where the radius runs
+// out, at the K-th corner; the horizon is further, where the corners go on for ever. So the cap
+// is not chosen: it is the K-th corner, and the unit is the window's half over 2^K.
+const K = 5, CAP = Math.atan(Math.pow(2, K));
+const ZMAX = Math.asinh(Math.tan(CAP));                      // the rapidity that puts the blue at the horizon: pushing past it adds nothing
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+// THE LIST IS MAX_INT LONG and stays that way: 2^53 − 1, the last integer JavaScript counts
+// exactly. There is no size control — the reader's radius is the only thing the hand sets.
+const N = Number.MAX_SAFE_INTEGER;
+let index = Math.floor(N / 2), centre = index, reach = 1;   // the record, the window, and the reader's radius
+let zeta = 0, theta = 0, held = false, springAt = -1, x0 = 0, y0 = 0, last = 0;
+const span   = () => Math.pow(Math.max(1, N), reach);
+const heldTheta = () => Math.atan(Math.sinh(zeta));          // the blue needle: the gudermannian of the rapidity
+const unit = s => s / 2 / Math.pow(2, K);                   // the reader's unit: one corner out, in records
+const off  = (a, s) => unit(s) * Math.tan(a);                 // the fisheye: the unit times tan of the blue's angle; the K-th corner is the window's end
+function read(){ index = clamp(centre + off(heldTheta(), span()), 0, N - 1); }   // the value is what the blue points at
+function recentre(){                                         // the window goes onto the record; the blue takes up any residue the ends force
+  const s = span(); centre = clamp(index, s / 2, N - s / 2);
+  zeta = Math.asinh((index - centre) / unit(s));
+}
+// CHANGING THE RADIUS KEEPS THE BLUE (Tom, Sep 12: "changing the radius pinch destroys the blue
+// needle"). A radius change used to call recentre(), which puts the window ON the record — and then
+// the record is the centre, so the blue has nothing to point past and collapses to the apex. A zoom
+// is not a change of place: the record stays, the window keeps its centre, and only the blue's
+// ANGLE is restated in the new unit. The centre moves only when it must — when the new window
+// cannot reach the record, or cannot fit in the list — and that is a limit, not a reset.
+// |index − centre| ≤ s/2 is exactly |ζ| ≤ ZMAX, so the two bounds are one bound.
+function rezoom(){
+  const s = span(), c = clamp(centre, s / 2, N - s / 2);
+  if (Math.abs(index - c) <= s / 2) { centre = c; zeta = Math.asinh((index - c) / unit(s)); }
+  else recentre();                                           // the record is outside the new window
+}
+function liveTheta(now){                                     // where the gold is drawn: the thumb, or the spring back to apex
+  if (held) return theta;
+  if (springAt >= 0){ const t = (now - springAt) / SPRING_MS; if (t >= 1){ springAt = -1; return 0; }
+    return theta * Math.pow(1 - t, 3); }
+  return 0;
+}
+function step(now){                                          // per frame: the gold turns the blue; the blue is read
+  const dt = Math.min(0.05, (now - (last || now)) / 1000); last = now;
+  if (held) zeta = clamp(zeta + Math.tan(theta) * THRUST * dt, -ZMAX, ZMAX);   // thrust adds rapidity, through the tangent; the horizon is as far as it goes
+  if (N) read();
+  draw(now); requestAnimationFrame(step);
+}
+function grab(e){ held = true; springAt = -1; x0 = e.clientX; y0 = e.clientY; }
+function release(e){
+  held = false; springAt = performance.now();
+  // A TAP CHANGES NOTHING (Tom, Sep 12: "tapping does not change the dial, only panning"). A press
+  // that does not travel used to set the radius to wherever it landed, so a finger put down to look
+  // moved the instrument. The radius is now the wheel's, the pinch's, and the scale's pan.
+  recentre();                 // and either way the pan is over: the window rests on the record it
+                              // reached, leaving a record and a radius with no angle left over
+}
+
+// ── THE ANGLE QUERY ──────────────────────────────────────────────────────────────────────────
+// Kept because it is what the dial's own reading is made of, though nothing draws with it now.
+// THE LAYOUT (index → angle), fixed by the range alone: record i sits at θ_i = φ + i·π/N — the
+// list laid on a half turn, N cells of π/N each, and nothing of the reader in it.
+// THE LENS (angle → position): p = s·tan(θ − φ), with s the reader's scale.
+// THE QUERY runs that backwards: θ = φ + atan(p/s), and i = round((θ − φ)·N/π) — one arctan and a
+// rounding, no scan, whatever N is. The scale is the series' own: adjacent records are one width
+// apart at the focus, so s = N·w/π, and with the half-width taken as the reader's own the factor is
+// ψ₁ = 2/π, the rate at which a continuous turn is spent on a discrete list. AND IT WRAPS: the
+// index comes back mod N, so the ends of the list meet and the list is a ring.
+// The radius is the reader's scale: at full radius s is the whole list, and as the radius falls the
+// focus's neighbourhood spreads and the rest wraps toward the edges.
+let digitBox = null;                               // where the record's digits are, so one can be clicked
+let digitDrag = null;                              // a pan on the digits: the gold thumb, laid out flat
+// THE CHART IS GONE (Tom, Sep 12): "remove the line chart on top." Removed with it: the list's
+// magnitudes, the chart's lens, its box, and the drag along it. The dial is untouched.
+
+// THE WHOLE DIAL IS DRAWN ON A BACK CANVAS, AND `ctx` IS THAT CANVAS. Naming the back buffer only
+// inside draw() split the picture in two: draw() painted the rung on the buffer while digits(),
+// the readout and every other helper went on painting the visible canvas, and the copy at the end
+// wiped whichever of them lost. The dial went missing. There is one context and it is the buffer's;
+// the visible canvas is touched in exactly one place, the copy at the end of a frame.
+const cv = dial, view = cv.getContext('2d');
+const back = document.createElement('canvas'), ctx = back.getContext('2d');
+const GOLD = '#e8c86a', TEAL = '#1D9E75', DIM = 'rgba(232,200,106,0.28)', BLUE = '#6cc4ff';
+const MONO = '"JetBrains Mono","SF Mono",Menlo,Consolas,monospace';
+function sizeReadout(W){                                     // how long the list is
+  ctx.font = '500 16px ' + MONO; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = GOLD; ctx.globalAlpha = 0.6; ctx.fillText(N.toLocaleString(), W / 2, 30); ctx.globalAlpha = 1;
+}
+function digits(W, y){                                       // the record, in three bands keyed to the corner
+  // TEAL: the digits inside one unit — what a move to the corner turns, the proportional regime.
+  // BLUE: the digits from the unit to the window's end — the rungs, what the corners beyond turn.
+  // GOLD: the digits this radius cannot reach.
+  ctx.font = '500 22px ' + MONO; ctx.textAlign = 'left';
+  const str = Math.round(index).toLocaleString();
+  const cut = digitsAbove => { let i = str.length, d = 0; while (i > 0 && d < digitsAbove) if (str[--i] !== ',') d++; return i; };
+  const iU = cut(Math.log10(Math.max(1, unit(span())))), iS = cut(Math.log10(span()));
+  const head = str.slice(0, iS), mid = str.slice(iS, iU), tail = str.slice(iU);
+  const tx = W / 2 - ctx.measureText(str).width / 2;
+  ctx.fillStyle = GOLD; ctx.fillText(head, tx, y);
+  ctx.fillStyle = BLUE; ctx.fillText(mid, tx + ctx.measureText(head).width, y);
+  ctx.fillStyle = TEAL; ctx.fillText(tail, tx + ctx.measureText(head + mid).width, y);
+  // WHERE EACH DIGIT SITS, so one can be clicked. A digit is a place value; clicking it asks the
+  // reader for a unit of that size, and the radius follows.
+  digitBox = { y, tx, str, w: ctx.measureText(str).width, h: 22,
+               edges: (() => { const e = []; for (let i = 0; i <= str.length; i++) e.push(tx + ctx.measureText(str.slice(0, i)).width); return e; })() };
+}
+// ── THE SCALE, AND THE DOT UNDER IT ─────────────────────────────────────────────────────────
+// A run under the record with a dot on it, at the place this scale occupies between a single record
+// and the whole list. PAN IT SIDEWAYS TO SET THE RADIUS (Tom, Sep 12: "add panning support for the scale number on bottom that adjusts
+// the radius"): the width of the number is the whole range, so a finger's travel across it runs
+// from one record to the list entire, and the dot follows. Since the same tangent that drives the
+// thrust does not belong here — a radius is a scale, not a rate — the travel is LINEAR IN THE
+// RUNGS, which is the one coordinate a change of radius is uniform in.
+let scaleBox = null;
+function scaleReadout(W, y){
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  // NO NUMBER (Tom, Sep 12: "remove the scientific notation number" · "NO remove it"). The scale is
+  // the run and the dot on it, and nothing else — where the dot sits IS the scale, and the record
+  // above already says what the reader can reach in its own colours. The run is still what a pan
+  // works on and still spans the whole range.
+  const half = 130;                                                     // the range the pan spans
+  ctx.strokeStyle = 'rgba(207,214,228,0.18)'; ctx.lineWidth = 1;        // the run the dot moves along
+  ctx.beginPath(); ctx.moveTo(W / 2 - half, y); ctx.lineTo(W / 2 + half, y); ctx.stroke();
+  // THE RUN IS INVERTED (Tom, Sep 12: "invert the horizontal scrollbar so max value on the left").
+  // The whole list is at the LEFT end and a single record at the right, so the dot travels the way
+  // the reading does — leftward is more in reach, rightward is closer in. The pan's sign follows it.
+  ctx.fillStyle = GOLD;                                                  // the dot: where this scale sits
+  ctx.beginPath(); ctx.arc(W / 2 + half - 2 * half * reach, y, 5, 0, 2 * PI); ctx.fill();
+  scaleBox = { y, half, cx: W / 2 };
+}
+const onScale = (px, py) => scaleBox && py > scaleBox.y - 12 && py < scaleBox.y + 14
+                         && Math.abs(px - scaleBox.cx) < scaleBox.half + 12;
+
+// CLICKING A DIGIT SET THE RADIUS (Tom, Sep 8), AND NO LONGER DOES (Tom, Sep 12: "tapping does not
+// change the dial, only panning"). The place-value reading below is kept because the COLOURS still
+// use it — the digit where the bands meet is the unit's place — but nothing calls it on a tap. Each digit of the record is a place value: the
+// tens, the thousands, the billions. Clicking one says "let my unit be this size" — the reader's
+// unit is set to that place, and since the unit is the window over 2^(K+1), the window and so the
+// RADIUS follow: reach = log(window)/log(N). The digit clicked becomes the boundary between the
+// bands, so the click is read straight off the colours it changes.
+function digitAt(px, py){
+  const b = digitBox; if (!b) return null;
+  if (py < b.y - b.h || py > b.y + 6 || px < b.tx - 4 || px > b.tx + b.w + 4) return null;
+  for (let i = 0; i < b.str.length; i++) {
+    if (px >= b.edges[i] && px < b.edges[i + 1]) {
+      if (b.str[i] === ',') return null;                       // a separator names no place
+      let places = 0; for (let j = i + 1; j < b.str.length; j++) if (b.str[j] !== ',') places++;
+      return places;                                           // the digit's power of ten
+    }
+  }
+  return null;
+}
+function setUnitToPlace(places){
+  const want = Math.pow(10, places) * 2 * Math.pow(2, K);      // the window whose unit is that place
+  reach = clamp(Math.log(Math.max(2, want)) / Math.log(Math.max(2, N)), 0, 1);
+  rezoom();                                                  // the unit changes; the record does not
+}
+function heldMark(x, y, lx, ly){                             // the speed you keep: a ring, a line to it
+  if (!zeta) return;
+  ctx.save(); ctx.strokeStyle = BLUE; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.7;
+  ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(x, y); ctx.stroke();
+  ctx.globalAlpha = 0.85; ctx.lineWidth = 1.5; ctx.shadowColor = BLUE; ctx.shadowBlur = 4;
+  ctx.beginPath(); ctx.arc(x, y, 5, 0, 2 * PI); ctx.stroke(); ctx.restore();
+}
+
+// THE SURFACE IS KEPT (Tom, Sep 13: "it is flashing continuously"). Setting a canvas's width or
+// height REPLACES ITS BITMAP — it is not a resize, and it clears even when the value is unchanged —
+// so doing it every frame threw the dial away and painted it back sixty times a second. Nothing on
+// the dial was moving while it did so: at rest its state and its pixels are identical frame to
+// frame, and the frame budget was never overrun. What flashed was the surface, not the drawing.
+// The size is set only when the size has actually changed.
+let surface = '', surfW = 0, surfH = 0, surfD = 0;
+let cx = 0, cy = 0, R = 1;
+// AND THE DIAL DRAWS ONLY WHEN SOMETHING HAS MOVED (Tom, Sep 13, twice: "it is flashing
+// continuously"; "why do the yellow horizontal lines flash, they are in the same position, they
+// never change"). Keeping the surface was not enough: the dial still cleared its whole canvas and
+// laid a thousand strokes back down sixty times a second with nothing changed, and a layer that
+// clears and repaints every frame is a layer that can be caught mid-repaint. It now compares what
+// it draws FROM — the record, the window, the two angles, the radius, the hand, the spring, the
+// size — and returns before the clear when none of it has moved. A dial at rest is now a still
+// picture rather than a picture being redrawn.
+// AND THE PICTURE IS BUILT WHERE NOBODY IS LOOKING (Tom, Sep 13, repeatedly). Clearing the visible
+// canvas and then painting it leaves it EMPTY in between, and a compositor that takes its copy in
+// that gap puts one blank frame on the screen — a flash. The dial is drawn on a canvas of its own
+// and copied across in a single `copy`, which replaces every pixel at once and leaves no gap.
+let shown = '';
+function draw(now){
+  // ⚠ A SIZE IS A WHOLE NUMBER OF PIXELS, AND A CHANGE OF ONE IS NOT A CHANGE. In a panel that
+  // measures itself — a preview pane, a split view, anything that reflows — clientWidth can wander
+  // by a pixel from frame to frame, and every wander was read here as a new size: the canvas was
+  // reallocated, the picture thrown away and painted again, sixty times a second. That is a flash on
+  // every frame, and it happens only where the page is not master of its own viewport, which is why
+  // it never showed in a browser window. The size is rounded and a difference of one pixel is
+  // ignored; anything larger is a real resize and still redraws.
+  const D = Math.min(2, devicePixelRatio || 1);
+  const W = Math.round(cv.clientWidth), H = Math.round(cv.clientHeight);
+  // ⚠ A PANEL BEGINS WITH NO SIZE AT ALL, and that is the flash (Tom, Sep 13, with the error:
+  // "drawImage … a canvas element with a width or height of 0"). In a preview pane the frame is laid
+  // out after the page starts, so the first frames measure zero — the back canvas was made 0×0, the
+  // copy threw, and an uncaught throw inside a requestAnimationFrame KILLS THE LOOP. The page then
+  // sat dead until the next resize restarted it, and started dying again. A window sizes itself
+  // before the first frame, which is why this never appeared in one.
+  // A frame with no size is not drawn at all, and the size is not remembered, so the first real
+  // measurement is treated as the first size.
+  if (W < 2 || H < 2) return;
+  const want = (surface && Math.abs(W - surfW) <= 1 && Math.abs(H - surfH) <= 1 && D === surfD)
+    ? surface : (W + 'x' + H + '@' + D);
+  const state = [want, index, centre, zeta, reach, theta, held ? 1 : 0,
+                 springAt >= 0 ? liveTheta(now).toFixed(6) : 'rest'].join('|');
+  if (state === shown) return;                               // nothing has moved: leave the picture alone
+  shown = state;
+  if (want !== surface) {
+    surface = want; surfW = W; surfH = H; surfD = D;
+    cv.width = W * D; cv.height = H * D;
+    back.width = W * D; back.height = H * D;
+  }
+  ctx.setTransform(D, 0, 0, D, 0, 0); ctx.clearRect(0, 0, W, H);
+  // ONE INSTRUMENT: the dial takes the lower part of the canvas and the room above it stays clear.
+  cx = W / 2; cy = H - 64; R = Math.min(W * 0.46, H * 0.52);
+  // THE LIST'S LENGTH IS NOT WRITTEN ACROSS THE TOP (Tom, Sep 13: "remove the title number on
+  // top"). It said how long the list is, which never changes and which the record's own digits
+  // already imply; it sat in the sky of every page built on this dial, and each example had been
+  // suppressing it separately. The readout itself is kept below, unused, in case a page ever wants
+  // to call it.
+  // sizeReadout(W);
+  ctx.lineCap = 'round';
+  const r = R * reach, th = liveTheta(now), sx = Math.sin(th), cs = Math.cos(th);
+  ctx.strokeStyle = held ? GOLD : DIM; ctx.lineWidth = held ? 2 : 1.25;                  // the rung, at the radius
+  ctx.beginPath(); ctx.arc(cx, cy, r, -PI, 0); ctx.stroke();
+  // THE CORNER, and the corners beyond it: ticks on the rung at tan = 1, 2, 4 … 2^K on both sides.
+  // The first is the reader's unit — the one calibration the dial has without a number — and the
+  // rest are the rungs, one doubling apart each, crowding toward the horizon. (Drawn at atan(2^k),
+  // which is exact; the wording "evenly spaced in rapidity" was corrected Sep 12 — even in the
+  // doublings, which the dial's ζ only approaches. See the head comment.)
+  for (let k = 0; k <= K; k++) {
+    const a = Math.atan(Math.pow(2, k)), len = k === 0 ? 14 : 7;
+    ctx.strokeStyle = k === 0 ? GOLD : DIM; ctx.lineWidth = k === 0 ? 2 : 1;
+    for (const sg of [-1, 1]) {
+      const ux = sg * Math.sin(a), uy = -Math.cos(a);
+      ctx.beginPath(); ctx.moveTo(cx + (r - len) * ux, cy + (r - len) * uy); ctx.lineTo(cx + (r + 4) * ux, cy + (r + 4) * uy); ctx.stroke();
+    }
+  }
+  ctx.strokeStyle = DIM; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, cy - R); ctx.stroke();            // the apex: zero
+  ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + R * sx, cy - R * cs); ctx.stroke();
+  ctx.strokeStyle = GOLD; ctx.lineWidth = 2;                                             // the needle, to the rung
+  ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + r * sx, cy - r * cs); ctx.stroke();
+  ctx.fillStyle = GOLD; ctx.shadowColor = GOLD; ctx.shadowBlur = 14;                     // the handle
+  ctx.beginPath(); ctx.arc(cx + r * sx, cy - r * cs, held ? 6 : 4.5, 0, 2 * PI); ctx.fill();
+  ctx.shadowBlur = 0;
+  // THE BLUE IS A GUIDE AND NOTHING ELSE (Tom, Sep 12): "the blue needle is only a guide, it has
+  // no meaning when panning has stopped." Drawn while the pan is on and not after; what the pan was
+  // for survives it, in the record.
+  if (held) { const ht = heldTheta(); heldMark(cx + r * Math.sin(ht), cy - r * Math.cos(ht), cx, cy); }
+  ctx.beginPath(); ctx.arc(cx, cy, 2, 0, 2 * PI); ctx.fill();
+  if (!N) { across(); return; }                                                          // an empty list has no record to read
+  digits(W, cy + 34);
+  scaleReadout(W, cy + 47);        // under the record, in the band the hub leaves
+  across();
+}
+// THE ONE ACT THAT PUTS THE FINISHED PICTURE ON THE SCREEN. Everything above is drawn on a canvas
+// nobody is looking at; this copies it across in a single operation. `copy` replaces every pixel at
+// once, so the visible canvas is never empty for an instant and no frame can be caught half-painted.
+function across(){
+  if (!back.width || !back.height) return;                   // nothing to copy: never throw here
+  view.setTransform(1, 0, 0, 1, 0, 0);
+  view.globalCompositeOperation = 'copy';
+  view.drawImage(back, 0, 0);
+}
+// the thumb: its direction from the centre is the angle (the rate). Its distance is the radius (the gain)
+// only for a CLICK — a press that does not move; a press that pans turns the angle and leaves the radius alone
+let reach0 = 1;
+function at(e){
+  const b = cv.getBoundingClientRect(), dx = e.clientX - b.left - cx, dy = Math.max(0, cy - (e.clientY - b.top));
+  theta = clamp(Math.atan2(dx, dy), -CAP, CAP);
+  return clamp(Math.hypot(dx, dy) / R, 0, 1);
+}
+// ── PINCH: THE WHEEL, ON A SCREEN THAT HAS NONE ──────────────────────────────────────────────
+// The wheel sets the radius, and a trackpad's pinch already arrives as one. A touch screen has
+// neither, so two fingers do it here: the distance between them is the radius, on the same log
+// scale the wheel uses. THE DIRECTION, settled Sep 12 after two wrong readings of it: PINCHING IN
+// IS THE TWO FINGERS GETTING FURTHER APART, and it MAKES THE RADIUS BIGGER — spreading opens the
+// reach out toward the whole list, bringing the fingers together closes it onto the record. Doubling the distance between the fingers is a fifth of
+// the range, about a hundredfold of window. While two fingers are down the thumb is let go, so a
+// pinch never pans; the record is kept through the change exactly as the wheel keeps it.
+const touching = new Map();
+let pinch = null;
+const pinchSpan = () => { const [a, b] = [...touching.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
+let scaleDrag = null;
+cv.onpointerdown = e => {
+  touching.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (touching.size === 2) {                                   // a second finger: stop panning, start pinching
+    if (digitDrag) digitDrag = null;
+    if (held) { held = false; springAt = performance.now(); recentre(); }
+    pinch = { d0: Math.max(8, pinchSpan()), reach0: reach };
+    return;
+  }
+  cv.setPointerCapture(e.pointerId);
+  // THE DIGITS ARE THE DIAL, IN A LINE (Tom, Sep 8). A press on them that does not move is a
+  // click — it sets the unit to that digit's place. A press that pans IS THE GOLD THUMB: the
+  // sideways distance from where the finger went down is the needle's angle, so the digits are
+  // pushed at the same rate the rung would push them, through the same tangent, and letting go
+  // springs back the same way. Equivalent to the semicircle, laid out flat.
+  { const r = cv.getBoundingClientRect();
+    if (onScale(e.clientX - r.left, e.clientY - r.top)) {       // the scale: a pan sets the radius
+      scaleDrag = { x0: e.clientX, reach0: reach }; return; }
+    const p = digitAt(e.clientX - r.left, e.clientY - r.top);
+    if (p !== null) { digitDrag = { place: p, x0: e.clientX, moved: false }; return; } }
+  grab(e); reach0 = at(e);
+};
+cv.onpointermove = e => {
+  if (touching.has(e.pointerId)) touching.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pinch) {
+    if (touching.size < 2) return;
+    // THE GAIN, found between two complaints (Tom, Sep 12: "pinch is too coarse", then at a
+    // sixteenth per doubling, "it barely moves", then "more"). A fifth of the range per doubling of
+    // the fingers was a factor of fifteen hundred in the window; a sixteenth was a rung a pinch. A
+    // QUARTER now: a doubling of the fingers is twelve rungs, a hand's easy squeeze four or five.
+    reach = clamp(pinch.reach0 + Math.log2(Math.max(8, pinchSpan()) / pinch.d0) * 0.25, 0, 1);
+    rezoom();                                                  // the record is kept; only the unit moves
+    return;
+  }
+  if (scaleDrag) {
+    reach = clamp(scaleDrag.reach0 - (e.clientX - scaleDrag.x0) / (2 * (scaleBox ? scaleBox.half : 120)), 0, 1);
+    rezoom();                                                  // the record is kept; only the unit moves
+    return;
+  }
+  if (digitDrag) {
+    const dx = e.clientX - digitDrag.x0;
+    if (!digitDrag.moved && Math.abs(dx) < TAP_PX) return;
+    digitDrag.moved = true;
+    held = true; springAt = -1;
+    // THE TRAVEL IS THE ANGLE, not a distance on a screen. Taking the arctangent of the travel
+    // would undo the thrust's own tangent and leave the pan LINEAR — the whole point is that it is
+    // not. So the finger's travel maps straight onto the needle's swing: nothing at the middle,
+    // the horizon at the end of the travel. The rate is then tan of that, slow at the centre and
+    // running away toward the edges, which is the rung's own feel.
+    const travel = Math.max(90, (digitBox ? digitBox.w : 240) * 0.7);
+    theta = clamp(CAP * dx / travel, -CAP, CAP);
+    return;
+  }
+  if (held) at(e);
+};
+cv.onpointerup = cv.onpointercancel = e => {
+  touching.delete(e.pointerId);
+  if (pinch) { if (touching.size < 2) pinch = null; return; }   // the last finger up ends the pinch
+  if (scaleDrag) { scaleDrag = null; return; }
+  if (digitDrag) {
+    const d = digitDrag; digitDrag = null;
+    if (d.moved) { held = false; springAt = performance.now(); recentre(); }   // a pan: the thumb springs, the window rests on the record
+    // a tap on a digit does nothing: only panning changes the dial
+    return;
+  }
+  if (held) release(e);
+};
+// the wheel: sideways trims the speed, in and out the radius
+cv.addEventListener('wheel', e => {
+  const f = e.deltaMode === 1 ? 16 : 1;
+  // THE WHEEL IS INVERTED (Tom, Sep 12): pushing it away CLOSES the radius onto the record, pulling
+  // it toward you opens it back to the whole list.
+  // AND A TRACKPAD'S PINCH IS NOT A WHEEL, though it arrives as one. It comes with ctrlKey set, and
+  // it must read like the two-finger pinch it is — FINGERS OUT, BIGGER RADIUS — which is the
+  // opposite sign to the wheel's. Handling both through one line is what made the trackpad disagree
+  // with the touch screen about which way a pinch goes.
+  zeta += e.deltaX * f / 2000;
+  // A trackpad's pinch is its own gesture and its own gain, and it wants MORE than the wheel, not
+  // less: the wheel is notched and a pinch is a slow squeeze, so the same travel arrives as a stream
+  // of small deltas. Raised twice on Sep 12 ("pinch is too coarse" → 1/1300, "it barely moves" →
+  // 1/550, "more, it still barely moves" → 1/200, which is twice the wheel's own rate).
+  if (e.deltaY) { reach = clamp(reach + (e.ctrlKey ? -e.deltaY / 200 : e.deltaY / 400) * f, 0, 1); rezoom(); }
+  e.preventDefault();
+}, { passive: false });
+onresize = () => {}; requestAnimationFrame(step);
+</script>
+<style>
+  /* ── THE TWO EDGE RAILS, IN field.html's GRAMMAR ──────────────────────────────────────────────
+     Tom, Sep 14: a tilt rail down the left, a walk rail down the right, "see field.html for how we
+     did it in our other application". Taken from there and not reinvented:
+       · the rail is a WIDE ZONE (90px, or 15vw on a narrow screen) with a thin bright line at the
+         very edge — the zone is what a thumb finds, the line is what the eye finds;
+       · it carries its OWN DARK BACKING, a short gradient off the edge, so the bright line always
+         has something dim behind it and reads over a photograph or a lit street alike;
+       · a NUB rides it showing the value — 20×8px and rounded, because a 2px mark on a 6px rail is
+         "technically present, practically not";
+       · the whole rail is live, top to bottom, and the finger is an ABSOLUTE lever: where you touch
+         is the value, not a relative nudge;
+       · NO TEXT on the edges. A control that shows its state does not need to say its name.
+     What differs here: the right rail drives the WALK rather than a thrust, so its top is forward,
+     its centre is stopped and its bottom is backward — the same unrolled-dial reading, with the
+     road's own pace in place of a throttle. */
+  #tiltRail, #walkRail {
+    position: fixed; top: 0; bottom: 0; width: min(90px, 15vw); z-index: 6;
+    cursor: ns-resize; touch-action: none; background: transparent;
+  }
+  #tiltRail { left: 0; }
+  #walkRail { right: 0; }
+  #tiltRail::after, #walkRail::after {
+    content: ''; position: absolute; top: 0; bottom: 0; width: 22px; pointer-events: none;
+  }
+  #tiltRail::after  { left: 0;  background: linear-gradient(to right, rgba(4,7,12,.55), rgba(4,7,12,0)); }
+  #walkRail::after  { right: 0; background: linear-gradient(to left,  rgba(4,7,12,.55), rgba(4,7,12,0)); }
+  #tiltRail::before, #walkRail::before {
+    content: ''; position: absolute; top: 0; bottom: 0; width: 6px;
+    background: #e8c86a; opacity: .34; box-shadow: 0 0 10px rgba(232,200,106,.45);
+    transition: opacity .15s, box-shadow .15s;
+  }
+  #tiltRail::before { left: 0; }
+  #walkRail::before { right: 0; }
+  #tiltRail:hover::before, #tiltRail.dragging::before,
+  #walkRail:hover::before, #walkRail.dragging::before {
+    opacity: .95; box-shadow: 0 0 16px rgba(232,200,106,.8);
+  }
+  .rail-mark {
+    position: absolute; width: 20px; height: 8px; border-radius: 4px; pointer-events: none;
+    background: #e8c86a; box-shadow: 0 0 10px rgba(232,200,106,.95), 0 1px 3px rgba(0,0,0,.6);
+  }
+  #tiltRail .rail-mark { left: 0; }
+  #walkRail .rail-mark { right: 0; }
+  .rail-tick {
+    position: absolute; width: 12px; height: 2px; border-radius: 1px; pointer-events: none;
+    background: rgba(159,182,200,.45);
+  }
+  #tiltRail .rail-tick { left: 0; }
+  #walkRail .rail-tick { right: 0; }
+</style>
+<div id="tiltRail" title="Drag to tilt the eye — up to look along the road, down toward the ground"></div>
+<div id="walkRail" title="Drag to walk — up forward, centre stopped, down backward"></div>
+<style>
+  /* ── THE MENU, IN svg-inline's OWN STYLE ────────────────────────────────────────────────────
+     Its palette, its type, its drawer: a gold-on-near-black panel that slides in, a scrim behind
+     it, a hamburger in the corner. svg-inline hangs its drawer on the RIGHT; this one is asked for
+     in the UPPER LEFT, so the slide and the border are mirrored and nothing else differs. */
+  :root {
+    --bg2: #0e0e13; --line2: rgba(255,255,255,0.10); --panel: #14141a;
+    --fg: #c8c8d0; --fg-muted: #6e6e7a; --gold: #d4a052; --gold-dim: rgba(212,160,82,0.5);
+  }
+  #menuBtn {
+    position: fixed; top: 12px; left: 12px; z-index: 1001;
+    width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--line2); border-radius: 3px; background: var(--panel);
+    color: var(--fg-muted); cursor: pointer; transition: all .15s;
+  }
+  #menuBtn:hover { color: var(--fg); border-color: var(--fg-muted); background: #181a22; }
+  #menuBtn svg { width: 16px; height: 16px; display: block; }
+  #menuScrim {
+    position: fixed; inset: 0; z-index: 999; background: rgba(0,0,0,0.4);
+    opacity: 0; pointer-events: none; transition: opacity .22s;
+  }
+  #menuScrim.open { opacity: 1; pointer-events: auto; }
+  #menu {
+    position: fixed; top: 0; left: 0; z-index: 1000;
+    width: 300px; max-width: 86vw; height: 100vh;
+    background: var(--bg2); border-right: 1px solid var(--line2);
+    padding: 56px 18px 18px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto;
+    transform: translateX(-100%); transition: transform .22s ease;
+    box-shadow: 12px 0 40px rgba(0,0,0,0.5);
+    font-family: 'DM Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    color: var(--fg);
+  }
+  #menu.open { transform: translateX(0); }
+  #menu .menu-close {
+    position: absolute; top: 12px; right: 12px; width: 26px; height: 26px;
+    border: 1px solid var(--line2); border-radius: 3px; background: var(--panel);
+    color: var(--fg-muted); cursor: pointer; font-size: 12px; line-height: 1;
+  }
+  #menu .menu-close:hover { color: var(--fg); border-color: var(--fg-muted); }
+  #menu .menu-title {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--fg-muted); margin-bottom: -4px;
+  }
+  #menu .menu-note { font-size: 10.5px; line-height: 1.5; color: var(--fg-muted); }
+  #menu .group { display: flex; flex-direction: column; gap: 8px; }
+  #menu .group.row { flex-direction: row; align-items: center; gap: 8px; }
+  #menu label.opt {
+    display: flex; align-items: center; gap: 8px; cursor: pointer;
+    font-size: 12px; color: var(--fg); user-select: none;
+  }
+  #menu label.opt input { position: absolute; opacity: 0; pointer-events: none; }
+  #menu label.opt .box {
+    width: 26px; height: 16px; border-radius: 8px; border: 1px solid var(--line2);
+    background: var(--panel); position: relative; transition: all .15s; flex: 0 0 auto;
+  }
+  #menu label.opt .box::after {
+    content: ''; position: absolute; top: 2px; left: 2px; width: 10px; height: 10px;
+    border-radius: 50%; background: var(--fg-muted); transition: all .15s;
+  }
+  #menu label.opt:has(input:checked) .box { border-color: var(--gold-dim); background: rgba(212,160,82,0.12); }
+  #menu label.opt:has(input:checked) .box::after { left: 12px; background: var(--gold); }
+</style>
+<button id="menuBtn" aria-label="Menu"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor"
+  stroke-width="1.4"><path d="M2 4h12M2 8h12M2 12h12"/></svg></button>
+<div id="menuScrim"></div>
+<div id="menu" hidden>
+  <button class="menu-close" id="menuClose" aria-label="Close">✕</button>
+  <div class="group">
+    <div class="menu-title">the road</div>
+    <div class="menu-note">Every sleeper is a record of the dial's list, and the country either side
+      is made out of the addresses themselves — nothing is stored.</div>
+    <label class="opt"><input type="checkbox" id="optIds"><span class="box"></span>show id</label>
+    <label class="opt"><input type="checkbox" id="optWalk" checked><span class="box"></span>walk</label>
+    <div class="menu-note">The road rolls toward you at a walking pace. The space bar does the same,
+      a double tap on the road starts it, and a hand on the road stops it.</div>
+    <label class="opt"><input type="checkbox" id="optPaint"><span class="box"></span>show repaints</label>
+    <div class="menu-note">A counter, for finding flicker. Each canvas reports how many times a second
+      it CLEARED AND REPAINTED itself. A still page should read 0 · 0 · 0. If it reads 0 and the page
+      is flickering anyway, the flicker is not this page repainting — and the line beneath names the
+      last thing that changed, which says who is asking for the repaints when they happen.</div>
+    <div class="menu-note">The record standing at each sleeper, written beside it wherever there is
+      room, drawn over everything and the dial included. Off to begin with: the street is built up
+      instead, one building to a cell, and the names take the ground again when this is on.</div>
+  </div>
+</div>
+<style>
+  /* THE LAYERS, WITHOUT A NEGATIVE ONE (Tom, Sep 13: still flashing after the dial stopped
+     replacing its surface). The road used to sit at z-index −1, which put it BEHIND the body's
+     background — so the background had to be moved to the root to let it show at all. A negative
+     layer under a root background is the one arrangement here a compositor may repaint unevenly,
+     and it is the last thing left that could flash while the pixels are provably still. It is gone:
+     the road sits at 0, the DIAL is lifted above it at 1, the ids at 2 — all positive, one stacking
+     context, the background back on the body where it belongs and nothing painted under it. The
+     dial's own script is untouched; this is the page around it, giving its canvas a position. */
+  #dial { position: fixed; inset: 0; z-index: 1; }
+</style>
+<canvas id="scene" style="position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:0"></canvas>
+<!-- THE IDS HAVE A CANVAS OF THEIR OWN, ABOVE EVERYTHING. The road is drawn behind the dial so the
+     dial's rung and needle read over it; the records must go the other way — over the dial as well —
+     so they are written on a third canvas that sits on top and takes no pointer. -->
+<canvas id="ids" style="position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:2"></canvas>
+<script>
+// ── THE ROAD ─────────────────────────────────────────────────────────────────────────────────
+// Its own canvas, over the room the dial leaves. It reads the dial's own `index` and draws what
+// stands there. The dial does not know it is here, and nothing of it is touched.
+(() => {
+  // ── NOTHING IS EVER DRAWN ON A CANVAS THAT IS BEING LOOKED AT ────────────────────────────────
+  // (Tom, Sep 13: "this should be simple, why the difficulty? every building flashes on their way
+  // out.") It should be simple, and the difficulty was that I kept correcting the GEOMETRY when the
+  // fault was in the PAINTING. Every frame this cleared the visible canvas to transparent and then
+  // laid the picture back down on it. Between those two acts the canvas is empty, and if the
+  // compositor takes its copy in that gap — which it may, at any frame — what reaches the screen is
+  // one blank frame: a flash. It shows worst when a building is nearest, because that is when the
+  // missing paint covers the most.
+  // The picture is now built on a canvas NOBODY IS LOOKING AT and copied over in a single
+  // operation. `copy` replaces every pixel at once, so the visible canvas is never empty for an
+  // instant and there is no gap for a compositor to find.
+  const sc = document.getElementById('scene'), gv = sc.getContext('2d');
+  const idc = document.getElementById('ids'), igv = idc.getContext('2d');
+  const buf = document.createElement('canvas'), g = buf.getContext('2d');
+  const ibuf = document.createElement('canvas'), ig = ibuf.getContext('2d');
+  let showIds = false;                                         // the menu's own switch, off to begin
+// ── THE WORLD, MADE OUT OF THE ADDRESS ───────────────────────────────────────────────────────
+  // Nothing is stored. What stands beside the road at record i is a pure function OF i — hash the
+  // address, and the address is the seed — so the road can be nine quadrillion long, leapt across in
+  // one pan, and the same place is always the same place when you come back to it. That is the
+  // paper's claim about address spaces made to do work: the circle holds addresses, what stands at
+  // them lives somewhere else, and "somewhere else" can be a function rather than a store.
+  //
+  // WHY OCTAVES AND NOT A HASH. A hash of the address alone gives white noise: every record unlike
+  // its neighbour, which is as unbrowsable as a road where every record is alike — the reader still
+  // cannot tell where it is, only that the view is busy. What makes a world readable is CORRELATION
+  // ACROSS SCALES, which is the rough figure of the level-of-detail work: sum octaves, each seeded
+  // from a coarser shift of the address (i >> k), so neighbours resemble each other and larger
+  // features span many records. Measured on this generator: correlation +1.00 at one record apart,
+  // +0.96 at sixteen, +0.78 at two hundred and fifty-six, +0.45 at a thousand, +0.10 at four
+  // thousand. Big country, then hills, then stones.
+  //
+  // AND THE OCTAVE IS THE RUNG. A record far down the road needs only its coarse octaves — the fine
+  // ones are finer than the grain it is seen at — so the generator is handed the depth and stops when
+  // the octave falls below what the eye can resolve. A reader that never arrives never pays for the
+  // last octave, which is the level-of-detail axis doing the budgeting for free.
+  // ⚠ THE SEEDS WERE DEGENERATE AT THESE ADDRESSES, and it is the paper's wall a third time. Every
+  // seed here was made by MULTIPLYING the record — `at * 2246822519 + salt` — and at four billion
+  // that product is 9 × 10^18, past 2^53, where adding a small salt changes nothing at all. So the
+  // two sides of a cell got the same number, identical to sixteen places, and the salts meant to
+  // separate height from windows from offset separated nothing. The address is now split into two
+  // halves that each fit in thirty-two bits and mixed, so nothing is multiplied past the double's
+  // grain: keep the digits, not the number (The Radix §7).
+  const seedOf = (i, salt) => {
+    const lo = i >>> 0, hi = Math.floor(i / 4294967296) >>> 0;
+    let x = Math.imul(lo ^ Math.imul(salt, 0x9E3779B1), 0x7feb352d);
+    x ^= Math.imul(hi + salt + 1, 0x846ca68b);
+    x ^= x >>> 15; x = Math.imul(x, 0x2545F491); x ^= x >>> 16;
+    return (x >>> 0) / 4294967296;
+  };
+  const W32 = 0xFFFFFFFF;
+  function hash32(x){                                            // one address in, one number out
+    x = (x >>> 0);
+    x ^= x >>> 16; x = Math.imul(x, 0x7feb352d);
+    x ^= x >>> 15; x = Math.imul(x, 0x846ca68b);
+    x ^= x >>> 16;
+    return (x >>> 0) / 4294967296;
+  }
+  const OCT_FIRST = 2, OCT_N = 16, OCT_RISE = 1.2;               // finest wavelength, count, weight per octave
+  // ── THE LAND IS THE ADDRESS'S OWN LEVELS ─────────────────────────────────────────────────────
+  // Each octave is seeded from the PREFIX at its level — the record with its low bits dropped, which
+  // is exactly what the tower draws as a row — rather than from a shift chosen for convenience. At a
+  // grain of two those are the same arithmetic, which is the point: the road's octaves and the
+  // tower's levels are one structure, so a feature of the land at level b spans exactly 2^b records
+  // and begins where that level's digit changes. The country is therefore not decoration on the
+  // address; it IS the address, read at every scale at once.
+  //
+  // AND THE RADIUS THEN SELECTS THE SCALE. At the radius that steers bit b, one corner of travel is
+  // 2^b records, which is one feature of level b — so the same movement of the hand crosses one
+  // feature whatever the radius, and what changes is which country it is.
+  // THE LEVEL THE RADIUS STEERS, which is the dial's own gearing read as an address (The Radix §2):
+  // the reader's unit is a count of records and the level it lands on is that count's own bit.
+  const steeredBit = () => Math.max(2, Math.min(48,
+    Math.round(Math.log2(Math.max(1, Math.pow(N, reach) / 2 / 32)))));
+  // WHERE A SLEEPER ACTUALLY LIES (Tom, Sep 13: "the yellow lines don't move at all" and then "why
+  // flash them, the yellow lines are locked in place and flashing on and off").
+  // One sleeper per record, laid at EXACTLY one standoff apart, makes the road periodic with a
+  // period of one record: a whole record of travel — the only step the dial's own pan can take —
+  // reproduces the picture exactly. The first attempt at a cure gave each sleeper a brightness from
+  // its own address, which was worse: the positions still did not move, so the marks sat still and
+  // BLINKED as one record's brightness replaced another's at the same place. The cure has to be
+  // GEOMETRIC. Each sleeper is now laid at its record plus a small offset of its own — a fraction of
+  // a standoff, out of the record's own hash — so no two stretches of road are alike, nothing is
+  // periodic, and a single record of travel slides and re-spaces the whole road instead of redrawing
+  // it. The offset is the address's, like everything else here, and it is the same on every visit.
+  const JITTER = 0.42;                                          // how far a sleeper may sit from its record
+  const off = i => JITTER * (seedOf(i, 777) - 0.5);   // the offset alone, never added to i
+  const prefix = (i, b) => Math.floor(i / Math.pow(2, b));       // the tower's own row, as a number
+  // ⚠ THE FINEST LEVEL FADES IN; IT DOES NOT SWITCH ON (Tom, Sep 13: "I don't see the flash when
+  // panning with the dial, only auto motion"). That difference is the whole diagnosis. How many
+  // levels a stretch of country is drawn with was a ROUNDED function of its depth, and rounding is a
+  // step: as the walk advanced, band after band of the land gained or lost a whole octave between
+  // one frame and the next, and its skyline jumped. A dial pan leaps so far that the picture is
+  // simply different and nothing is seen to jump; a smooth walk crosses those steps one after
+  // another, several a second, which is a flash you can only get while walking.
+  // The count is continuous now: the last level is weighted by how far the depth has come toward
+  // deserving it, so a level arrives over a stretch of walking rather than in a single frame.
+  function terrain(i, levels){                                   // the land at record i
+    const want = Math.max(4, Math.min(OCT_N, levels));           // NOT rounded: the fraction matters
+    const n = Math.floor(want), frac = want - n;
+    let v = 0, amp = 1, tot = 0;
+    for (let k = 0; k <= n; k++) {
+      const b = k + OCT_FIRST, step = Math.pow(2, b), lo = prefix(i, b);
+      const a = seedOf(lo, b + 40503), c = seedOf(lo + 1, b + 40503);
+      let t = (i - lo * step) / step; t = t * t * (3 - 2 * t);   // across the level, end to end
+      const w = (k === n) ? amp * frac : amp;                    // the newest level, part-way in
+      v += w * (a + (c - a) * t); tot += w; amp *= OCT_RISE;
+    }
+    return tot > 0 ? v / tot : 0.5;                              // 0…1
+  }
+  // what one level contributes on its own — used by nothing on the page, and by the checks
+  window.__terrain = (i, levels) => terrain(i, levels);
+  window.__here = () => index + frac;                          // where the walk stands, for the checks
+  window.__pos = () => [index, frac];                          // the two parts, apart, for the checks
+  window.__tilt = () => horizon;
+  window.__quarterLight = q => ({ hue: seedOf(q, 401), wake: seedOf(q, 409), burn: seedOf(q, 419) });                               // where the vanishing point sits, for the checks
+  window.__walls = [];                                         // the last frame's walls, for the checks
+  // and a building's own numbers, so a check can ask whether one record's building holds its shape
+  window.__building = (at, side) => {
+    const dHigh = seedOf(prefix(at, 6), 71);
+    return { district: prefix(at, 6), quarter: prefix(at, 9),
+             tall: (0.5 + 3.4 * dHigh * dHigh) + (0.5 + 2.2 * dHigh) * seedOf(at, side > 0 ? 3 : 7),
+             tone: 0.07 + 0.10 * seedOf(at, side > 0 ? 101 : 149) + 0.12 * seedOf(prefix(at, 6), 73) };
+  };
+  window.__level = (i, b) => {
+    const step = Math.pow(2, b), lo = prefix(i, b);
+    const a = seedOf(lo, b + 40503), c = seedOf(lo + 1, b + 40503);
+    let t = (i - lo * step) / step; t = t * t * (3 - 2 * t);
+    return a + (c - a) * t;
+  };
+
+  const PALE = 'rgba(207,214,228,0.55)',      // the sleepers: the road's own marks, one at every standoff
+        RAIL = 'rgba(207,214,228,0.32)',      // the two rails, running to the bottom corners
+        FAINT = 'rgba(207,214,228,0.16)',     // the horizon
+        LAND = 'rgba(150,196,168,0.5)',       // the country either side, made from the addresses
+        LAND_FILL = 'rgba(20,34,30,0.92)',    // and its body, standing between the road and the sky
+        ROAD_FILL = '#0d1016',                // the road itself, cut back out of the country
+        BUILD_FILL = 'rgba(26,40,38,0.96)',   // the buildings, where the ids are not
+        BUILD_EDGE = 'rgba(150,196,168,0.45)',
+        WINDOW = 'rgba(232,200,106,0.30)',    // the lit ones; the dark ones are simply not drawn
+        GOLD = '#e8c86a';                     // the rungs: the reader's own, doublings of its unit
+  // TEN RECORDS BETWEEN SLEEPERS, AND THAT IS WHAT MAKES THE MOTION VISIBLE (Tom, Sep 12: "the
+  // yellow lines should move. to show motion"). With one sleeper per record the road has a period of
+  // exactly one record, so ANY whole number of records walked leaves the view identical — every
+  // sleeper replaced by its neighbour — and since near nine quadrillion a double cannot step by less
+  // than one record, nothing ever appeared to move however hard the dial was panned. A road whose
+  // period is ten records has no such blind spot: a single record of walking shifts it by a tenth of
+  // a gap, and only an exact multiple of ten leaves it unchanged. The sleepers are laid at every
+  // tenth record, so a standoff is ten records, and where you stand is the record divided by ten.
+  // ONE RECORD, ONE SLEEPER (Tom, Sep 12: "the index should be incremented by 1 not 10"). Ten
+  // records to a sleeper was a way of making the walk visible: with one, the road's period is
+  // exactly one record, and near nine quadrillion a double cannot step by less than one record, so
+  // every step landed on an identical view. THE FRACTION IS KEPT HERE INSTEAD — the road remembers
+  // where it stands BETWEEN sleepers, in `frac`, and the dial keeps the whole record. The view
+  // therefore moves smoothly while the record counts one at a time, which is what the record is for.
+  const EYE = 1.5, SPACING = 1, NEAR = 0.02;            // the eye's height, records between sleepers, the nearest depth
+  const RUNGS = [1, 2, 4, 8, 16, 32];                    // the reader's own: doublings of one standoff
+
+  // ⚠ THE WALK IS KEPT IN TWO PARTS, AND THIS IS THE PAPER'S OWN WALL (The Radix §7: keep the
+  // digits, not the number). The position used to be handed over as one number, index + frac — and
+  // at four and a half quadrillion a double's smallest step is a whole record, so the fraction was
+  // rounded away the moment it was added. The stroll then advanced in jumps of a whole sleeper
+  // rather than smoothly: measured at 0, 0, 0, 0.5, 0, 0 standoffs a frame. The record and the part
+  // of a record are now carried SEPARATELY and never added: a depth is (sleeper − record) − frac,
+  // where the first bracket is a small integer and exact at any address, and the fraction is
+  // subtracted afterwards where it still has room to be a fraction.
+  function draw(W, H, base, fr){
+    const here = base;                                         // the whole records; `fr` is the rest
+    // THE ROAD IS THE SCREEN (Tom, Sep 12: "it should use the lower left and lower right corners").
+    // The rails run from the vanishing point to the two bottom corners and stop there — nothing is
+    // drawn off the sides. That fixes the road's WIDTH rather than being fixed by it: a rail's slope
+    // is eye height ÷ half width in standoffs, whatever the focal length, so making it reach the
+    // corner is choosing how wide the road is, W2 = eye · (W/2) / (H − horizon). The focal length is
+    // then free to set the DEPTH scale, and it puts a mark one standoff out just above the dial's
+    // hub — where the blue needle starts, and where the eye is.
+    // THE VANISHING POINT IS AT THE TOP (Tom, Sep 12). It sat a sixth of the way down, which left a
+    // band of empty sky above it and gave the road less of the screen than it could have. The
+    // horizon is now the top edge, so the whole height of the page is road: the far end of it is the
+    // edge of the view, which is what a horizon is.
+    // THE VANISHING POINT RESTS AT THE TOP and TILTS (Tom, Sep 12: "long press and pan should change
+    // the tilt"). Lowering it is the eye pitching up — more sky, less road; raising it is pitching
+    // down toward your own feet, the road running right to the top edge. Nothing else changes: the
+    // rails still meet the bottom corners and the sleepers still divide by their own depth.
+    const hy = horizon, cx0 = cx || W / 2, hub = cy || H - 64;
+    const W2 = EYE * (W / 2) / (H - hy);
+    const f = (hub - 20 - hy) / EYE;
+    const ground = Z => hy + f * EYE / Z, half = Z => f * W2 / Z;
+    g.strokeStyle = FAINT; g.lineWidth = 1;                                   // the horizon
+    g.beginPath(); g.moveTo(0, hy); g.lineTo(W, hy); g.stroke();
+    g.strokeStyle = RAIL; g.lineWidth = 1.2;                                  // the rails, corner to corner
+    for (const x of [0, W]) { g.beginPath(); g.moveTo(cx0, hy); g.lineTo(x, H); g.stroke(); }
+    // ⚠ THE LAND DREW ON THE WRONG CANVAS, and that was the flashing (Tom, Sep 13: "way too much
+    // flashing everywhere", "it is flashing continuously", "no change"). Every line of this block
+    // said `ctx`, which in this file is THE DIAL'S context, not the road's `g`. So the country was
+    // being painted onto the dial's own surface — which the dial clears sixty times a second — and
+    // it appeared and vanished with every frame. Nothing about compositing, layers or canvas
+    // reallocation was the cause; the earlier fixes for those are worth keeping and were not this.
+    // The lesson for the next example page: a page that borrows a reference instrument shares its
+    // globals, and `ctx` is one of them.
+    //
+    // THE LAND EITHER SIDE, drawn from the addresses themselves. Each record's terrain is read at
+    // the octaves its depth can show — coarse far off, every octave underfoot — and drawn as the
+    // height of the ground at that record, left and right of the rails. Nothing here is stored: walk
+    // a thousand records away and back and the same hills are in the same places, because they were
+    // never put anywhere to begin with.
+    {
+      // DRAWN AS A RIBBON BETWEEN THE ROAD AND ITS SKYLINE, not as a silhouette filled to the
+      // bottom of the frame: the land nearest the eye projects off the sides of the screen, so a
+      // shape closed at the bottom edge swallowed the whole view. The band runs from the rail
+      // outward to the skyline and back, which keeps the land beyond the road where it belongs.
+      // THE LAND IS FILLED TO THE FRAME AND THE ROAD IS CUT BACK OUT OF IT. As a ribbon between the
+      // rail and the skyline it came out a thin band hugging the horizon — country in the arithmetic
+      // and a smear on the screen. It now runs from its skyline down to the bottom edge, as ground
+      // does, and the road is then painted back over it in the page's own colour, so the country is
+      // on both sides and the road is clear between them.
+      const put = (out) => {
+        if (out.length < 2) return;
+        g.beginPath();
+        g.moveTo(out[0][0], H + 40);
+        out.forEach(p => g.lineTo(p[0], p[1]));
+        g.lineTo(out[out.length - 1][0], H + 40);
+        g.closePath();
+        g.fillStyle = LAND_FILL; g.fill();
+        g.strokeStyle = LAND; g.lineWidth = 1.2;
+        g.beginPath();
+        out.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]));
+        g.stroke();
+      };
+      for (const sg of [-1, 1]) {
+        const out = [], inn = [];
+        for (let k = 0; k < 900; k++) {
+          const at = base - 1 + k, Z = (at - base) - fr;
+          if (Z < NEAR) continue;
+          const y = ground(Z); if (y < hy + 0.5) break; if (y > H + 60) continue;
+          if (half(Z) < 0.5) break;                               // the country, once it is sub-pixel
+          // WHICH LEVELS THE COUNTRY IS MADE OF. The finest is set by the DEPTH — a level is
+          // invisible once it is narrower than the eye can separate there — and the coarsest is a
+          // dozen levels above it. Taking the coarsest from the RADIUS instead, which is what this
+          // did for an hour, is wrong for a plain reason worth keeping: at a large radius those
+          // levels are billions of records wide, so they do not vary across a road a few hundred
+          // records long, and the country came out FLAT. The radius's part in this is not which
+          // levels are drawn but how far a corner of travel carries you through them — which is
+          // measured, and is what §10 of the paper rests on.
+          // and the DEPTH is passed as it is, unrounded, so the level count slides with it
+          const h = terrain(at, 17 - Math.log2(Math.max(1, Z)));
+          out.push([cx0 + sg * half(Z) * 5, y - (f / Z) * h * EYE * 1.4]);       // the skyline
+          inn.push([cx0 + sg * half(Z), y]);                                      // the road's own edge
+        }
+        put(out);
+      }
+      // and the road, painted back over the country in the page's own colour
+      g.beginPath();
+      g.moveTo(cx0, hy);
+      g.lineTo(cx0 - half(NEAR) * 0.02 - W, H + 40);
+      g.lineTo(cx0 + half(NEAR) * 0.02 + W, H + 40);
+      g.closePath();
+      g.save(); g.clip();
+      g.fillStyle = ROAD_FILL;
+      g.beginPath(); g.moveTo(cx0, hy); g.lineTo(0, H); g.lineTo(W, H); g.closePath(); g.fill();
+      g.restore();
+
+      // ── BUILDINGS, WHERE THE RECORDS' NAMES WOULD OTHERWISE BE ──────────────────────────────
+      // They stand in for the ids: switch "show id" off and the road is built up instead of
+      // labelled. ONE BUILDING TO A CELL — a cell being the stretch of road between one sleeper and
+      // the next, which is one record — and the building takes the whole of it, front face flush
+      // against the rail with nothing between. So the frontage is continuous, as a street's is, and
+      // where a building begins and ends IS where its record begins and ends.
+      // What varies is the HEIGHT, and the windows in it: both out of the record's own hash, so the
+      // same street is the same street on every visit and no two cells are alike. Nothing is stored.
+      if (!showIds) {
+        for (const sg of [-1, 1]) {
+          // AND THE STREET STOPS WHERE IT STOPS BEING VISIBLE. Two hundred cells a side was a
+          // guess; most of them are thinner than a pixel by the time they are reached, and drawing
+          // them cost a third of the frame. The loop now ends at the first frontage too thin to see,
+          // which is the level-of-detail axis paying for itself again.
+          // ── AND THEY ARE SOLID NOW (Tom, Sep 14: "can you make the buildings 3d?") ───────────
+          // A building was one wall, which reads as a street until you look at its edge. It now has
+          // a DEPTH — its own, from its own record — so the near END of it and, on the low ones, its
+          // ROOF are drawn as well. Two things follow that a single wall never needed.
+          // FIRST, ORDER. Three faces per building means one can hide another, so they are drawn FAR
+          // TO NEAR: the nearest is laid down last and covers what stands behind it. A painter's
+          // order, which is all that is wanted where everything is a flat face at a known depth.
+          // SECOND, WHAT IS VISIBLE AT ALL. A face at a constant depth projects as a rectangle,
+          // because the ground's height on the screen depends on the depth alone — so the end wall
+          // is upright and square, whatever the perspective does to the front. And the ROOF is only
+          // in view when the eye is higher than it is: a building taller than the standoff and a
+          // half the eye stands at shows no roof, which is why the tall ones read as cliffs and the
+          // low ones as houses, without a word being said about it.
+          const cells = [];
+          for (let k = 0; k < 200; k++) {
+            // ⚠ AND THE CELL YOU ARE IN IS DRAWN TOO (Tom, Sep 13: "as each building moves into the
+            // bottom, it flashes"). The loop began at the record AHEAD — so the cell the eye is
+            // inside was never drawn at all. Walking past a building meant crossing into its cell,
+            // at which point it left the loop in a single frame while it still filled the bottom of
+            // the screen: the flash, and the last one left. The count starts two cells BEHIND now,
+            // and what is genuinely past is dropped by the test below rather than by never being
+            // considered.
+            const at = base - 2 + k;
+            // THE NEAREST BUILDING IS CLIPPED, NOT DROPPED (Tom, Sep 13: "there is a flash as the
+            // bottom building moves closer to the bottom"). A cell straddles the eye as it passes:
+            // its far corner is still ahead while its near corner has gone behind. Skipping the
+            // whole cell the moment its near corner passed made the last building vanish just as it
+            // filled the view — the flash. The near corner is held at the nearest depth the picture
+            // has instead, so the wall goes on being drawn, stretched down past the bottom edge,
+            // until the far corner passes too and there is genuinely nothing left of it.
+            // ⚠ THE WALL IS CUT AT THE FRAME'S EDGE, NOT AT A DEPTH (Tom, Sep 13: "now they shrink
+            // as they move past the bottom of the screen"). Two wrong cures before this one: clamping
+            // the near corner at almost-zero depth made a quad forty thousand pixels tall that wrapped
+            // the whole view — the harsh flash — and clamping it at a fixed DEPTH pinned it to one
+            // spot on the rail, so the wall collapsed onto that spot instead of sliding off the edge.
+            //
+            // The cure is to work in the coordinate the picture is linear in. Every corner of the
+            // wall is linear in t = 1/Z: the base runs hy + f·eye·t, the roof hy + f·(eye − tall)·t,
+            // and the side cx ± f·W2·t. So clipping at the bottom of the FRAME is just a cap on t,
+            // and a capped corner still lies exactly on the rail and the roof line where they leave
+            // the screen. The wall slides off the bottom at full size, as a building does.
+            const Za = (at - base) + off(at) - fr, Z2 = (at + 1 - base) + off(at + 1) - fr;
+            if (Z2 <= 0.02) continue;                             // the far corner is behind the eye
+            // ── THE DISTRICT IT STANDS IN, read before anything is drawn from it ──────────────
+            // A building's DETAIL is its own record's; its CHARACTER is its district's — and a
+            // district is a PREFIX, the record with its low bits dropped, which is exactly what the
+            // tower draws as a row. So a stretch of street shares a manner while its buildings still
+            // differ inside it: the address supplies the levels, and the reader's step decides which
+            // of them it is moving through. Two levels, because two is what a walk can cross.
+            // DISTRICT 2^6, sixty-four records, about two minutes on foot at this pace — near enough
+            // to notice arriving in. QUARTER 2^9, eight minutes, so several districts share a cast
+            // before that changes too. Anything coarser belongs to the dial, not the feet.
+            const dist = prefix(at, 6), quarter = prefix(at, 9);
+            const dHigh = seedOf(dist, 71);                        // how tall this district builds
+            const dTone = seedOf(dist, 73);                        // how light its walls are
+            const dLit = seedOf(dist, 79);                         // how much of it is awake
+            const qWarm = seedOf(quarter, 83);                     // and the quarter's own cast
+            // the height is the RECORD'S, drawn from a range that is the DISTRICT'S: a district of
+            // low houses has varied low houses, a district of towers has varied towers.
+            const base0 = 0.5 + 3.4 * dHigh * dHigh, span0 = 0.5 + 2.2 * dHigh;
+            const tall = base0 + span0 * seedOf(at, sg > 0 ? 3 : 7);   // standoffs high
+            // ⚠ AND THE CAP GOES WELL PAST THE FRAME, NOT ON IT (Tom, Sep 13: "its now shrinking the
+            // building"). Capping t at the frame's edge put BOTH corners on the same point as a
+            // building went by, so the wall converged to a sliver and vanished — the shrinking. The
+            // cap is only there to keep coordinates sane; it belongs far outside the view, where the
+            // wall's near corner has long since left the picture and the visible part of it is the
+            // full width of the frame. Ten screens down is plenty and is still an ordinary number.
+            // ⚠ AND THIS IS THE FLASH ITSELF, FOUND AT LAST BY FOLLOWING ONE BUILDING PAST THE EYE.
+            // Measured, its width on screen went 97 pixels, then 275, then 5,686 — and then it was
+            // gone. A wall's projected width runs to INFINITY as its far corner reaches the eye, so
+            // every building covered the whole view for an instant and then vanished. Once per
+            // building, on the way out: exactly what was reported. No amount of clipping helps,
+            // because the geometry is right — a wall you are standing in does fill the view.
+            // What is wrong is drawing it at all. A building is FADED OUT over the last standoff of
+            // its approach and is gone before it can swallow the picture: at a standoff and a half
+            // it is whole, by half a standoff it is nothing, and in between it thins away. Perspective
+            // says the near field cannot be drawn by this construction; the fade says so politely.
+            const tCap = (10 * H - hy) / (f * EYE);
+            // THE FADE IS ON THE NEAR CORNER, NOT THE FAR ONE. Fading on the far corner was useless:
+            // a cell is already straddling the eye by then, and a wall you are standing inside fills
+            // the view however faint it is — measured at 5,686 pixels across a 1,440-pixel screen.
+            // It is the moment the eye reaches the NEAR corner that has to be avoided, so a building
+            // is whole at a standoff out and gone before the eye can enter its cell.
+            const fade = Math.max(0, Math.min(1, (Za - 0.15) / 0.85));
+            if (fade <= 0.01) continue;                           // the eye is at its door: not drawn
+            const t2 = 1 / Z2;
+            if (t2 >= tCap) continue;                             // even the far corner is past the view
+            const t1 = Za <= 1 / tCap ? tCap : Math.min(1 / Za, tCap);
+            const xA = cx0 + sg * f * W2 * t1, xB = cx0 + sg * f * W2 * t2;
+            const yA = hy + f * EYE * t1,      yB = hy + f * EYE * t2;
+            const tA = hy + f * (EYE - tall) * t1, tB = hy + f * (EYE - tall) * t2;
+            if (k < 6) window.__walls.push({ at, sg, w: Math.round(Math.abs(xB - xA)),
+                                             h: Math.round(Math.abs(yA - tA)) });
+            cells.push({ at, t1, t2, tall, fade, xA, xB, yA, yB, tA, tB });
+          }
+          // and now, far to near
+          for (let i = cells.length - 1; i >= 0; i--) {
+            const C = cells[i];
+            const at = C.at, t1 = C.t1, t2 = C.t2, tall = C.tall, fade = C.fade;
+            const xA = C.xA, xB = C.xB, yA = C.yA, yB = C.yB, tA = C.tA, tB = C.tB;
+            // ── WHAT A BUILDING IS MADE OF, ALL OF IT OUT OF ITS OWN RECORD ────────────────────
+            // Every number below is a seed of the address and a salt, so a street is the same street
+            // on every visit, the two sides of a cell differ, and no two buildings anywhere are
+            // alike — while nothing at all is stored. The salts are what separate one property from
+            // another; they have to be distinct or a building's face and its height move together.
+            const dist = prefix(at, 6), quarter = prefix(at, 9);
+            const dTone = seedOf(dist, 73), dLit = seedOf(dist, 79), qWarm = seedOf(quarter, 83);
+            // ── THE LIGHT BELONGS TO THE QUARTER ──────────────────────────────────────────────
+            // The street had one lighting condition everywhere, which made travelling between
+            // quarters a change of architecture and nothing else. A quarter now sets its own light,
+            // out of the prefix it already has — no new information, a level spent differently.
+            // Three things, and they are the three a night street actually differs in:
+            //   HUE      what colour the lit windows are, from a cold blue-white through amber to a
+            //            deep sodium orange — the single thing that says "another part of town";
+            //   HOW MANY are lit, which is a quarter awake or a quarter asleep;
+            //   HOW HARD they burn, which is the difference between offices and houses.
+            const qHue = seedOf(quarter, 401), qWake = seedOf(quarter, 409), qBurn = seedOf(quarter, 419);
+            // the lit-window colour: 0 → cold (198,214,255), 1 → sodium (255,166,74)
+            const LR = Math.round(198 + 57 * qHue), LG = Math.round(214 - 48 * qHue),
+                  LB = Math.round(255 - 181 * qHue);
+            const ch = seedOf(at, sg > 0 ? 101 : 149);            // its character: what kind of thing
+            const lit = 0.25 + 0.75 * (0.35 * seedOf(at, sg > 0 ? 211 : 233) + 0.65 * dLit);
+            const wall = 0.07 + 0.10 * ch + 0.12 * dTone;         // its own tone, inside its district's
+            const warm = 0.3 * seedOf(at, sg > 0 ? 307 : 311) + 0.7 * qWarm;
+            const Z2 = 1 / t2;                                    // the far corner's depth again
+            const wide = Math.abs(xB - xA), high = Math.abs(yA - tA);
+            const px = (u, v) => {                                // a point on the wall, in perspective
+              const x = xA + (xB - xA) * u, yg = yA + (yB - yA) * u, yt = tA + (tB - tA) * u;
+              return [x, yg + (yt - yg) * v];
+            };
+            const quad = (u0, v0, u1, v1) => {                    // a panel of the wall
+              const p0 = px(u0, v0), p1 = px(u1, v0), p2 = px(u1, v1), p3 = px(u0, v1);
+              g.beginPath(); g.moveTo(p0[0], p0[1]); g.lineTo(p1[0], p1[1]);
+              g.lineTo(p2[0], p2[1]); g.lineTo(p3[0], p3[1]); g.closePath();
+            };
+            g.globalAlpha = fade;
+            // THE WALL, in its own tone: the far ones read darker because there is more air in the
+            // way, which is the one thing here that is not the address's doing but the depth's.
+            const air = Math.min(0.55, 0.55 / (1 + 4 / Math.max(0.25, Z2)));
+            const R0 = Math.round(255 * (wall + 0.05 * warm)), G0 = Math.round(255 * (wall + 0.07)),
+                  B0 = Math.round(255 * (wall + 0.06 - 0.04 * warm));
+            // ── THE BUILDING'S OWN DEPTH, and the two faces that come with it ─────────────────
+            const deep = 1.1 + 3.0 * seedOf(at, sg > 0 ? 137 : 139);   // standoffs back from the rail
+            const xOut = t => cx0 + sg * f * (W2 + deep) * t;     // the far side of it, from the road
+            const shade = (r, gg, bb, k) => `rgb(${Math.round(r * k)},${Math.round(gg * k)},${Math.round(bb * k)})`;
+            const face = (x0, x1, yTop, yBot, k) => {
+              g.beginPath(); g.moveTo(x0, yBot); g.lineTo(x1, yBot);
+              g.lineTo(x1, yTop); g.lineTo(x0, yTop); g.closePath();
+              g.fillStyle = shade(R0, G0, B0, k); g.fill();
+              g.fillStyle = `rgba(11,13,18,${air})`; g.fill();
+            };
+            // THE NEAR END, upright and square because a face at one depth has one ground line
+            face(xA, xOut(t1), tA, yA, 0.62);
+            // THE ROOF, only while the eye is above it — a building taller than the eye has none
+            if (tall < EYE) {
+              g.beginPath();
+              g.moveTo(xA, tA); g.lineTo(xB, tB);
+              g.lineTo(xOut(t2), tB); g.lineTo(xOut(t1), tA); g.closePath();
+              g.fillStyle = shade(R0, G0, B0, 1.28); g.fill();
+              g.fillStyle = `rgba(11,13,18,${air})`; g.fill();
+            }
+            // AND THE FRONT, laid over both: the face the street sees
+            quad(0, 0, 1, 1);
+            g.fillStyle = `rgb(${R0},${G0},${B0})`; g.fill();
+            g.fillStyle = `rgba(11,13,18,${air})`; g.fill();      // the air between
+            // A PARAPET, a band of a different tone at the top, deeper on some than others
+            const cap = 0.03 + 0.06 * ch;
+            quad(0, 1 - cap, 1, 1);
+            g.fillStyle = `rgba(${R0 + 22},${G0 + 24},${B0 + 22},0.9)`; g.fill();
+            g.fillStyle = `rgba(11,13,18,${air})`; g.fill();
+            // AND THE EDGE WHERE IT MEETS ITS NEIGHBOUR, which is what makes a row read as a row
+            g.strokeStyle = BUILD_EDGE; g.lineWidth = Math.max(0.4, Math.min(1.3, f * t2 / 340));
+            g.beginPath(); g.moveTo(xB, yB); g.lineTo(xB, tB); g.stroke();
+            // ── THE WINDOWS ────────────────────────────────────────────────────────────────────
+            // A storey is a fixed height in STANDOFFS, not a fraction of the building, so a tall
+            // building has more floors rather than taller ones — which is most of what makes a row
+            // of different heights read as a street. The grid arrives with the depth: no windows at
+            // all far off, then the columns, then the panes, each when there is room for it.
+            if (wide >= 2.5 && high >= 7) {
+              const floors = Math.max(1, Math.round(tall / 0.42));
+              const bays = 1 + Math.floor(1.5 + 2.5 * seedOf(at, sg > 0 ? 419 : 421));
+              const perPane = wide / bays, perFloor = high / floors;
+              const sill = 0.24, head = 0.72;                      // where a window sits in its floor
+              for (let r = 0; r < floors; r++) {
+                for (let c = 0; c < bays; c++) {
+                  const on = seedOf(at, 1009 + r * 131 + c * 17 + (sg > 0 ? 5 : 61));
+                  if (on < 0.62 - 0.45 * qWake) continue;          // a dark window is not drawn
+                  const u0 = (c + 0.22) / bays, u1 = (c + 0.78) / bays;
+                  const v0 = (r + sill) / floors, v1 = (r + head) / floors;
+                  quad(u0, v0, u1, v1);
+                  // the lit ones glow a little, and how much is the record's business too
+                  // how brightly this one burns: its own, inside its district's, inside the
+                  // quarter's — three levels of the address in a single window
+                  const k2 = (0.12 + 0.75 * qBurn) * (0.30 + 0.70 * lit) * (0.45 + 0.55 * on);
+                  g.fillStyle = `rgba(${LR},${LG},${LB},${(Math.min(0.95, k2) * (1 - air * 0.8)).toFixed(3)})`;
+                  g.fill();
+                  // a pane divider, once the window is big enough to have one
+                  if (perPane > 26 && perFloor > 30) {
+                    const um = (u0 + u1) / 2;
+                    const a0 = px(um, v0), a1 = px(um, v1);
+                    g.strokeStyle = `rgba(11,13,18,${(0.5 * (1 - air)).toFixed(3)})`;
+                    g.lineWidth = 1;
+                    g.beginPath(); g.moveTo(a0[0], a0[1]); g.lineTo(a1[0], a1[1]); g.stroke();
+                  }
+                }
+              }
+              // A DOOR on the ground floor, on about half of them
+              if (high > 40 && seedOf(at, sg > 0 ? 601 : 607) > 0.45) {
+                const dm = 0.5 + 0.28 * (seedOf(at, 613) - 0.5);
+                quad(dm - 0.09, 0.02, dm + 0.09, Math.min(0.9 / floors, 0.5));
+                g.fillStyle = `rgba(${LR},${LG},${LB},${(0.20 * (1 - air)).toFixed(3)})`; g.fill();
+              }
+            }
+            g.globalAlpha = 1;
+          }
+        }
+      }
+    }
+    // THE MARKS ARE THE ROAD'S AND THEY MOVE (Tom, Sep 12: "the yellow lines should move, they are
+    // locked in place"). They stood at 1, 2, 4 … standoffs AHEAD OF THE EYE, which is a ladder
+    // carried by whoever holds it and therefore fixed on the screen whatever you do. Now they are
+    // the road's own sleepers, one at every record, lying where they were laid: walking brings each
+    // one up the screen, past the dial and underfoot, and the next takes its place. Each carries the
+    // record that stands there, written where there is room for it.
+    // THE RECORDS ARE WRITTEN ON THE TOP CANVAS, not this one: the road lies behind the dial, and a
+    // record written here would be under the dial's rung wherever the two met.
+    ig.font = '500 12px "JetBrains Mono","SF Mono",Menlo,Consolas,monospace';
+    ig.textAlign = 'left'; ig.textBaseline = 'middle';
+    // THE AIR TAKES THE QUARTER'S CAST AS WELL, faintly: a sodium quarter has an orange haze over
+    // its far end and a cold one a blue-grey. It is the same seed the windows use, spent on the
+    // distance instead of on the glass, and it is what makes the change of quarter read from a
+    // hundred records away rather than only when you are among the buildings.
+    // Drawn as a band over the far half only, where the haze belongs, and cheap: one rectangle.
+    {
+      const qh = seedOf(prefix(base, 9), 401);
+      g.fillStyle = `rgba(${Math.round(120 + 90 * qh)},${Math.round(130 - 20 * qh)},${Math.round(150 - 70 * qh)},0.05)`;
+      g.fillRect(0, hy, W, Math.max(0, (hub - hy) * 0.55));
+    }
+    const first = base - 1;                      // the sleeper just passed is still drawn, for the same reason
+    let lastLabel = Infinity;
+    for (let k = 0; k < 900; k++) {              // COUNT THE MARKS, NEVER THE RECORD: adding one to a
+      const at = first + k, Z = (at - base) + off(at) - fr;   // near 2^53 adding one changes nothing,
+      if (!(Z >= NEAR)) continue;                // counts that way never ends — which froze the page
+      const y = ground(Z), w = half(Z);
+      if (y < hy + 0.5) break;                   // past the vanishing point: nothing further can show
+      if (w < 0.6) break;                        // and narrower than a pixel is nothing at all
+      if (y > hub - 12) continue;                // nearer than the dial's hub: behind it and below
+      g.strokeStyle = GOLD; g.lineWidth = Math.max(0.6, Math.min(2.2, f / Z / 200));
+      g.beginPath(); g.moveTo(cx0 - w, y); g.lineTo(cx0 + w, y); g.stroke();
+      if (showIds && lastLabel - y > 13) { ig.fillStyle = GOLD;
+        ig.fillText((at * SPACING).toLocaleString(), cx0 + w + 6, y); lastLabel = y; }  // the record that stands there
+    }
+    g.fillStyle = GOLD; g.beginPath(); g.arc(cx0, hy, 2.5, 0, 2 * Math.PI); g.fill();   // the vanishing point
+  }
+
+  // ── PANNING THE TRACKS ───────────────────────────────────────────────────────────────────────
+  // The road can be dragged directly (Tom, Sep 12: "let the user pan the railroad tracks to, up and
+  // down"). A press ABOVE the dial's rung belongs to the road; the dial keeps everything else, and
+  // the press is stopped in the capture phase so the dial never sees it. Dragging moves the record
+  // so that THE SLEEPER UNDER THE HAND STAYS UNDER THE HAND: the pointer's height is turned back
+  // into a depth — Z = f·eye / (y − horizon), the perspective divide run backwards — before and
+  // after, and the difference is how far you walked. Pull down and the road comes toward you.
+  //
+  // AND THE DIAL IS LEFT ALONE (Tom, Sep 12: "don't collapse the dial when panning the track"). An
+  // earlier pass put the radius at a hundred records on every press, which collapsed the dial's rung
+  // to a stub the moment a hand touched the road — and the radius is the reader's own setting, not
+  // something a walk is entitled to take. The drag moves the RECORD and nothing else: the road's
+  // scale is its own, the sleeper under the hand stays under the hand at any radius, and where the
+  // dial stands is left where the dial's own gestures put it.
+  // A PINCH IS THE WHOLE SCREEN'S (Tom, Sep 12: "pinch should be global to the complete screen to
+  // change the dial size, not just the dial"). The road takes a press above the dial's rung, which
+  // meant two fingers put down there never reached the dial and the radius could not be pinched over
+  // the road at all. Now the road claims only the FIRST finger: the moment a second goes down, the
+  // walk is let go and both presses are handed on, so the dial pinches from anywhere on the screen.
+  let track = null, down = 0, first = null, handing = false, maybe = null, tilt = null;
+  // ⚠ THE MENU IS NOT THE ROAD. These listeners run in the capture phase on the window, which is
+  // BEFORE anything in the drawer can stop them — so opening the menu read as a tap on the road and
+  // stopped the walk, and the switch then said one thing while the road did another. Anything inside
+  // the drawer, its button or its scrim is not a press on the road at all.
+  // …and the two edge rails belong on this list for the same reason the drawer does: these handlers
+  // run in the capture phase on the window, so without it the road claims a press on a rail before
+  // the rail's own listener ever sees it, and the rail does nothing at all.
+  const onChrome = e => !!(e.target && e.target.closest &&
+    e.target.closest('#menu, #menuBtn, #menuScrim, #paintCount, #tiltRail, #walkRail'));
+  // AND THE EYE STARTS PITCHED A LITTLE DOWN (Tom, Sep 13: "tilt should be lower by default"). The
+  // vanishing point sat on the top edge, which is an eye looking dead level at the far end of the
+  // road; a walker's eye is tipped slightly toward the ground ahead, which puts more street in the
+  // picture and less sky. A long press still takes it anywhere.
+  let horizon = 96;                                            // where the vanishing point sits
+  let frac = 0;                                                // where the road stands between sleepers
+
+  // TAKING A PRESS OFF THE DIAL, which both the walk and the tilt need. The dial has been holding it
+  // as a thumb: it is handed a release so the thumb lets go, its angle is put to nothing and its
+  // spring cancelled — a released thumb keeps THRUSTING for a few frames, and at full radius that
+  // alone threw the record to the end of the list — and the record is put back where the press found
+  // it, `index` as well as `centre`, since the walk reads the record straight out of `index` and the
+  // dial only refreshes it on its next frame.
+  function startTilt(id, x, y, at){
+    rolling = false;                                            // a hold on the road ends the walk too
+    takeOver(id, at);
+    if (maybe) clearTimeout(maybe.timer);
+    tilt = { id, x, y, h0: horizon, xLast: x, yLast: y }; maybe = null;
+  }
+  function takeOver(id, at){
+    handing = true;
+    document.getElementById('dial').dispatchEvent(new PointerEvent('pointerup',
+      { pointerId: id, clientX: 0, clientY: 0, bubbles: true }));
+    handing = false;
+    theta = 0; springAt = -1; centre = at; index = at; zeta = 0;
+  }
+  const geom = () => { const W = sc.clientWidth, H = sc.clientHeight, hy = horizon;
+    return { hy, f: ((cy || H - 64) - 20 - hy) / EYE, top: (cy || H - 64) - (R || 0) }; };
+  // HOW FAR A DRAG WALKS YOU, AND WHY IT IS NOT THE SLEEPER UNDER THE HAND. Holding the sleeper
+  // under the hand is the honest gesture and it is unusable: its gain is the perspective's own, so
+  // it collapses toward the eye. Near the bottom of the screen a pixel is worth a hundredth of a
+  // standoff, so pulling the road down ran out of road to give and simply stopped — "pulling it down
+  // just clamps". THE GRAB POINT NOW CHOOSES THE GEAR, once, and the drag runs at that rate for as
+  // long as the hand keeps moving. The rate is the perspective's own slope where the hand landed —
+  // dZ/dy = Z² / (f·eye), standoffs a pixel — so a grab near the horizon covers ground and one near
+  // the eye is fine, which is the road's own reading of its own depth; and nothing saturates however
+  // far the hand is pulled. AND THE GEAR IS ONE GEAR, not the grab's own: taking it from where the
+  // hand landed made walking out fast and walking back slow, since the way home is grabbed near the
+  // eye where the perspective gives almost nothing. It is read once from the MIDDLE of the road
+  // instead, so up and down are the same rate and a drag of the same length always walks the same
+  // distance, whichever end of the road it started at.
+  // THE RATE IS A FRACTION OF THE ROAD PER SCREEN, not a slope read off the perspective. The slope
+  // at the middle of the road came to about a twentieth of a standoff a pixel, so a full pull of the
+  // hand walked twenty standoffs and the road seemed to crawl. A drag down the whole height of the
+  // road now walks WALK standoffs, whatever the window's shape — one rate a hand can learn.
+  // A DRAG WALKS AT THE SAME PACE AS THE ROLL (Tom, Sep 13: "slow down the railroad panning so its
+  // about the same speed as auto motion"). It was ninety standoffs for a pull down the whole road,
+  // which is a leap, not a walk — and it is why dragging and rolling could not be compared. Four
+  // standoffs now: a full pull takes you past four buildings, which at the roll's half-standoff a
+  // second is about seven seconds of walking. The two motions can be put side by side, which is
+  // worth more than the speed: whatever is different about them shows up in the comparison.
+  const WALK = 4;                                              // standoffs for a pull down the road
+  const gear = () => { const q = geom(); return WALK / Math.max(80, q.top - q.hy); };
+  // WHICH GESTURE IS WHOSE, decided by the DIRECTION of the first movement and not by where the
+  // hand landed (Tom, Sep 12: "I still can't pan or pull the railroad tracks down"). The road is
+  // drawn across almost the whole screen while the dial's thumb answers a press anywhere, so any
+  // rule drawn as a LINE across the page gives one of them nearly nothing: claiming only above the
+  // rung left the wide near sleepers — the natural place to grab — going to the dial instead.
+  // The two gestures are not alike, though, and that is what separates them: THE ROAD RUNS UP AND
+  // DOWN THE SCREEN AND THE THUMB SWINGS SIDEWAYS. So a press above the hub is undecided, the dial
+  // takes it as usual, and the first travel settles it — mostly vertical and the road takes over,
+  // mostly sideways and the thumb keeps it. Below the hub nothing is undecided: the digits and the
+  // scale live there and the dial keeps every press (Tom, Sep 12: "the dial is the top of the
+  // zorder, don't pan the railroad tracks on bottom").
+  addEventListener('pointerdown', e => {
+    // the guard comes FIRST: the press we are handing to the dial comes back through this listener,
+    // and counting it as another finger sent the hand-over calling itself until the stack gave out.
+    if (handing) return;
+    if (onChrome(e)) return;                                   // the drawer's own presses
+    if (++down > 1) {                                          // a second finger: the dial's pinch
+      // the first finger is handed over whether or not it had begun a walk: since the road now stops
+      // every press out here, the dial would otherwise never see either of them and a pinch over the
+      // road would do nothing at all.
+      maybe = null; tilt = null;
+      if (first) { handing = true;
+        document.getElementById('dial').dispatchEvent(new PointerEvent('pointerdown',
+          { pointerId: first.id, clientX: first.x, clientY: first.y, bubbles: true, isPrimary: true }));
+        handing = false; }
+      track = null; return;
+    }
+    // ⚠ THE DIAL'S FACE IS THE DIAL'S (Tom, Sep 13: "panning the dial itself is problematic, it
+    // flashes and goes back to zero angle"). The road was claiming every press above the hub, and
+    // the dial's whole face lies above its hub — so a press on the rung became an undecided press
+    // here, and the moment the hand moved downward the road took it and handed the dial a release.
+    // A released thumb springs back to nothing: the needle snapped to zero mid-gesture and the
+    // picture jumped, which is the flash. The road now claims only what is OUTSIDE the dial: beyond
+    // its rung, or below its hub. Everything within a hand's width of the face belongs to the dial,
+    // and its pan is its own from the first pixel to the last.
+    if (e.clientY >= (cy || 0)) return;                         // the dial's own band: digits and scale
+    if (Math.hypot(e.clientX - (cx || 0), e.clientY - (cy || 0)) < (R || 0) + 12) return;   // its face
+    // ⚠ AND THE PRESS IS TAKEN OUTRIGHT, NOT BORROWED (Tom, Sep 13: "tapping outside the dial is
+    // still moving the dial"). Until now a press out here was left undecided and the DIAL held it
+    // meanwhile — so a tap on the road, which never travels and is never claimed, stayed the dial's
+    // from beginning to end: it grabbed, thrust while the finger rested, and recentred on release.
+    // A tap outside the dial moved the dial, which is not what a tap is for. The press is now
+    // stopped here at once. What the road cannot use it for, nobody uses it for: a tap does nothing.
+    e.stopPropagation();
+    // A LONG PRESS TILTS. Held for a third of a second without going anywhere, the press stops being
+    // a walk and becomes the eye's pitch. THE HOLD HAS TO TOLERATE A WANDERING HAND (Tom, Sep 12:
+    // "no change. tilt is locked when its flat"): a hand resting on a trackpad or a screen drifts
+    // several pixels, and cancelling the hold at the first five of them meant the long press almost
+    // never survived — every attempt turned into a walk instead. The hold now allows FOURTEEN pixels
+    // of drift, and the walk does not claim the press until EIGHT, so a deliberate hold has room to
+    // be a hold. The timer covers a press that never moves at all; the check on each move covers one
+    // that drifts, so a slow press-then-pan tilts either way.
+    maybe = { id: e.pointerId, x: e.clientX, y: e.clientY, at: index, t0: performance.now(),
+              xLast: e.clientX, yLast: e.clientY, tLast: performance.now() };
+    maybe.timer = setTimeout(() => {
+      if (!maybe || maybe.id !== e.pointerId) return;
+      startTilt(e.pointerId, maybe.x, maybe.y, maybe.at);
+    }, 450);
+    first = { id: e.pointerId, x: e.clientX, y: e.clientY };
+  }, true);
+  addEventListener('pointermove', e => {
+    if (onChrome(e) && !track && !tilt) return;                 // the drawer's own movements
+    if (down > 1) { track = null; maybe = null; tilt = null; return; }   // a pinch is under way: the dial's
+    if (tilt && e.pointerId === tilt.id) {
+      e.stopPropagation();
+      // ONCE HELD, THE TWO AXES ARE TWO INSTRUMENTS (Tom, Sep 12: "long press + left right panning
+      // should change the dial, not the tilt"). Up and down is the eye's pitch; LEFT AND RIGHT IS
+      // THE DIAL — the hand becomes the gold thumb, the sideways offset is its angle, and it drives
+      // the record exactly as a press on the dial does. Each move is judged on its own direction, so
+      // one hold can pitch the view and then run the list without lifting.
+      // and under a hold, sideways is nothing either: the tilt is the pitch and the pitch is
+      // vertical. The dial is the dial's, wherever the hand happens to be resting.
+      const stepY = e.clientY - tilt.yLast;
+      tilt.xLast = e.clientX; tilt.yLast = e.clientY;
+      tilt.h0 += stepY;                                         // only the pitching travel counts
+      // THE TILT HAS ROOM BOTH WAYS (Tom, Sep 12: "it's impossible to change the tilt if it is at
+      // its minimum"). The horizon rests at the top edge, and stopping it there left only one
+      // direction to go: a hand pulling up from rest met a wall and nothing moved. But a horizon
+      // ABOVE the top of the frame is a real view — the eye pitched down at the ground near its own
+      // feet, the road climbing out of the top of the picture — so it is allowed to rise off the
+      // screen, half a height of it, and the tilt works from wherever it happens to be standing.
+      const H = sc.clientHeight;
+      horizon = Math.min(H * 0.62, Math.max(-H * 0.5, tilt.h0));
+      return;
+    }
+    if (maybe && e.pointerId === maybe.id) {
+      // ⚠ MOVING AT ALL IS NOT HOLDING (Tom, Sep 13: "I can't pan the buildings because it always
+      // tilts, even though i did not long press"). The rule here had grown into a speed test with a
+      // distance cap, and the moment the walk was slowed to a stroll it caught every walk: a hand
+      // dragging the road gently is slow and has not gone far, which is exactly what the rule called
+      // a hold. Speed is the wrong question. A press that has GONE somewhere is a gesture, however
+      // gently it went; a press that has gone nowhere for half a second is a hold. Eight pixels
+      // decides it, which is more than a hand's tremor and less than any intended movement.
+      const dx = Math.abs(e.clientX - maybe.x), dy = Math.abs(e.clientY - maybe.y);
+      const travel = Math.max(dx, dy);
+      if (travel < 8) {                                         // still where it started
+        if (performance.now() - maybe.t0 >= 450) {              // and has stayed there: the pitch
+          startTilt(e.pointerId, e.clientX, e.clientY, maybe.at); return;
+        }
+        return;                                                 // too soon to say
+      }
+      clearTimeout(maybe.timer);                                // it went somewhere: not a hold
+      // ⚠ OUTSIDE THE DIAL, EVERY DIRECTION IS THE ROAD'S (Tom, Sep 13: "left right panning outside
+      // the dial should be the same as up down panning, don't change the dial outside the dial").
+      // A sideways drag out here used to drive the thumb, which meant the dial could be moved from
+      // a part of the screen that is not the dial — the same complaint as the tap, in another
+      // direction. The dial is changed only on the dial now. Out here a drag walks the road whichever
+      // way it goes, and it is the VERTICAL part of the hand's travel that walks: dragging sideways
+      // does nothing, dragging at an angle walks by as much as the hand went down.
+      track = { id: e.pointerId, y: e.clientY, gear: gear() };
+      rolling = false;                                          // a hand walking the road ends the walk
+      maybe = null;
+    }
+    if (!track || e.pointerId !== track.id) return;
+    e.stopPropagation();
+    const walked = (e.clientY - track.y) * track.gear;        // down the screen is forward
+    const tNow = performance.now();                            // and how fast the hand is going,
+    if (track.t) { const dt = Math.max(8, tNow - track.t);      // kept for the coast after it leaves
+      track.v = 0.7 * (walked / dt) * 1000 + 0.3 * (track.v || 0); }
+    track.t = tNow;
+    track.y = e.clientY;
+    const whole = Math.floor(frac + walked);                   // the record takes the whole sleepers…
+    frac = frac + walked - whole;                              // …and the road keeps the remainder
+    centre = Math.max(0, Math.min(Number.MAX_SAFE_INTEGER - 1, index + whole));
+    index = centre;                                            // in the same breath, never a frame apart
+    zeta = 0;                                                  // a walk, not a reading: the guide stays home
+    first = { id: e.pointerId, x: e.clientX, y: e.clientY };
+  }, true);
+  for (const ev of ['pointerup', 'pointercancel']) addEventListener(ev, e => {
+    if (handing) return;                                       // the release we are staging: not a real one
+    if (onChrome(e) && !track && !tilt) return;                // the drawer's own releases
+    down = Math.max(0, down - 1);
+    if (maybe && e.pointerId === maybe.id) { clearTimeout(maybe.timer); maybe = null; }
+    if (tilt && e.pointerId === tilt.id) { e.stopPropagation(); tilt = null;
+      if (held) { held = false; springAt = performance.now(); }  // the thumb springs home as ever
+    }
+    if (first && e.pointerId === first.id) first = null;
+    // ── A SWIPE COASTS ──────────────────────────────────────────────────────────────────────
+    // A hand that leaves the road while still moving hands over its speed, and the road carries on
+    // and slows to a stop by friction — the fisheye's own swipe physics: a flick coasts, friction
+    // stops it wherever it stops it, the next touch stops the coast, and there is no snap. The road
+    // stands where the friction left it, mid-cell if that is where it ran out.
+    if (track && e.pointerId === track.id) {
+      e.stopPropagation();
+      if (track.v && Math.abs(track.v) > 0.25) { coast = track.v; rolling = false; }
+      track = null;
+    }
+  }, true);
+
+  // ── AUTO MOTION ──────────────────────────────────────────────────────────────────────────────
+  // The space bar starts and stops it (Tom, Sep 12). It walks the road at a steady rate in
+  // STANDOFFS — a constant speed in the world, which is the only rate that is the road's own rather
+  // than the screen's. The sleepers therefore arrive quickly far off and slowly near the eye, since
+  // what is even in the world is never even on the screen: the whole of the perspective divide, run
+  // as a motion. A hand on the dial or on the tracks stops it, as it stops any coast.
+  // A WALKING PACE (Tom, Sep 13: "auto should be smoother, and slower, I want to enjoy the walk
+  // through the city"). A third of what it was: at this rate a building takes nearly two seconds to
+  // come up and pass, which is about what walking past one is like. The rate is constant in
+  // STANDOFFS — even in the world — so the far street still creeps and the near frontages still
+  // sweep by, which is the perspective doing the work and is most of what makes it read as walking.
+  const SPEED = 0.55;                                          // standoffs a second, to begin with
+  let pace = SPEED;                                            // and what the right rail sets it to
+  // THE WALK IS ON WHEN THE PAGE OPENS (Tom, Sep 13). A street that is already being walked says
+  // what the page is in the first second, and a hand on the road stops it whenever it likes.
+  let rolling = true, lastT = 0, owed = 0;
+  const toggleRoll = () => { rolling = !rolling; lastT = performance.now(); owed = 0; };
+  addEventListener('keydown', e => {
+    if (e.code === 'Space' || e.key === ' ') { e.preventDefault(); toggleRoll(); return; }
+    // ── THE KEYS ──────────────────────────────────────────────────────────────────────────────
+    // UP AND DOWN WALK THE ROAD, left and right move the dial — the same division the hand has, in
+    // the one place a hand is not: a keyboard. Down is forward, as dragging the road down is. Held,
+    // they repeat at the rate the operating system repeats them, which is why each press moves a
+    // fixed distance rather than starting a motion: a held key then walks steadily and stops dead
+    // when it is let go, and nothing has to be undone.
+    // ── THE ARROW KEYS ────────────────────────────────────────────────────────────────────────
+    // ALL FOUR WALK THE ROAD (Tom, Sep 13: "keyboard left right should do the same thing as
+    // up/down"). Left and right briefly moved the DIAL, which broke the rule the hand already
+    // follows: outside the dial, every direction is the road's. A keyboard is outside the dial —
+    // there is nowhere on it that is the dial's face — so all four arrows walk, and the dial is
+    // changed by the dial. Down and right go forward, up and left go back, which is how a list and
+    // a road each read.
+    const STEP = 0.35;                                          // standoffs per press
+    // UP AND DOWN ARE INVERTED (Tom, Sep 13). Up walks forward now, down walks back: an arrow key
+    // points where you are GOING, not which way the road slides underneath you — which is the
+    // opposite sense to dragging, where the hand carries the road itself. Left and right keep their
+    // reading: right is forward along the list, as the digits run.
+    const fwd = (e.key === 'ArrowUp' || e.key === 'ArrowRight') ? 1
+              : (e.key === 'ArrowDown' || e.key === 'ArrowLeft') ? -1 : 0;
+    if (fwd) {
+      e.preventDefault(); rolling = false; coast = 0;           // a hand on the road, in key form
+      const walked = fwd * STEP;
+      const whole = Math.floor(frac + walked);
+      frac = frac + walked - whole;
+      centre = Math.max(0, Math.min(Number.MAX_SAFE_INTEGER - 1, index + whole));
+      index = centre; zeta = 0;
+      return;
+    }
+  });
+  // AND A TOUCH HAS NO SPACE BAR, so a double tap on the road STARTS the walk and any single press
+  // stops it. Not a toggle: a hand on the road stops the roll the moment it lands, so the first tap
+  // of a pair has already stopped it and a toggle on the second would only start it again. Start on
+  // the double, stop on any touch — which is also how it reads: to stop a thing that is moving you
+  // put a hand on it, not two.
+  // ⚠ A DRAG WAS COUNTING AS A TAP, and that is how the roll started by itself. This handler took
+  // every pointerup as a tap, whether the press had travelled or not — so two ordinary drags of the
+  // road, finished within a third of a second of each other and ending near the same height, read as
+  // a double tap and set the road rolling. A rolling road repaints every frame for as long as it
+  // runs, which is what a repaint counter reading sixty means, and what a hand not expecting it
+  // reads as flicker. A press now counts as a tap only if it went nowhere: no walk was claimed from
+  // it, no tilt, and it moved less than eight pixels.
+  let lastTap = 0, lastTapY = 0;
+  addEventListener('pointerup', e => {
+    if (onChrome(e)) return;                                  // the drawer's own releases are not taps
+    if (e.clientY >= geom().top) return;                      // the dial's ground: its own gestures, not the road's
+    const travelled = (down0 && Math.max(Math.abs(e.clientX - down0.x), Math.abs(e.clientY - down0.y)) >= 8);
+    if (travelled || track || tilt) { lastTap = 0; return; }   // that was a gesture, not a tap
+    if (down > 0) { lastTap = 0; return; }                     // another finger is down: a pinch, not a tap
+    rolling = false;                                           // a tap on the road stops the walk
+    const t = performance.now();
+    if (t - lastTap < 330 && Math.abs(e.clientY - lastTapY) < 40) {
+      rolling = true; lastT = performance.now(); owed = 0; lastTap = 0; return;
+    }
+    lastTap = t; lastTapY = e.clientY;
+  }, true);
+  let down0 = null;                                            // where a press began, for the tap test
+  // ⚠ THE DIAL DOES NOT STOP THE WALK (Tom, Sep 13: "moving the dial should not cancel auto mode").
+  // Any press anywhere used to stop the roll, the dial's own face included — so the radius could not
+  // be changed, nor the list run, without the walk ending and having to be started again. The two
+  // are different instruments: the roll walks the road, the dial says where and at what grain, and
+  // there is no reason a hand on one should end the other. A press stops the roll only where the
+  // ROAD would act on it — outside the dial, above its hub — which is where "a hand on the road
+  // stops it" was meant to apply all along.
+  // and the stop waits until the road has actually CLAIMED something. Stopping on the press itself
+  // was still too eager: a pinch begins with one finger on the road, so every pinch ended the walk
+  // before the second finger arrived. The walk is ended where the road takes the gesture — a tap, a
+  // drag or a hold — and by nothing else.
+  addEventListener('pointerdown', e => {
+    if (onChrome(e)) return;
+    down0 = { x: e.clientX, y: e.clientY }; coast = 0;
+  }, true);
+  // and nothing keeps running once the page is put aside
+  addEventListener('blur', () => { rolling = false; });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) rolling = false; });
+  // THE COAST is the roll's quieter cousin: a speed that decays rather than one that is held.
+  let coast = 0;
+  function glide(dt){
+    if (!coast) return;
+    const walked = coast * dt;
+    coast *= Math.pow(0.12, dt);                               // friction: an eighth of it a second
+    if (Math.abs(coast) < 0.05) coast = 0;                     // below a crawl it is simply over
+    const whole = Math.floor(frac + walked);
+    frac = frac + walked - whole;
+    if (whole) { centre = Math.max(0, Math.min(Number.MAX_SAFE_INTEGER - 1, index + whole));
+                 index = centre; zeta = 0; }
+  }
+  function roll(now){
+    const dtc = Math.min(0.1, (now - (lastT || now)) / 1000);
+    if (!rolling) { glide(dtc); lastT = now; owed = 0; return; }
+    coast = 0;                                                  // a steady walk and a coast are not both
+    const dt = Math.min(0.1, (now - lastT) / 1000); lastT = now;
+    // THE STEP IS OWED UNTIL IT CAN BE PAID. A frame's worth of walking is a fraction of a record,
+    // and in the middle of a list this long a double cannot hold a fraction: index + 0.27 IS index,
+    // so a rate applied straight to the record rounds away every frame and the road never moves. The
+    // fractions are kept here instead and spent as whole records, which is the same walk with the
+    // reader's own resolution showing in it — the road advances in tenths of a standoff.
+    frac += dt * pace;                                         // the fraction carries the smooth part
+    const pay = Math.floor(frac);
+    if (pay) {
+      // ⚠ AND THE RECORD IS MOVED IN THE SAME BREATH AS THE FRACTION. Paying a whole record set the
+      // window's CENTRE and left `index` to catch up on the dial's next frame — so for exactly one
+      // frame the drawing used the old record with the already-reduced fraction, and the road
+      // snapped back a whole sleeper and forward again. Once every couple of seconds, while
+      // rolling and never while dragging, because a drag is over before the next frame matters.
+      // That is a flash you can only get from the roll.
+      frac -= pay; zeta = 0;
+      centre = Math.max(0, Math.min(Number.MAX_SAFE_INTEGER - 1, index + pay));
+      index = centre;
+    }
+  }
+
+  // ── THE MENU ─────────────────────────────────────────────────────────────────────────────────
+  {
+    const btn = document.getElementById('menuBtn'), panel = document.getElementById('menu');
+    const scrim = document.getElementById('menuScrim'), close = document.getElementById('menuClose');
+    const open = on => { panel.hidden = false; panel.classList.toggle('open', on); scrim.classList.toggle('open', on); };
+    btn.addEventListener('click', () => open(!panel.classList.contains('open')));
+    close.addEventListener('click', () => open(false));
+    scrim.addEventListener('click', () => open(false));
+    addEventListener('keydown', e => { if (e.key === 'Escape') open(false); });
+    document.getElementById('optIds').addEventListener('change', e => { showIds = e.target.checked; });
+    const walkBox = document.getElementById('optWalk');
+    walkBox.addEventListener('change', e => {
+      rolling = e.target.checked; lastT = performance.now(); owed = 0; coast = 0; });
+    // the switch follows the walk however it was started or stopped — by the space bar, by a double
+    // tap, or by a hand landing on the road — so it never says one thing while the road does another
+    setInterval(() => { if (walkBox.checked !== rolling) walkBox.checked = rolling; }, 150);
+    document.getElementById('optPaint').addEventListener('change', e => {
+      showPaint = e.target.checked; box.style.display = showPaint ? 'block' : 'none'; });
+    // the drawer's own presses are the drawer's: the road must not read them as a walk or a hold
+    for (const el of [btn, panel, scrim])
+      for (const ev of ['pointerdown', 'pointermove', 'pointerup'])
+        el.addEventListener(ev, e => e.stopPropagation());
+  }
+
+  // ── THE FLICKER, AND WHERE IT CAME FROM (Tom, Sep 13: "way too much flashing everywhere") ────
+  // Two faults, and both were this file's. SETTING A CANVAS'S width OR height REALLOCATES ITS
+  // BITMAP — it is not a resize, it is a new surface — and this loop did it to both canvases sixty
+  // times a second. Three stacked canvases each throwing away their surface every frame is exactly
+  // what a browser composites unevenly, and unevenly composited is what flashing is. The size is now
+  // set only when it has actually changed.
+  // And the second: the loop redrew whether or not anything had moved. Now it draws only when the
+  // state it draws FROM has changed — the record, the part-sleeper, the radius, the tilt, the switch
+  // or the window's size — so a page at rest is a still page, which it never was before.
+  let size = '', state = '', sizeW = 0, sizeH = 0, sizeD = 0;
+  // ── A COUNTER FOR FLICKER ─────────────────────────────────────────────────────────────────────
+  // Claude cannot see the flicker in a headless browser: every canvas here measures zero repaints at
+  // rest. So rather than guess at another cure, this counts them where the page actually runs. It
+  // wraps each canvas's clearRect — the dial's included, from outside, without touching its file —
+  // and prints the count for the last second, with the last state key the dial changed on.
+  const paint = { road: 0, labels: 0, dial: 0 }, seen = { road: 0, labels: 0, dial: 0 };
+  let showPaint = false, lastKey = '', keyLine = '';
+  for (const [id, key] of [['scene', 'road'], ['ids', 'labels'], ['dial', 'dial']]) {
+    const c = document.getElementById(id); if (!c) continue;
+    const cg = c.getContext('2d'), cr = cg.clearRect.bind(cg);
+    cg.clearRect = (...a) => { paint[key]++; return cr(...a); };
+  }
+  const box = document.createElement('div');
+  box.id = 'paintCount';
+  box.style.cssText = 'position:fixed;top:12px;right:12px;z-index:1002;pointer-events:none;' +
+    'font:11px/1.5 ui-monospace,Menlo,Consolas,monospace;color:#b6bdcb;text-align:right;display:none';
+  document.body.appendChild(box);
+  setInterval(() => {
+    for (const k in paint) { seen[k] = paint[k]; paint[k] = 0; }
+    if (!showPaint) return;
+    box.textContent = '';
+    const a = document.createElement('div');
+    a.textContent = `road ${seen.road} · labels ${seen.labels} · dial ${seen.dial}  per second`;
+    const b = document.createElement('div');
+    b.style.opacity = '0.6';
+    b.textContent = keyLine || 'nothing has changed';
+    box.appendChild(a); box.appendChild(b);
+  }, 1000);
+  // what the dial is drawing from, watched from outside so the change can be named
+  setInterval(() => {
+    const now = [Math.round(index), Math.round(centre), zeta.toFixed(6), reach.toFixed(6),
+                 theta.toFixed(6), held ? 'held' : 'free'].join(' ');
+    if (now !== lastKey) {
+      const was = lastKey.split(' '), is = now.split(' ');
+      const names = ['record', 'window', 'blue', 'radius', 'thumb', 'hand'];
+      const which = names.filter((n, i) => was[i] !== is[i]);
+      keyLine = was.length ? 'last change: ' + (which.join(', ') || '—') : '';
+      lastKey = now;
+    }
+  }, 100);
+
+  // ── THE RAILS, WIRED ─────────────────────────────────────────────────────────────────────────
+  // Each rail maps a position on itself to a value and the value back to a position — one pair of
+  // functions, used by the finger and by the nub, so the mark is always under the thumb. field.html
+  // records what happens when those two disagree: a finger halfway down setting a value the marker
+  // draws at 80%, and a fifth of the rail at each end doing nothing at all.
+  const GAUGE = {                                             // the two edge rails' own arithmetic
+    // the LEFT rail is the eye's pitch: the top of it is level with the road, the bottom is looking
+    // at the ground a few paces ahead. The same range a long press reaches, on a rail that shows it.
+    tiltFromFrac: f => -0.35 * H0() + (0.62 + 0.35) * H0() * Math.max(0, Math.min(1, f)),
+    tiltToFrac: h => Math.max(0, Math.min(1, (h + 0.35 * H0()) / ((0.62 + 0.35) * H0()))),
+    // the RIGHT rail is the walk, the dial unrolled: top is full ahead, centre is stopped, bottom is
+    // full astern. Holding it anywhere sets the pace; letting go leaves the pace where it was put.
+    WALK_MAX: 2.2,                                             // standoffs a second, either way
+    walkFromFrac: f => GAUGE.WALK_MAX * (1 - 2 * Math.max(0, Math.min(1, f))),
+    walkToFrac: v => Math.max(0, Math.min(1, 0.5 - 0.5 * v / GAUGE.WALK_MAX)),
+  };
+  const H0 = () => sc.clientHeight || 800;
+
+  function wireRail(el, read, write, opts){
+    if (!el) return;
+    let pid = null, startY = 0, engaged = false;
+    const done = e => {
+      if (pid === null || (e && e.pointerId !== undefined && e.pointerId !== pid)) return;
+      pid = null; el.classList.remove('dragging');
+      if (opts && opts.release) opts.release(engaged);
+      engaged = false;
+    };
+    el.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'touch' && !e.isPrimary) return;   // a second finger is never a rail
+      pid = e.pointerId; startY = e.clientY; engaged = false;
+      try { el.setPointerCapture(pid); } catch {}
+      el.classList.add('dragging');
+      e.preventDefault(); e.stopPropagation();
+    });
+    el.addEventListener('pointermove', e => {
+      if (pid === null || e.pointerId !== pid) return;
+      // a release this element missed would leave the drag stuck, and every hover after it would
+      // move the value: no button down means that missed release (field.html's own lesson)
+      if (e.pointerType === 'mouse' && !e.buttons) { done(e); return; }
+      if (!engaged) { if (Math.abs(e.clientY - startY) < 5) return; engaged = true; }
+      const r = el.getBoundingClientRect();
+      write(Math.max(0, Math.min(1, (e.clientY - r.top) / Math.max(1, r.height))));
+      e.preventDefault(); e.stopPropagation();
+    });
+    for (const ev of ['pointerup', 'pointercancel']) {
+      el.addEventListener(ev, done);
+      addEventListener(ev, done);
+    }
+    addEventListener('blur', () => done());
+  }
+
+  {
+    const tr = document.getElementById('tiltRail'), wr = document.getElementById('walkRail');
+    // the nubs, and the ticks that are scale rather than state
+    const mk = (host, cls) => { const d = document.createElement('div'); d.className = cls;
+                                host.appendChild(d); return d; };
+    const tiltNub = mk(tr, 'rail-mark'), walkNub = mk(wr, 'rail-mark');
+    const zero = mk(wr, 'rail-tick');                          // where the walk is stopped
+    wireRail(tr, () => horizon, f => { horizon = GAUGE.tiltFromFrac(f); });
+    // ⚠ THE RIGHT RAIL SETS THE WALK GOING AND LEAVES IT GOING (Tom, Sep 14: "the right side slider
+    // should start auto motion. it is stopping."). It was written as a throttle — held, it walked;
+    // released, friction took it — which is the wrong instrument for this page. The walk here is a
+    // STANDING state with a switch in the menu and the space bar, so the rail is a SPEED SETTING for
+    // it: put the nub where you want the pace and take your hand away, and the road keeps that pace
+    // until something stops it. The centre is stop, which is the one place where letting go leaves
+    // the road still.
+    wireRail(wr, () => pace, f => {
+      const v = GAUGE.walkFromFrac(f);
+      coast = 0;                                                // a set pace is not a coast
+      if (Math.abs(v) < 0.06) { rolling = false; pace = 0; }    // the dead band at the middle: stop
+      else { pace = v; rolling = true; }                        // otherwise: walk at that pace
+    })
+    // the nubs follow the values, whoever set them — the rail, a long press, the space bar
+    setInterval(() => {
+      const h = tr.getBoundingClientRect().height, w = wr.getBoundingClientRect().height;
+      tiltNub.style.top = (GAUGE.tiltToFrac(horizon) * (h - 8)) + 'px';
+      const v = rolling ? pace : coast;
+      walkNub.style.top = (GAUGE.walkToFrac(v) * (w - 8)) + 'px';
+      zero.style.top = (0.5 * (w - 2)) + 'px';
+    }, 60);
+  }
+
+  function frame(){
+    // ⚠ AND A SIZE IS A WHOLE NUMBER OF PIXELS HERE TOO. Inside a panel that measures itself, the
+    // viewport wanders by a pixel between frames; each wander was read as a new size, and a new size
+    // reallocates every canvas on the page — the picture thrown away and repainted, sixty times a
+    // second. A difference of one pixel is now ignored, which is the flash that only appears where
+    // the page does not own its own viewport.
+    const D = Math.min(2, devicePixelRatio || 1);
+    const W = Math.round(sc.clientWidth), H = Math.round(sc.clientHeight);
+    // ⚠ AND A PANEL BEGINS WITH NO SIZE, which is where the flash came from. A frame measured before
+    // the panel has laid itself out gives zero, the buffers were made 0×0, the copy threw, and a
+    // throw inside requestAnimationFrame kills the loop dead — until a resize started it again, and
+    // again. A frame with no size is not drawn and not remembered.
+    if (W < 2 || H < 2) { requestAnimationFrame(frame); return; }
+    const want = (size && Math.abs(W - sizeW) <= 1 && Math.abs(H - sizeH) <= 1 && D === sizeD)
+      ? size : (W + 'x' + H + '@' + D);
+    if (want !== size) {                                   // only on a real change of size
+      size = want; sizeW = W; sizeH = H; sizeD = D;
+      sc.width = W * D; sc.height = H * D;
+      idc.width = W * D; idc.height = H * D;
+      buf.width = W * D; buf.height = H * D;
+      ibuf.width = W * D; ibuf.height = H * D;
+      state = '';                                          // a new surface has nothing on it
+    }
+    roll(performance.now());                               // the space bar's steady walk, if it is on
+    // QUANTISED TO WHAT IS DRAWN. Comparing raw floats means a change far below a pixel — the last
+    // bit of a fraction — asks for a full repaint, and asking sixty times a second is flicker.
+    const now = [Math.round(index), frac.toFixed(4), coast.toFixed(3), reach.toFixed(6),
+                 Math.round(horizon), showIds ? 1 : 0, held ? 1 : 0, size].join('|');
+    if (now !== state) {
+      state = now;
+      g.setTransform(D, 0, 0, D, 0, 0); g.clearRect(0, 0, W, H);
+      ig.setTransform(D, 0, 0, D, 0, 0); ig.clearRect(0, 0, W, H);
+      g.lineCap = 'butt'; g.lineJoin = 'round';
+      window.__walls.length = 0;
+      draw(W, H, index, frac);                             // the record, and the part of a record, apart
+      // and across in one act, with no empty moment in between
+      if (buf.width && buf.height) {                        // never copy from an empty surface
+        gv.setTransform(1, 0, 0, 1, 0, 0); gv.globalCompositeOperation = 'copy'; gv.drawImage(buf, 0, 0);
+        igv.setTransform(1, 0, 0, 1, 0, 0); igv.globalCompositeOperation = 'copy'; igv.drawImage(ibuf, 0, 0);
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
