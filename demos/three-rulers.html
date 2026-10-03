@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Three Rulers, One Reading</title>
+<!-- THREE RULERS, ONE READING — a standalone demo of three of the draw project's instruments, fed by one
+     reading instead of a shape: the head dial (drawHeadDial, its 'rungs' and 'cell' graduations), the
+     serial panel (drawSerialPanel) and the cascade drum (drawCascadePanel).
+
+     THE READING. Turn the bar: its angle θ from pure horizontal gives the pair h = cos θ, v = sin θ, the
+     reading s = v/h = tan θ, and the sweep g = θ ÷ 90°.
+
+     THE DIAL folds the reading at the corner. With m = min(|s|, 1/|s|), the share, and the home half
+     where |s| ≤ 1, the ring position is u = m/2 at home and u = 1 − m/2 past the corner, drawn round
+     the circle with the seam, where 0 and ∞ meet, at the top and the corner at the bottom. The flip
+     s ↦ 1/s is the mirror u ↦ 1 − u. Graduated two ways:
+       octaves   the doublings past the corner and the halvings before it, mirror images;
+       register  cells one step σ wide in ℓ = |ln s|, at u = e^(−ℓ)/2. On an odd register a cell sits ON
+                 the corner (gold): "unchanged" is a symbol. On an even one the cells meet at the corner
+                 and none is on it. Past the register's reach, ±(states − 1)/2 steps, are the rails.
+     THE STRIP unfolds the same reading: y = g = (2/π)·atan|s|, home at the top, the horizon at the
+     foot, the corner exactly half way down, the octaves crowding toward both ends.
+     THE DRUM counts octaves the way a reader does: halve past the corner, double before it, until the
+     value is caught in the reader's own octave. The count is the octave, k; where it lands is the share
+     within it, t (Serial, Parallel and Nowhere §3.3). Its rows are drawn on a drum, spaced by a tangent. -->
+<style>
+  :root{--bg:#0b0d12;--panel:#12151c;--line:#2b2e36;--gold:#e8c86a;--teal:#1D9E75;--cyan:#5ec4d8;--red:#e0705a;--blue:#6aa8e8;
+        --ink:#c9c7be;--hi:#f1efe6;--dim:#8a909b;--mono:"SF Mono",Menlo,Consolas,monospace;
+        --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;color-scheme:dark}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans)}
+  main{max-width:1120px;margin:0 auto;padding:22px 16px 40px;display:flex;flex-direction:column;gap:16px}
+  h1{margin:0;font-size:22px;font-weight:600;color:var(--hi);text-wrap:balance}
+  .lede{margin:0;color:var(--dim);max-width:72ch}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .lbl{font:11px var(--mono);color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-right:2px}
+  button{font:12px var(--mono);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 10px;cursor:pointer}
+  button:hover{border-color:var(--dim)}
+  button[aria-pressed="true"]{border-color:var(--gold);color:var(--gold)}
+  button:focus-visible,canvas:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  .top{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px}
+  .three{display:grid;grid-template-columns:1.2fr .55fr 1fr;gap:16px}
+  @media (max-width:760px){.top,.three{grid-template-columns:1fr}}
+  .card{background:var(--panel);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+  .card h2{margin:0;font-size:14px;font-weight:600;color:var(--hi)}
+  .card p{margin:0;font-size:12.5px;color:var(--dim)}
+  canvas{display:block;width:100%;max-width:100%;touch-action:none}
+  #sweep{aspect-ratio:16/10;cursor:grab}
+  #dial{aspect-ratio:1/1} #strip{aspect-ratio:1/2.4} #drum{aspect-ratio:1/1.2}
+  .rows{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font:13px var(--mono);font-variant-numeric:tabular-nums}
+  .rows > span:nth-child(odd){color:var(--dim)}
+  .rows .v{color:var(--hi)}
+  .g{color:var(--gold)}
+</style>
+</head>
+<body>
+<main>
+  <h1>Three rulers, one reading</h1>
+  <p class="lede">Turn the bar from pure horizontal toward pure vertical. One reading, v/h, is laid on three rulers: a dial folded at the corner, a strip that unfolds it, and a drum that counts octaves the way a reader does.</p>
+  <div class="top">
+    <div class="card">
+      <h2>The sweeping bar</h2>
+      <canvas id="sweep" tabindex="0" aria-label="The sweeping bar. Drag it, or use the arrow keys, to set the angle."></canvas>
+      <div class="bar"><button id="flip" type="button">flip: v/h → h/v</button><button id="corner" type="button">to the corner</button>
+        <button id="neg" type="button">other facing (−)</button></div>
+    </div>
+    <div class="card">
+      <h2>The reading</h2>
+      <div class="rows" id="rows"></div>
+    </div>
+  </div>
+  <div class="bar" role="group" aria-label="Dial graduation">
+    <span class="lbl">dial</span>
+    <button class="gm" type="button" data-m="octaves" aria-pressed="true">octaves</button>
+    <button class="gm" type="button" data-m="cells" aria-pressed="false">register cells</button>
+    <span class="lbl" style="margin-left:8px">register</span>
+    <button class="rg" type="button" data-r="31" aria-pressed="true">31 states (odd)</button>
+    <button class="rg" type="button" data-r="32" aria-pressed="false">32 states (even)</button>
+    <span class="lbl" style="margin-left:8px">step σ</span>
+    <button class="sg" type="button" data-s="0.036" aria-pressed="false">0.036</button>
+    <button class="sg" type="button" data-s="0.12" aria-pressed="true">0.12</button>
+    <button class="sg" type="button" data-s="0.3" aria-pressed="false">0.3</button>
+  </div>
+  <div class="three">
+    <div class="card"><h2>The dial, folded at the corner</h2>
+      <canvas id="dial" aria-label="The dial: home half on the left, the corner at the bottom, the seam where 0 and infinity meet at the top"></canvas>
+      <p>Home half on the left, past the corner on the right. The seam at the top is where 0 and ∞ meet. The hollow mark is the flip.</p></div>
+    <div class="card"><h2>The strip, unfolded</h2>
+      <canvas id="strip" aria-label="The strip: home at the top, the corner half way down, the horizon at the foot"></canvas>
+      <p>y = g. The corner falls half way down.</p></div>
+    <div class="card"><h2>The drum, counting octaves</h2>
+      <canvas id="drum" aria-label="The drum: the reading halved or doubled until it is caught in the reader's own octave"></canvas>
+      <p>Halve past the corner, double before it, until caught.</p></div>
+  </div>
+</main>
+<script>
+const PI = Math.PI;
+const css = k => getComputedStyle(document.documentElement).getPropertyValue(k).trim();
+const C = {}; for (const k of ['gold', 'teal', 'cyan', 'red', 'blue', 'ink', 'hi', 'dim', 'panel', 'line', 'mono']) C[k] = css('--' + k);
+let th = Math.atan(2.6), mode = 'octaves', states = 31, sigma = 0.12;
+const LIM = PI / 2 - 1e-6;
+// ── THE READING ──────────────────────────────────────────────────────────────────────────────────
+const R = () => { const s = Math.tan(th), a = Math.abs(s), share = a <= 1 ? a : 1 / a;
+  return { s, a, g: Math.abs(th) / (PI / 2), share, home: a <= 1 }; };
+function octave(a){                                                     // the drum: halve or double until caught
+  const rows = [a]; let v = a;
+  if (a > 1) { while (v > 2) { v /= 2; rows.push(v); } }               // past the corner: caught in (1, 2]
+  else if (a > 0) { while (v < 0.5) { v *= 2; rows.push(v); } }       // before it: caught in [½, 1)
+  const k = rows.length - 1, share = a > 1 ? 1 / v : v;                // octave k, and the share in the caught octave
+  return { rows, k, t: a > 0 ? 2 * share - 1 : 0 };
+}
+// ── DRAWING HELPERS ──────────────────────────────────────────────────────────────────────────────
+function ctx(cv){ const D = Math.min(2, devicePixelRatio || 1), W = Math.round(cv.clientWidth), H = Math.round(cv.clientHeight);
+  if (cv.width !== W * D || cv.height !== H * D) { cv.width = W * D; cv.height = H * D; }
+  const g = cv.getContext('2d'); g.setTransform(D, 0, 0, D, 0, 0); g.clearRect(0, 0, W, H); return [g, W, H]; }
+const octColour = (k, back) => back ? 'rgba(232,200,106,' + Math.max(0.15, 0.75 - 0.08 * k) + ')' : 'rgba(94,196,216,' + Math.max(0.15, 0.75 - 0.08 * k) + ')';
+// ── THE SWEEPING BAR ─────────────────────────────────────────────────────────────────────────────
+const sw = document.getElementById('sweep');
+function drawSweep(){
+  const [g, W, H] = ctx(sw), r = R(), L = Math.min(W * 0.42, H * 0.44), px = W * 0.42, py = H / 2;
+  g.strokeStyle = C.line; g.lineWidth = 1.5; g.beginPath(); g.arc(px, py, L, -PI / 2, PI / 2); g.stroke();
+  g.beginPath(); g.moveTo(px, py - L - 8); g.lineTo(px, py + L + 8); g.stroke();
+  g.setLineDash([3, 5]); g.strokeStyle = 'rgba(232,200,106,.6)';           // the corner, both facings
+  for (const sg of [-1, 1]) { g.beginPath(); g.moveTo(px, py); g.lineTo(px + L * Math.cos(PI / 4), py - sg * L * Math.sin(PI / 4)); g.stroke(); }
+  g.setLineDash([]);
+  const x = px + L * Math.cos(th), y = py - L * Math.sin(th);
+  g.strokeStyle = 'rgba(201,199,190,.5)'; g.setLineDash([2, 4]); g.beginPath(); g.moveTo(x, y); g.lineTo(x, py); g.stroke(); g.setLineDash([]);
+  g.lineWidth = 3; g.strokeStyle = C.teal; g.beginPath(); g.moveTo(px, py); g.lineTo(x, py); g.stroke();       // h
+  g.strokeStyle = C.red; g.beginPath(); g.moveTo(x, py); g.lineTo(x, y); g.stroke();                           // v
+  g.strokeStyle = C.hi; g.lineWidth = 3.5; g.beginPath(); g.moveTo(px, py); g.lineTo(x, y); g.stroke();
+  g.fillStyle = C.gold; g.beginPath(); g.arc(x, y, 7, 0, 2 * PI); g.fill();
+  g.fillStyle = C.hi; g.beginPath(); g.arc(px, py, 4, 0, 2 * PI); g.fill();
+  g.font = '12px ' + C.mono; g.textAlign = 'left'; g.fillStyle = C.teal; g.fillText('h ' + Math.cos(th).toFixed(3), px + 6, py + 16);
+  g.fillStyle = C.red; g.fillText('v ' + Math.abs(Math.sin(th)).toFixed(3), x + 8, (y + py) / 2);
+  g.fillStyle = C.dim; g.textAlign = 'right'; g.fillText('the reader, the pivot', px - 8, py + 4);
+  g.textAlign = 'left'; g.fillText('home', px + L + 8, py + 4); g.fillText('horizon', px + 6, py - L - 10);
+}
+function setFrom(e){ const b = sw.getBoundingClientRect(), W = b.width, H = b.height, px = W * 0.42, py = H / 2;
+  const dx = Math.max(0.0001, e.clientX - b.left - px), dy = py - (e.clientY - b.top); th = Math.max(-LIM, Math.min(LIM, Math.atan2(dy, dx))); draw(); }
+let drag = false;
+sw.addEventListener('pointerdown', e => { sw.setPointerCapture(e.pointerId); drag = true; setFrom(e); });
+sw.addEventListener('pointermove', e => { if (drag) setFrom(e); });
+sw.addEventListener('pointerup', () => { drag = false; }); sw.addEventListener('pointercancel', () => { drag = false; });
+sw.addEventListener('keydown', e => { const d = e.shiftKey ? 0.2 : 1;
+  if (e.key === 'ArrowUp' || e.key === 'ArrowRight') { th = Math.min(LIM, th + d * PI / 180); draw(); e.preventDefault(); }
+  if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') { th = Math.max(-LIM, th - d * PI / 180); draw(); e.preventDefault(); } });
+// ── THE DIAL ─────────────────────────────────────────────────────────────────────────────────────
+const dial = document.getElementById('dial');
+function drawDial(){
+  const [g, W] = ctx(dial), r = R(), cx = W / 2, cy = W / 2, rad = W * 0.36, ring = W * 0.07;
+  // u ∈ [0, 1] round the ring: 0 and 1 the seam at the top, ½ the corner at the bottom, home on the left
+  const at = (u, rr) => { const a = -PI / 2 - u * 2 * PI; return [cx + rr * Math.cos(a), cy + rr * Math.sin(a)]; };
+  const band = (u0, u1, col, w) => { g.strokeStyle = col; g.lineWidth = w || ring; g.beginPath();
+    const n = Math.max(3, Math.ceil(Math.abs(u1 - u0) * 240));
+    for (let i = 0; i <= n; i++) { const [x, y] = at(u0 + (u1 - u0) * i / n, rad); i ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); };
+  const uOf = (a) => a <= 1 ? a / 2 : 1 - 1 / (2 * a);
+  if (mode === 'octaves') {
+    for (let k = 0; k < 10; k++) {                                       // octave k on each side, mirror images
+      const lo = 2 ** -(k + 1), hi = 2 ** -k;
+      band(uOf(lo), uOf(hi) - 0.0015, octColour(k, false));
+      band(1 - uOf(hi) + 0.0015, 1 - uOf(lo), octColour(k, true));
+    }
+  } else {
+    const half = (states - 1) / 2, odd = states % 2 === 1;
+    // cell edges in ℓ: odd register (k + ½)σ, even kσ; the last cell is the rail out to the seam
+    const edges = []; for (let k = 0; k <= Math.ceil(half) + 1; k++) edges.push(odd ? (k + 0.5) * sigma : k * sigma);
+    const reach = odd ? (half + 0.5) * sigma : half * sigma;
+    let flipc = false;
+    for (let k = 0; k < edges.length - 1; k++) {
+      const l0 = edges[k], l1 = Math.min(edges[k + 1], reach); if (l0 >= reach) break;
+      const col = flipc ? 'rgba(201,199,190,.55)' : 'rgba(201,199,190,.3)'; flipc = !flipc;
+      band(1 - Math.exp(-l0) / 2 + 0.001, 1 - Math.exp(-l1) / 2 - 0.001, col);
+      band(Math.exp(-l1) / 2 + 0.001, Math.exp(-l0) / 2 - 0.001, col);
+    }
+    band(1 - Math.exp(-reach) / 2, 1, 'rgba(224,112,90,.75)'); band(0, Math.exp(-reach) / 2, 'rgba(224,112,90,.75)');   // the rails
+    if (odd) band(Math.exp(-sigma / 2) / 2, 1 - Math.exp(-sigma / 2) / 2, C.gold);                            // the corner cell
+    else { const [x1, y1] = at(0.5, rad - ring / 2 - 4), [x2, y2] = at(0.5, rad + ring / 2 + 4);
+      g.strokeStyle = C.gold; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); }
+  }
+  // the seam and the corner
+  const [sx, sy] = at(0, rad + ring / 2 + 12), [kx, ky] = at(0.5, rad + ring / 2 + 12);
+  g.fillStyle = C.dim; g.font = '11px ' + C.mono; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText('0 ≡ ∞', sx, sy - 2); g.fillStyle = C.gold; g.fillText('corner', kx, ky + 2);
+  g.fillStyle = C.dim; const [hx, hy] = at(0.25, rad - ring - 18), [bx, by] = at(0.75, rad - ring - 18);
+  g.fillText('home', hx, hy); g.fillText('past', bx, by);
+  // the marker, and its flip
+  const u = uOf(r.a), [mx, my] = at(u, rad), [fx, fy] = at(1 - u, rad);
+  g.strokeStyle = C.hi; g.lineWidth = 2; g.beginPath(); g.arc(fx, fy, 6, 0, 2 * PI); g.stroke();
+  g.fillStyle = C.hi; g.beginPath(); g.arc(mx, my, 7, 0, 2 * PI); g.fill();
+  g.strokeStyle = C.hi; g.lineWidth = 1.5; g.beginPath(); g.moveTo(cx, cy); g.lineTo(mx, my); g.stroke();
+  g.fillStyle = C.hi; g.font = '600 14px ' + C.mono; g.fillText(fmtS(r.a), cx, cy);
+}
+// ── THE STRIP ────────────────────────────────────────────────────────────────────────────────────
+const strip = document.getElementById('strip');
+function drawStrip(){
+  const [g, W, H] = ctx(strip), r = R(), top = 14, bot = H - 14, x0 = W * 0.5, half = W * 0.17;
+  const y = gg => top + (bot - top) * gg;
+  for (let k = 0; k < 10; k++) {                                         // the octaves, both sides of the corner
+    const lo = 2 ** -(k + 1), hi = 2 ** -k, gl = q => (2 / PI) * Math.atan(q);
+    g.fillStyle = octColour(k, false); g.fillRect(x0 - half, y(gl(lo)), 2 * half, y(gl(hi)) - y(gl(lo)) - 1);
+    g.fillStyle = octColour(k, true); g.fillRect(x0 - half, y(gl(1 / hi)) + 1, 2 * half, y(gl(1 / lo)) - y(gl(1 / hi)) - 1);
+  }
+  g.font = '10px ' + C.mono; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillStyle = C.dim;
+  for (const v of [0.25, 0.5, 1, 2, 4, 8]) g.fillText(v === 1 ? '1' : v < 1 ? '1/' + (1 / v) : String(v), x0 + half + 4, y((2 / PI) * Math.atan(v)));
+  g.fillText('0', x0 + half + 4, top); g.fillText('∞', x0 + half + 4, bot);
+  g.strokeStyle = C.gold; g.lineWidth = 2; g.beginPath(); g.moveTo(x0 - half - 6, y(0.5)); g.lineTo(x0 + half + 2, y(0.5)); g.stroke();
+  const mx = x0 + (r.s < 0 ? -half * 0.5 : half * 0.5);                   // left of centre for the other facing
+  g.fillStyle = C.hi; g.beginPath(); g.arc(mx, y(r.g), 6, 0, 2 * PI); g.fill();
+}
+// ── THE DRUM ─────────────────────────────────────────────────────────────────────────────────────
+const drum = document.getElementById('drum');
+function drawDrum(){
+  const [g, W, H] = ctx(drum), r = R(), o = octave(r.a), n = o.rows.length;
+  const slots = Math.max(n, 6) + 1, ai = PI / slots, rowH = Math.min(26, H / 9), extent = 2 * rowH / ai, vc = H / 2;
+  // rows on a drum: row i at vc + ½·extent·tan(angle + i·ai), the caught row at the centre
+  const ang = -(n - 1) * ai;
+  g.font = '12px ' + C.mono; g.textBaseline = 'middle';
+  for (let i = 0; i < n; i++) {
+    const a = ang + i * ai; if (Math.abs(a) >= PI / 2 - 0.02) continue;
+    const yy = vc + 0.5 * extent * Math.tan(a), sc = Math.cos(a);
+    if (yy < 8 || yy > H - 8) continue;
+    const last = i === n - 1;
+    g.globalAlpha = 0.35 + 0.65 * sc;
+    if (last) { g.fillStyle = 'rgba(232,200,106,.14)'; g.fillRect(8, yy - rowH * sc / 2, W - 16, rowH * sc); }
+    g.fillStyle = last ? C.gold : C.ink; g.textAlign = 'left';
+    g.fillText((i === 0 ? 'read ' : r.a > 1 ? '÷2 → ' : '×2 → ') + fmtS(o.rows[i]), 14, yy);
+    g.textAlign = 'right'; g.fillStyle = C.dim;
+    g.fillText(last ? (r.a === 1 ? 'the corner' : 'caught · octave ' + o.k) : i === 0 ? 'the reading' : 'step ' + i, W - 14, yy);
+  }
+  g.globalAlpha = 1;
+}
+// ── THE READOUT ──────────────────────────────────────────────────────────────────────────────────
+function fmtS(v){ return !isFinite(v) ? '∞' : v >= 1000 ? v.toExponential(2) : v >= 10 ? v.toFixed(2) : v.toFixed(4); }
+function rows(){
+  const r = R(), o = octave(r.a);
+  document.getElementById('rows').innerHTML = [
+    ['θ, the bar', (th * 180 / PI).toFixed(2) + '°'],
+    ['s = v/h', '<span class="v">' + (r.s < 0 ? '−' : '') + fmtS(r.a) + '</span>'],
+    ['g = θ ÷ 90°', '<span class="g">' + r.g.toFixed(4) + '</span>'],
+    ['side', r.a === 1 ? 'the corner' : r.home ? 'home side: v in terms of h' : 'past the corner: h in terms of v'],
+    ['share', r.share.toFixed(4) + '   min(v,h)/max(v,h)'],
+    ['octave, t', o.k + ', ' + o.t.toFixed(3) + '   counted out from the corner'],
+    ['flip', 's → ' + fmtS(1 / r.a) + ',  g → ' + (1 - r.g).toFixed(4)],
+  ].map(([a, b]) => '<span>' + a + '</span><span>' + b + '</span>').join('');
+}
+function draw(){ drawSweep(); drawDial(); drawStrip(); drawDrum(); rows(); }
+// ── HANDS ────────────────────────────────────────────────────────────────────────────────────────
+document.getElementById('flip').onclick = () => { th = Math.sign(th || 1) * (PI / 2 - Math.abs(th)); th = Math.max(-LIM, Math.min(LIM, th)); draw(); };
+document.getElementById('corner').onclick = () => { th = Math.sign(th || 1) * PI / 4; draw(); };
+document.getElementById('neg').onclick = () => { th = -th; draw(); };
+const group = (q, f) => document.querySelectorAll(q).forEach(b => b.onclick = () => {
+  document.querySelectorAll(q).forEach(x => x.setAttribute('aria-pressed', String(x === b))); f(b); draw(); });
+group('.gm', b => { mode = b.dataset.m; }); group('.rg', b => { states = +b.dataset.r; mode = 'cells'; press('.gm', 'cells'); });
+group('.sg', b => { sigma = +b.dataset.s; mode = 'cells'; press('.gm', 'cells'); });
+function press(q, val){ document.querySelectorAll(q).forEach(x => x.setAttribute('aria-pressed', String(x.dataset.m === val))); }
+addEventListener('resize', draw);
+draw();
+</script>
+</body>
+</html>

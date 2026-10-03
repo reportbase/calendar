@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Cycle Sheet</title>
+<!-- THE CYCLE SHEET — a standalone demo of the draw project's lab of the same name (draw.html,
+     startCycle). Several parties, each pair related in its own terms, and no common unit anywhere.
+
+     Each edge i–j carries a reading: how much j is in i's terms, held as a log, u_ij, so that reading
+     the edge backwards gives −u_ij and going round a cycle ADDS the logs (multiplies the readings).
+     A SINGLE GROUND, one value g_i per party with every reading g_j/g_i, exists exactly when every
+     cycle closes, its readings multiplying to 1. On a complete graph the triangles generate every cycle,
+     so the triangles are what is checked.
+
+     When the cycles do not close, the readings still split, uniquely and from the readings alone, into
+     the part one ground explains and the part no ground can carry: least squares for u_ij ≈ φ_j − φ_i
+     (the graph Laplacian, with φ_0 pinned to 0), and the residual r = u − (φ_j − φ_i). That residual is
+     the obstruction; on a complete graph it is pure circulation. Explained = 1 − ‖r‖²/‖u‖².
+
+     Hands: drag an edge up or down to change its reading, or select it and use the slider. -->
+<style>
+  :root{--bg:#0b0d12;--panel:#12151c;--line:#2b2e36;--gold:#e8c86a;--teal:#1D9E75;--red:#e0705a;--blue:#6aa8e8;
+        --ink:#c9c7be;--hi:#f1efe6;--dim:#8a909b;--mono:"SF Mono",Menlo,Consolas,monospace;
+        --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;color-scheme:dark}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans)}
+  main{max-width:1120px;margin:0 auto;padding:22px 16px 40px;display:flex;flex-direction:column;gap:16px}
+  h1{margin:0;font-size:22px;font-weight:600;color:var(--hi);text-wrap:balance}
+  .lede{margin:0;color:var(--dim);max-width:72ch}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .lbl{font:11px var(--mono);color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-right:2px}
+  button{font:12px var(--mono);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 10px;cursor:pointer}
+  button:hover{border-color:var(--dim)}
+  button[aria-pressed="true"]{border-color:var(--gold);color:var(--gold)}
+  button:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  .stage{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px;align-items:start}
+  @media (max-width:760px){.stage{grid-template-columns:1fr}}
+  canvas{display:block;width:100%;aspect-ratio:1/1;max-width:100%;background:var(--panel);border-radius:12px;touch-action:none;cursor:ns-resize}
+  .side{display:flex;flex-direction:column;gap:12px;min-width:0}
+  .card{background:var(--panel);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+  .verdict{font-size:15px;color:var(--hi);margin:0}
+  .rows{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font:13px var(--mono);font-variant-numeric:tabular-nums}
+  .rows > span:nth-child(odd){color:var(--dim)}
+  .meter{height:10px;background:#1c2029;border-radius:5px;overflow:hidden}
+  .meter i{display:block;height:100%;background:var(--teal);width:0}
+  .ok{color:var(--teal)} .bad{color:var(--red)} .g{color:var(--gold)}
+  input[type=range]{accent-color:var(--gold);width:100%}
+  .hint{font-size:12px;color:var(--dim);margin:0}
+</style>
+</head>
+<body>
+<main>
+  <h1>The cycle sheet</h1>
+  <p class="lede">Several parties, each pair related in its own terms, and no common unit anywhere. One ground explains every reading exactly when every cycle closes.
+    When they don't, the readings split into the part a ground explains and the part none can.</p>
+  <div class="bar" role="group" aria-label="Presets">
+    <span class="lbl">start from</span>
+    <button class="pre" type="button" data-p="ring" aria-pressed="true">each beats the next</button>
+    <button class="pre" type="button" data-p="ground" aria-pressed="false">a ground</button>
+    <button class="pre" type="button" data-p="twist" aria-pressed="false">a ground plus a twist</button>
+    <button class="pre" type="button" data-p="level" aria-pressed="false">all level</button>
+    <span class="lbl" style="margin-left:10px">parties</span>
+    <button class="nn" type="button" data-n="3" aria-pressed="true">3</button>
+    <button class="nn" type="button" data-n="4" aria-pressed="false">4</button>
+    <button class="nn" type="button" data-n="5" aria-pressed="false">5</button>
+    <button class="nn" type="button" data-n="6" aria-pressed="false">6</button>
+  </div>
+  <div class="stage">
+    <canvas id="cv" aria-label="Parties on a circle with a reading on every edge. Drag an edge up or down to change its reading."></canvas>
+    <div class="side">
+      <div class="card">
+        <p class="verdict" id="verdict"></p>
+        <div class="meter" aria-hidden="true"><i id="meter"></i></div>
+        <div class="rows" id="rows"></div>
+      </div>
+      <div class="card">
+        <div class="rows" id="sel"></div>
+        <label for="slide" class="hint">selected edge’s reading</label>
+        <input id="slide" type="range" min="-1.6" max="1.6" step="0.001" value="0">
+        <p class="hint">Drag an edge up or down to change what it reads. Gold edges are explained by the ground; red ones carry the part no ground can.</p>
+      </div>
+    </div>
+  </div>
+</main>
+<script>
+const PI = Math.PI;
+let n = 3, u = [], edges = [], sel = 0, preset = 'ring', fitR = null;
+function build(){ edges = []; for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) edges.push([i, j]); }
+function load(p){
+  preset = p; build(); u = edges.map(() => 0);
+  if (p === 'ring') edges.forEach(([i, j], k) => {                     // i beats i+1 round the ring: no ground can hold it
+    if (j === i + 1) u[k] = Math.log(1.25); else if (i === 0 && j === n - 1) u[k] = -Math.log(1.25); });
+  if (p === 'ground' || p === 'twist') {
+    let seed = 7 + n; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const g = Array.from({ length: n }, () => 0.6 + 1.4 * rnd());
+    edges.forEach(([i, j], k) => { u[k] = Math.log(g[j] / g[i]) + (p === 'twist' ? 0.12 : 0); });
+  }
+  sel = 0; update();
+}
+// ── THE SPLIT: least squares for u_ij ≈ φ_j − φ_i, φ_0 pinned ──────────────────────────────────────
+function fit(){
+  const m = n - 1, A = Array.from({ length: m }, () => new Float64Array(m + 1));
+  edges.forEach(([i, j], k) => {                                         // the Laplacian and the divergence
+    for (const [a, b, sgn] of [[i, j, -1], [j, i, 1]]) {
+      if (a === 0) continue;
+      A[a - 1][a - 1] += 1; if (b !== 0) A[a - 1][b - 1] -= 1;
+      A[a - 1][m] += sgn * u[k];
+    }
+  });
+  for (let c = 0; c < m; c++) {                                          // Gauss–Jordan, partial pivoting
+    let p = c; for (let r = c + 1; r < m; r++) if (Math.abs(A[r][c]) > Math.abs(A[p][c])) p = r;
+    [A[c], A[p]] = [A[p], A[c]];
+    for (let r = 0; r < m; r++) if (r !== c) { const f = A[r][c] / A[c][c]; for (let k = c; k <= m; k++) A[r][k] -= f * A[c][k]; }
+  }
+  const phi = [0]; for (let r = 0; r < m; r++) phi.push(A[r][m] / A[r][r]);
+  const r = edges.map(([i, j], k) => u[k] - (phi[j] - phi[i]));
+  const rr = r.reduce((s, x) => s + x * x, 0), uu = u.reduce((s, x) => s + x * x, 0);
+  return { phi, r, obstruction: Math.sqrt(rr), explained: uu < 1e-18 ? 1 : 1 - rr / uu };
+}
+function cycles(){                                                       // every triangle, i→j→k→i
+  const at = (a, b) => { const k = edges.findIndex(([i, j]) => (i === a && j === b) || (i === b && j === a)); return a < b ? u[k] : -u[k]; };
+  let worst = 0, count = 0;
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) for (let k = j + 1; k < n; k++) {
+    const s = at(i, j) + at(j, k) + at(k, i); count++; if (Math.abs(s) > Math.abs(worst)) worst = s; }
+  return { worst, count };
+}
+// ── DRAWING ───────────────────────────────────────────────────────────────────────────────────────
+const cv = document.getElementById('cv'), css = k => getComputedStyle(document.documentElement).getPropertyValue(k).trim();
+const C = {}; for (const k of ['gold', 'teal', 'red', 'blue', 'ink', 'hi', 'dim', 'panel', 'mono']) C[k] = css('--' + k);
+let W = 0, R = 0, P = [];
+function place(){ const D = Math.min(2, devicePixelRatio || 1); W = Math.round(cv.clientWidth);
+  if (cv.width !== W * D) { cv.width = cv.height = W * D; }
+  R = W * 0.36; P = Array.from({ length: n }, (_, i) => { const a = -PI / 2 + 2 * PI * i / n; return [W / 2 + R * Math.cos(a), W / 2 + R * Math.sin(a)]; }); }
+const mix = (a, b, t) => { const p = x => [1, 3, 5].map(o => parseInt(x.slice(o, o + 2), 16)); const A = p(a), B = p(b);
+  return 'rgb(' + A.map((v, k) => Math.round(v + (B[k] - v) * t)).join(',') + ')'; };
+function draw(){
+  place(); const D = cv.width / W, g = cv.getContext('2d'); g.setTransform(D, 0, 0, D, 0, 0); g.clearRect(0, 0, W, W);
+  const rms = Math.sqrt(u.reduce((s, x) => s + x * x, 0) / Math.max(1, u.length)) || 1;
+  edges.forEach(([i, j], k) => {
+    const [x1, y1] = P[i], [x2, y2] = P[j], t = Math.min(1, Math.abs(fitR.r[k]) / Math.max(0.02, rms) * 1.2);
+    g.strokeStyle = mix(C.gold, C.red, t); g.lineWidth = k === sel ? 5 : 3; g.globalAlpha = k === sel ? 1 : 0.85;
+    g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); g.globalAlpha = 1;
+    // the direction and the reading, at the middle: j in i's terms
+    const mx = (x1 + x2) / 2, my = (y1 + y2) / 2, ang = Math.atan2(y2 - y1, x2 - x1);
+    g.save(); g.translate(mx, my); g.rotate(ang);
+    g.fillStyle = mix(C.gold, C.red, t); g.beginPath(); g.moveTo(9, 0); g.lineTo(-3, -6); g.lineTo(-3, 6); g.fill(); g.restore();
+    const lab = Math.exp(u[k]).toFixed(3), fs = Math.max(11, W / 48);
+    g.font = '600 ' + fs + 'px ' + C.mono; const tw = g.measureText(lab).width + 10;
+    const ox = -Math.sin(ang) * 16, oy = Math.cos(ang) * 16;
+    g.fillStyle = C.panel; g.fillRect(mx + ox - tw / 2, my + oy - fs * 0.75, tw, fs * 1.5);
+    g.fillStyle = k === sel ? C.hi : C.ink; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(lab, mx + ox, my + oy);
+  });
+  P.forEach(([x, y], i) => {                                             // the parties, each with its best ground value
+    g.fillStyle = C.panel; g.strokeStyle = C.hi; g.lineWidth = 2; g.beginPath(); g.arc(x, y, Math.max(16, W / 26), 0, 2 * PI); g.fill(); g.stroke();
+    g.fillStyle = C.hi; g.font = '600 ' + Math.max(13, W / 34) + 'px ' + C.mono; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('ABCDEF'[i], x, y);
+    const gx = x + (x - W / 2) * 0.32, gy = y + (y - W / 2) * 0.32;
+    g.fillStyle = C.teal; g.font = Math.max(11, W / 50) + 'px ' + C.mono; g.fillText('g ' + Math.exp(fitR.phi[i]).toFixed(3), gx, gy);
+  });
+}
+// ── THE PANEL ─────────────────────────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+function update(){
+  fitR = fit(); const cy = cycles(), closes = Math.abs(cy.worst) < 1e-6, ex = Math.max(0, fitR.explained);
+  $('verdict').innerHTML = closes ? '<span class="ok">Every cycle closes.</span> One ground explains every reading.'
+    : ex < 1e-6 ? '<span class="bad">No ground explains any of it.</span> The readings are all circulation.'
+    : '<span class="bad">The cycles do not close.</span> A ground explains ' + (100 * ex).toFixed(1) + '%; the rest goes round.';
+  $('meter').style.width = (100 * ex).toFixed(1) + '%';
+  $('rows').innerHTML = [
+    ['cycles checked', cy.count + ' triangles'],
+    ['worst cycle product', '<span class="' + (closes ? 'ok' : 'bad') + '">' + Math.exp(cy.worst).toFixed(4) + '</span>'],
+    ['explained by a ground', (100 * ex).toFixed(1) + '%'],
+    ['obstruction ‖r‖', fitR.obstruction.toFixed(4) + ' (log units)'],
+    ['best ground', fitR.phi.map((p, i) => 'ABCDEF'[i] + ' ' + Math.exp(p).toFixed(3)).join(' · ')]
+  ].map(([a, b]) => '<span>' + a + '</span><span>' + b + '</span>').join('');
+  const [i, j] = edges[sel], grad = fitR.phi[j] - fitR.phi[i];
+  $('sel').innerHTML = [
+    ['edge', 'ABCDEF'[j] + ' in ' + 'ABCDEF'[i] + '’s terms'],
+    ['reads', '<span class="g">' + Math.exp(u[sel]).toFixed(4) + '</span>'],
+    ['= ground', Math.exp(grad).toFixed(4)],
+    ['× what goes round', Math.exp(fitR.r[sel]).toFixed(4)]
+  ].map(([a, b]) => '<span>' + a + '</span><span>' + b + '</span>').join('');
+  $('slide').value = u[sel];
+  draw();
+}
+// ── HANDS ─────────────────────────────────────────────────────────────────────────────────────────
+function nearest(x, y){
+  let best = 0, bd = 1e9;
+  edges.forEach(([i, j], k) => { const [x1, y1] = P[i], [x2, y2] = P[j], dx = x2 - x1, dy = y2 - y1;
+    const t = Math.max(0, Math.min(1, ((x - x1) * dx + (y - y1) * dy) / (dx * dx + dy * dy)));
+    const d = Math.hypot(x - x1 - t * dx, y - y1 - t * dy); if (d < bd) { bd = d; best = k; } });
+  return [best, bd];
+}
+let drag = null;
+cv.addEventListener('pointerdown', e => { const r = cv.getBoundingClientRect(), [k, d] = nearest(e.clientX - r.left, e.clientY - r.top);
+  if (d > 40) return; cv.setPointerCapture(e.pointerId); sel = k; drag = { y: e.clientY, u0: u[k] }; update(); });
+cv.addEventListener('pointermove', e => { if (!drag) return;
+  u[sel] = Math.max(-1.6, Math.min(1.6, drag.u0 - (e.clientY - drag.y) * 0.006)); update(); });
+cv.addEventListener('pointerup', () => { drag = null; }); cv.addEventListener('pointercancel', () => { drag = null; });
+$('slide').addEventListener('input', e => { u[sel] = +e.target.value; update(); });
+const press = (sel_, el) => document.querySelectorAll(sel_).forEach(b => b.setAttribute('aria-pressed', String(b === el)));
+document.querySelectorAll('.pre').forEach(b => b.onclick = () => { press('.pre', b); load(b.dataset.p); });
+document.querySelectorAll('.nn').forEach(b => b.onclick = () => { press('.nn', b); n = +b.dataset.n; load(preset); });
+addEventListener('resize', draw);
+load('ring');
+</script>
+</body>
+</html>
