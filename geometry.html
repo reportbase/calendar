@@ -46,14 +46,19 @@
             overflow:hidden;overscroll-behavior:none;touch-action:none;user-select:none;-webkit-user-select:none}
   canvas{display:block;width:100%;height:100%;cursor:crosshair}
   /* THE READOUT IS A PANEL THAT OPENS AND CLOSES, closed to begin with: the button in the corner
-     opens it, its ✕ or 'n' closes it, and the dial takes back the room it used. */
+     opens it; a tap anywhere on it, its ✕, Escape or 'n' closes it, and the dial takes back the room it used. */
   #nums{position:fixed;z-index:2;padding:10px 12px;background:rgba(18,21,28,.92);border:0.5px solid rgba(232,200,106,.28);
-        border-radius:10px;font:12px/1.5 var(--mono);box-shadow:0 12px 32px rgba(0,0,0,.45)}
+        border-radius:10px;font:12px/1.5 var(--mono);box-shadow:0 12px 32px rgba(0,0,0,.45);
+        max-height:calc(100% - 28px);box-sizing:border-box;overflow:auto;touch-action:pan-y;overscroll-behavior:contain}
   #nums[hidden], #numsBtn[hidden]{display:none}
-  #numsBody{display:grid;grid-template-columns:auto auto 1fr;column-gap:12px;padding-right:22px}
+  #numsBody{display:grid;grid-template-columns:auto auto 1fr;column-gap:12px}
+  #numsHead{position:sticky;top:-10px;display:flex;justify-content:space-between;align-items:center;gap:12px;
+        margin:-10px -12px 6px;padding:8px 8px 8px 12px;background:var(--panel);border-bottom:0.5px solid rgba(232,200,106,.18);
+        color:var(--dim);letter-spacing:.12em;text-transform:uppercase;font-size:10px}
   #numsClose, #numsBtn{font:12px/1 var(--mono);color:var(--dim);background:var(--panel);cursor:pointer;
         border:0.5px solid rgba(232,200,106,.28);border-radius:6px}
-  #numsClose{position:absolute;top:8px;right:8px;width:22px;height:22px;padding:0}
+  #numsClose{padding:7px 10px;color:var(--ink);text-transform:none;letter-spacing:0}
+  #nums{cursor:pointer}
   #numsBtn{position:fixed;z-index:2;padding:7px 10px;letter-spacing:.08em}
   #numsClose:hover, #numsBtn:hover{color:var(--ink);border-color:var(--gold)}
   #numsClose:focus-visible, #numsBtn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
@@ -65,7 +70,7 @@
 <body>
 <canvas id="cv"></canvas>
 <button id="numsBtn" type="button" aria-expanded="false" aria-controls="nums">readout</button>
-<div id="nums" hidden><button id="numsClose" type="button" aria-label="Close the readout">✕</button><div id="numsBody"></div></div>
+<div id="nums" hidden><div id="numsHead"><span>readout</span><button id="numsClose" type="button" aria-label="Close the readout">close ✕</button></div><div id="numsBody"></div></div>
 <script>
 const PI = Math.PI, K = 5, CAP = Math.atan(2 ** K), ZMAX = Math.asinh(2 ** K);   // the window's end: the K-th corner, tan θ = 2^K
 const THRUST = 0.4, SPRING_MS = 150, TAP_PX = 6;
@@ -113,14 +118,17 @@ function setNums(on){                                         // open or close t
   updateNums(); force = true;
 }
 numsBtn.addEventListener('click', () => setNums(true));
-document.getElementById('numsClose').addEventListener('click', () => setNums(false));
+nums.addEventListener('click', () => setNums(false));                   // a tap anywhere on the panel closes it, the ✕ included
+addEventListener('keydown', e => { if (e.key === 'Escape' && !nums.hidden) setNums(false); });
 function layout(){
   const land = W >= H * 1.05;
   const dial = land ? { x: 0, y: 0, w: W / 2, h: H } : { x: 0, y: H * 0.5, w: W, h: H * 0.5 };
   const fig  = land ? { x: W / 2, y: 0, w: W / 2, h: H } : { x: 0, y: 0, w: W, h: H * 0.5 };
-  nums.style.left = numsBtn.style.left = (dial.x + 14) + 'px'; nums.style.top = numsBtn.style.top = (dial.y + 14) + 'px';
-  nums.style.maxWidth = Math.max(200, dial.w - 28) + 'px';
-  const top = nums.hidden ? 40 : nums.offsetHeight + 40;
+  // the button sits in the dial's corner; the open panel takes the top of the screen, never more than
+  // the screen, and scrolls inside itself when it is longer. Only beside the dial does it push the dial down.
+  nums.style.left = numsBtn.style.left = (dial.x + 14) + 'px'; numsBtn.style.top = (dial.y + 14) + 'px';
+  nums.style.top = '14px'; nums.style.maxWidth = Math.max(200, (land ? dial.w : W) - 28) + 'px';
+  const top = (land && !nums.hidden) ? nums.offsetHeight + 40 : 40;
   dial.cx = dial.x + dial.w / 2; dial.cy = dial.y + dial.h - 86;
   dial.R = Math.max(40, Math.min(dial.w * 0.44, dial.cy - dial.y - top));
   fig.ox = fig.x + fig.w / 2; fig.oy = fig.y + fig.h - 46;
