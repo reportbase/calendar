@@ -1,0 +1,200 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>The Fisheye Sweep</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,500;7..72,600&family=Source+Sans+3:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* The fisheye sweep, situation 3: swept from home in steps of h, proportional to the corner (the working horizon), doublings past it. No arctan. */
+:root{
+  --bg:#f3f5f6; --panel:#ffffff; --ink:#1d2a33; --muted:#66757f; --faint:#c9d2d8;
+  --addr:#2f4656; --accent:#c8641e; --accent-soft:rgba(200,100,30,.16); --line:#dde3e7;
+  --display:"Literata",Georgia,serif; --body:"Source Sans 3",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12181c; --panel:#192127; --ink:#e3e9ec; --muted:#93a2ab; --faint:#3a4852;
+  --addr:#b9cbd6; --accent:#f0924a; --accent-soft:rgba(240,146,74,.18); --line:#26313a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12181c; --panel:#192127; --ink:#e3e9ec; --muted:#93a2ab; --faint:#3a4852;
+  --addr:#b9cbd6; --accent:#f0924a; --accent-soft:rgba(240,146,74,.18); --line:#26313a; color-scheme:dark}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+.wrap{max-width:1080px;margin:0 auto;padding-inline:16px;padding-block:20px 32px;display:grid;gap:16px}
+h1{font-family:var(--display);font-weight:600;font-size:1.6rem;margin:0;text-wrap:balance}
+.lede{margin:0;color:var(--muted);max-width:68ch}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:16px;align-items:start}
+@media (max-width:760px){.grid{grid-template-columns:minmax(0,1fr)}}
+.col{display:grid;gap:16px;min-width:0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:8px;min-width:0}
+.panel h2{font-family:var(--display);font-weight:500;font-size:1.05rem;margin:0}
+.cap{margin:0;color:var(--muted);font-size:.9rem}
+canvas{display:block;width:100%;max-width:100%;touch-action:none;border-radius:6px}
+#geo{aspect-ratio:1/1;cursor:ns-resize}
+#line{height:130px;cursor:ew-resize}
+.row{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}
+.read{font-family:var(--mono);font-size:.85rem;font-variant-numeric:tabular-nums;color:var(--ink)}
+.read b{color:var(--accent);font-weight:500}
+label{font-family:var(--mono);font-size:.85rem}
+input[type=range]{width:min(220px,60vw);accent-color:var(--accent)}
+button{font:inherit;font-size:.9rem;padding:6px 14px;border-radius:999px;border:1px solid var(--faint);background:var(--panel);color:var(--ink);cursor:pointer;touch-action:manipulation}
+button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+input:disabled{opacity:.4}
+button:focus-visible,input:focus-visible,canvas:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+
+<div class="wrap">
+  <h1>The fisheye sweep</h1>
+  <p class="lede">Situation 3. h's breadth is known; v's breadth is not, so v is had only as a count of h's. The reader sweeps
+  from home, step by step. The corner, where v reaches one h, is known even though v's breadth is not, so the sweep from home
+  to the corner has two known ends and is taken in plain proportion: that span, the front side, is the working horizon, the
+  one a situated reader experiences. Past the corner is the back side. It has no end to sweep to, so it is counted by
+  doublings, 2 h, 4 h, 8 h, toward the horizon, which no count reaches. Nothing here uses an angle: the point v h's up the
+  line through home is where the reader is looking.</p>
+
+  <div class="grid">
+    <div class="col">
+      <div class="panel">
+        <h2>From the reader</h2>
+        <canvas id="geo" tabindex="0" aria-label="The reader, h out to home, and the line through home on which v is counted in h's. Drag up or down, or use the arrow keys, to move the place."></canvas>
+        <div class="row"><span class="read" id="readX"></span></div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="panel">
+        <h2>The sweep, home to the horizon</h2>
+        <canvas id="line" tabindex="0" aria-label="The sweep as a line: the front side in equal steps to the corner, then one step per doubling. Drag along it, or use the arrow keys."></canvas>
+        <p class="cap" id="cap"></p>
+        <div class="row">
+          <button id="sweepBtn" type="button">Sweep</button>
+          <label for="nIn">steps to the corner <span id="nOut"></span></label>
+          <input id="nIn" type="range" min="2" max="20" step="1" value="8">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const K = 6;                       // doublings shown past the corner (to 64 h); the horizon lies beyond them
+  // The place is u, how far the sweep has got: 0 at home, 1 at the corner, 1 + k after k doublings.
+  // v in h's: u on the front side (plain proportion), 2^(u − 1) on the back (one step of u per doubling).
+  let C = 8, u = 0.35, playing = false, last = 0;
+  const vOf = u => u <= 1 ? u : Math.pow(2, u - 1);
+  const uOf = v => v <= 1 ? v : 1 + Math.log2(v);
+  const fmt = v => v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1) : v.toFixed(v < 1 ? 3 : 2);
+
+  function fit(c) { const r = c.getBoundingClientRect(), d = Math.min(devicePixelRatio || 1, 2);
+    if (c.width !== Math.round(r.width * d) || c.height !== Math.round(r.height * d)) { c.width = Math.round(r.width * d); c.height = Math.round(r.height * d); }
+    const x = c.getContext('2d'); x.setTransform(d, 0, 0, d, 0, 0); return [x, r.width, r.height]; }
+
+  // ---- from the reader: h runs out to home; the line through home, upright, counts v in h's.
+  //      A step at v h's is the point v h's up that line; the ray from the reader to it is where the reader looks.
+  const geo = $('geo'); let G = null;
+  function drawGeo() {
+    const [x, w, h] = fit(geo);
+    x.clearRect(0, 0, w, h);
+    const ox = 30, oy = h - 40, H = Math.min(w - 130, (h - 70) / 2.6);   // one h, on screen; about 2.5 h fit above home
+    const lx = ox + H, top = 18;                                          // the line through home
+    G = { ox, oy, H, lx };
+    const Y = v => oy - v * H;
+    const ink = css('--ink'), muted = css('--muted'), faint = css('--faint'), acc = css('--accent'), addr = css('--addr');
+    x.font = `12px ${css('--mono')}`;
+    // the working horizon: home to the corner, shaded on the line
+    x.fillStyle = addr; x.globalAlpha = 0.14; x.fillRect(lx - 7, Y(1), 14, H); x.globalAlpha = 1;
+    // the line through home, running up toward the horizon
+    x.strokeStyle = faint; x.lineWidth = 1.2; x.beginPath(); x.moveTo(lx, oy); x.lineTo(lx, top); x.stroke();
+    x.beginPath(); x.moveTo(lx - 5, top + 8); x.lineTo(lx, top); x.lineTo(lx + 5, top + 8); x.stroke();
+    // h, known: the reader out to home
+    x.strokeStyle = ink; x.lineWidth = 2; x.beginPath(); x.moveTo(ox, oy); x.lineTo(lx, oy); x.stroke();
+    // the steps: the front side's C equal steps, then the doublings that fit
+    x.strokeStyle = addr; x.lineWidth = 1;
+    for (let j = 1; j < C; j++) { const y = Y(j / C); x.beginPath(); x.moveTo(lx - 5, y); x.lineTo(lx + 5, y); x.stroke(); }
+    for (let k = 1; k <= K; k++) { const v = Math.pow(2, k); if (Y(v) < top + 10) break; const y = Y(v); x.beginPath(); x.moveTo(lx - 9, y); x.lineTo(lx + 9, y); x.stroke(); x.fillStyle = muted; x.textAlign = 'left'; x.fillText(v + ' h', lx + 14, y + 4); }
+    // the corner: one h up the line
+    x.fillStyle = acc; x.beginPath(); x.arc(lx, Y(1), 4.5, 0, 7); x.fill();
+    // faint rays to home and to the corner
+    x.strokeStyle = faint; x.setLineDash([3, 4]); x.beginPath(); x.moveTo(ox, oy); x.lineTo(lx, Y(1)); x.stroke(); x.setLineDash([]);
+    // the place: v h's up the line, and the reader's look to it (drawn as far as the frame allows)
+    const v = vOf(u), yv = Y(v);
+    x.strokeStyle = acc; x.lineWidth = 1.5; x.beginPath(); x.moveTo(ox, oy);
+    if (yv >= top) x.lineTo(lx, yv); else { const t = (oy - top) / (oy - yv); x.lineTo(ox + (lx - ox) * t, top); } x.stroke();
+    if (yv >= top) { x.fillStyle = acc; x.beginPath(); x.arc(lx, yv, 6, 0, 7); x.fill(); }
+    else { x.fillStyle = acc; x.textAlign = 'left'; x.fillText(fmt(v) + ' h ↑', lx + 14, top + 12); }
+    // labels
+    x.fillStyle = muted; x.textAlign = 'center'; x.fillText('h, known', (ox + lx) / 2, oy - 10);
+    x.textAlign = 'left'; x.fillText('home', lx + 14, oy + 4); x.fillText('corner · 1 h', lx + 14, Y(1) + 4);
+    x.fillText('front side', lx + 14, Y(0.5) + 4); x.textAlign = 'right'; x.fillText('horizon', lx - 10, top + 6); x.textAlign = 'left';
+    x.textAlign = 'left'; x.fillText('reader', ox - 4, oy + 22);
+    x.strokeStyle = ink; x.lineWidth = 1.5; x.beginPath(); x.moveTo(ox - 5, oy); x.lineTo(ox + 5, oy); x.moveTo(ox, oy - 5); x.lineTo(ox, oy + 5); x.stroke();
+  }
+
+  // ---- the sweep as a line: the front side, home to the corner, in C equal steps; then one equal step per doubling
+  const line = $('line'); let LG = null;
+  function drawLine() {
+    const [x, w, h] = fit(line);
+    x.clearRect(0, 0, w, h);
+    const l = 16, r = 26, y = 56, span = 1 + K, Wd = w - l - r, F = 0.42 * Wd;            // the front side gets 42% of the line
+    const X = uu => uu <= 1 ? l + uu * F : l + F + (uu - 1) / K * (Wd - F);
+    LG = { l, r, w, span, F, Wd };
+    const muted = css('--muted'), faint = css('--faint'), acc = css('--accent'), addr = css('--addr');
+    x.font = `11px ${css('--mono')}`;
+    x.fillStyle = addr; x.globalAlpha = 0.14; x.fillRect(X(0), y - 12, X(1) - X(0), 24); x.globalAlpha = 1;
+    x.strokeStyle = faint; x.lineWidth = 1.2; x.beginPath(); x.moveTo(X(0), y); x.lineTo(w - 8, y); x.stroke();
+    x.beginPath(); x.moveTo(w - 14, y - 5); x.lineTo(w - 8, y); x.lineTo(w - 14, y + 5); x.stroke();
+    x.strokeStyle = addr; x.lineWidth = 1;
+    for (let j = 1; j < C; j++) { const p = X(j / C); x.beginPath(); x.moveTo(p, y - 6); x.lineTo(p, y + 6); x.stroke(); }
+    x.fillStyle = muted; x.textAlign = 'center';
+    for (let k = 1; k <= K; k++) { const p = X(1 + k); x.beginPath(); x.moveTo(p, y - 9); x.lineTo(p, y + 9); x.stroke(); if (w > 520 || k % 2 === 0) x.fillText(Math.pow(2, k) + ' h', p, y + 26); }
+    x.fillStyle = acc; x.beginPath(); x.arc(X(1), y, 4.5, 0, 7); x.fill();
+    x.fillStyle = muted; x.textAlign = 'left'; x.fillText('home', X(0), y + 26); x.textAlign = 'center'; x.fillText('corner', X(1), y + 26);
+    x.fillText('front side', (X(0) + X(1)) / 2, y - 34); x.fillText('the working horizon', (X(0) + X(1)) / 2, y - 20);
+    x.fillText('back side', (X(1) + X(span)) / 2, y - 34); x.fillText('doublings', (X(1) + X(span)) / 2, y - 20);
+    x.textAlign = 'right'; x.fillText('horizon', w - 6, y + 44);
+    const p = X(Math.min(u, span));
+    x.strokeStyle = acc; x.lineWidth = 2; x.beginPath(); x.moveTo(p, y - 14); x.lineTo(p, y + 14); x.stroke();
+    x.fillStyle = acc; x.beginPath(); x.moveTo(p - 5, y - 20); x.lineTo(p + 5, y - 20); x.lineTo(p, y - 14); x.fill();
+  }
+
+  function draw() {
+    const v = vOf(u), front = u < 1 - 1e-9, at = Math.abs(u - 1) < 1e-9;
+    const where = at ? 'the corner' : front ? `front side · step ${Math.round(u * C)} of ${C}` : `back side · ${(u - 1).toFixed(2)} doublings past the corner`;
+    $('readX').innerHTML = `v = <b>${fmt(v)} h</b> · ${where}`;
+    $('nOut').textContent = C; $('sweepBtn').textContent = playing ? 'Pause' : 'Sweep';
+    $('cap').textContent = `The front side is ${C} equal steps of 1/${C} h, from home to the corner: two known ends, so each step is a plain share of the span. `
+      + `Past the corner each step is a doubling, and the steps go on: ${K} are drawn, out to ${Math.pow(2, K)} h, and the horizon lies beyond any of them.`;
+    drawGeo(); drawLine();
+  }
+
+  // ---- input: pointer (mouse, pen, touch) and keys
+  const setU = nu => { u = Math.max(0, Math.min(1 + K, nu)); draw(); };
+  function fromGeo(e) { if (!G) return; const r = geo.getBoundingClientRect(), py = e.clientY - r.top;
+    const v = Math.max(0, (G.oy - py) / G.H); setU(uOf(v)); }
+  function fromLine(e) { if (!LG) return; const r = line.getBoundingClientRect(), px = e.clientX - r.left;
+    const q = px - LG.l; setU(q <= LG.F ? q / LG.F : 1 + (q - LG.F) / (LG.Wd - LG.F) * K); }
+  for (const [el, fn] of [[geo, fromGeo], [line, fromLine]]) {
+    let down = false;
+    el.addEventListener('pointerdown', e => { playing = false; down = true; el.setPointerCapture(e.pointerId); e.preventDefault(); fn(e); });
+    el.addEventListener('pointermove', e => { if (down) fn(e); });
+    const end = () => { down = false; }; el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+    el.addEventListener('keydown', e => { const d = (e.key === 'ArrowRight' || e.key === 'ArrowUp') ? 1 : (e.key === 'ArrowLeft' || e.key === 'ArrowDown') ? -1 : 0;
+      if (!d) return; e.preventDefault(); playing = false; const step = u < 1 - 1e-9 || (u <= 1 + 1e-9 && d < 0) ? 1 / C : 0.25; setU(Math.round((u + d * step) / step) * step); });
+  }
+  $('nIn').addEventListener('input', e => { C = +e.target.value; draw(); });
+  $('sweepBtn').addEventListener('click', () => { playing = !playing; if (playing) { u = 0; last = performance.now(); } draw(); });   // a sweep starts at home
+
+  // ---- the sweep runs from home: one front step at a time, then one doubling at a time, then back to home
+  function tick(now) {
+    if (playing) { const dt = Math.min(0.05, (now - last) / 1000); last = now;
+      u += dt * (u < 1 ? 1 / 3 : 1 / 1.6);
+      if (u >= 1 + K) { u = 0; }
+      draw(); }
+    requestAnimationFrame(tick); }
+  new ResizeObserver(draw).observe(document.body);
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', draw);
+  new MutationObserver(draw).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  draw(); requestAnimationFrame(tick);
+})();
+</script>
+
+</body></html>

@@ -1,0 +1,286 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>The Breadth Sweep</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,500;7..72,600&family=Source+Sans+3:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: the disc (turn × g) is the control; the breadths read out beside it. Same look as the Cauchy sweep. */
+:root{
+  --bg:#f3f5f6; --panel:#ffffff; --ink:#1d2a33; --muted:#66757f; --faint:#c9d2d8;
+  --addr:#2f4656; --accent:#c8641e; --accent-soft:rgba(200,100,30,.16); --line:#dde3e7;
+  --display:"Literata",Georgia,serif; --body:"Source Sans 3",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12181c; --panel:#192127; --ink:#e3e9ec; --muted:#93a2ab; --faint:#3a4852;
+  --addr:#b9cbd6; --accent:#f0924a; --accent-soft:rgba(240,146,74,.18); --line:#26313a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12181c; --panel:#192127; --ink:#e3e9ec; --muted:#93a2ab; --faint:#3a4852;
+  --addr:#b9cbd6; --accent:#f0924a; --accent-soft:rgba(240,146,74,.18); --line:#26313a; color-scheme:dark}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+.wrap{max-width:1080px;margin:0 auto;padding-inline:16px;padding-block:20px 32px;display:grid;gap:16px}
+h1{font-family:var(--display);font-weight:600;font-size:1.6rem;margin:0;text-wrap:balance}
+.lede{margin:0;color:var(--muted);max-width:68ch}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:16px;align-items:start}
+@media (max-width:760px){.grid{grid-template-columns:minmax(0,1fr)}}
+.col{display:grid;gap:16px;min-width:0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:8px;min-width:0}
+.panel h2{font-family:var(--display);font-weight:500;font-size:1.05rem;margin:0}
+.cap{margin:0;color:var(--muted);font-size:.9rem}
+canvas{display:block;width:100%;max-width:100%;touch-action:none;border-radius:6px}
+#disc{aspect-ratio:1/1;cursor:crosshair}
+#breadth{height:110px}
+.row{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}
+.read{font-family:var(--mono);font-size:.85rem;font-variant-numeric:tabular-nums;color:var(--ink)}
+.read b{color:var(--accent);font-weight:500}
+label{font-family:var(--mono);font-size:.85rem}
+input[type=range]{width:min(220px,60vw);accent-color:var(--accent)}
+button{font:inherit;font-size:.9rem;padding:6px 14px;border-radius:999px;border:1px solid var(--faint);background:var(--panel);color:var(--ink);cursor:pointer;touch-action:manipulation}
+button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+input:disabled{opacity:.4}
+button:focus-visible,input:focus-visible,canvas:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+
+<div class="wrap">
+  <h1>The breadth sweep</h1>
+  <p class="lede">A breadth is an extent, continuous, like N but not an index, and each facing has one. One facing, one breadth:
+  known, it is the quarter circle. Two facings, a breadth to the left and one to the right: known, the semicircle. Four facings,
+  four breadths: known, the circle. Eight facings, eight breadths: known, the sphere. g is [0, 1], the same for every breadth;
+  with the breadth known it is the radius from 1 to the breadth, r = 1 + g(B − 1). At g = 0 the radius is 1: the unit circle
+  (with eight facings, the unit sphere). At g = 1 it is B: the breadth fully expressed. The turn from h toward v, with h relative to v and v relative to h (no division,
+  no v/h), points to the place within the radius: x = r · turn / (π/2). The breadth here is known, divided evenly across the address space and read with
+  no situated observer: the view from nowhere, with no home, no horizon and no corner. The breadths of h and v are known and equal,
+  so both are normalized to 1: that is what makes it the unit circle. (A situated reader has the same geometry with the breadth unknown: the fisheye.)</p>
+
+  <div class="grid">
+    <div class="col">
+      <div class="panel">
+        <h2 id="discTitle">The disc: turn × radius</h2>
+        <canvas id="disc" tabindex="0" aria-label="The disc. Drag or touch: the angle sets the facing and the turn, the distance from the middle sets the radius. Arrow keys also work."></canvas>
+        <div class="row"><span class="read" id="readX"></span></div>
+        <div class="row" role="group" aria-label="Facings">
+          <button id="f1" type="button" aria-pressed="true">1 facing</button>
+          <button id="f2" type="button" aria-pressed="false">2 facings</button>
+          <button id="f4" type="button" aria-pressed="false">4 facings</button>
+          <button id="f8" type="button" aria-pressed="false">8 facings</button>
+        </div>
+        <div class="row" id="rRow" hidden>
+          <label for="rIn">g</label>
+          <input id="rIn" type="range" min="0" max="1" step="0.001" value="0.62">
+        </div>
+        <div class="row">
+          <label for="bIn">breadth B <span id="bOut"></span></label>
+          <input id="bIn" type="range" min="0" max="1000" step="1" value="500">
+          <button id="sweepBtn" type="button">Pause</button>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="panel">
+        <h2 id="bTitle"></h2>
+        <canvas id="breadth" aria-hidden="true"></canvas>
+        <p class="cap" id="bCap"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const HALF = Math.PI / 2, TAU = Math.PI * 2;
+  const bOf = v => Math.pow(10, 4 * v / 1000);   // breadth slider, even in ln B, 1 to 10,000 of its own lengths
+  let k = 1, B = bOf(500), rho = 0.62, theta = HALF - 0.55, yaw = 0.7, pitch = 0.45, playing = !matchMedia('(prefers-reduced-motion: reduce)').matches, t0 = performance.now(), tOff = 0;
+  const $ = id => document.getElementById(id);
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const fmt = v => { if (!isFinite(v)) return '∞'; const a = Math.abs(v); return a === 0 ? '0' : a >= 1000 ? v.toFixed(0) : a >= 100 ? v.toFixed(1) : a >= 10 ? v.toFixed(2) : a >= 1 ? v.toFixed(3) : v.toPrecision(3); };
+
+  // ---- the facings, laid on the disc as the array sweeps lay them. Each facing runs from its home (turn 0) to a horizon
+  //      (turn π/2); theta is the screen angle, counter-clockwise from the right.
+  //   1 facing: home straight up (theta π/2), horizon to the right (theta 0); h drawn up, v across
+  //   2 facings: home straight ahead (up); the right breadth to the right horizon, the left to the left horizon
+  //   4 facings: the front home up, the back home down; horizon A to the right, horizon B to the left
+  const FACINGS = {
+    1: [{ name: '', home: HALF, dir: -1 }],
+    2: [{ name: 'right', home: HALF, dir: -1 }, { name: 'left', home: HALF, dir: +1 }],
+    4: [{ name: 'front right', home: HALF, dir: -1 }, { name: 'front left', home: HALF, dir: +1 },
+        { name: 'back left', home: 3 * HALF, dir: -1 }, { name: 'back right', home: 3 * HALF, dir: +1 }],
+  };
+  //   8 facings: the octants of the ball, cut by the horizon (z = 0) and two meridians; homes at front (+z) and back (−z).
+  //   The direction pointed to is the one at the centre of the view; drag turns the ball under it.
+  const inv = q => { const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
+    const y = cp * q[1] + sp * q[2], z1 = -sp * q[1] + cp * q[2], x1 = q[0]; return [cy * x1 - sy * z1, y, sy * x1 + cy * z1]; };
+  const rot = p => { const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
+    const x1 = cy * p[0] + sy * p[2], z1 = -sy * p[0] + cy * p[2]; return [x1, cp * p[1] - sp * z1, sp * p[1] + cp * z1]; };
+  const ballFacing = () => { const d = inv([0, 0, 1]), name = (d[2] >= 0 ? 'front' : 'back') + ' ' + (d[1] >= 0 ? 'upper' : 'lower') + ' ' + (d[0] >= 0 ? 'right' : 'left');
+    return { f: { name, idx: (d[2] >= 0 ? 0 : 4) + (d[1] >= 0 ? 0 : 2) + (d[0] >= 0 ? 0 : 1) }, psi: Math.acos(Math.min(1, Math.abs(d[2]))), d }; };
+  const NAMES8 = ['front upper right', 'front upper left', 'front lower right', 'front lower left', 'back upper right', 'back upper left', 'back lower right', 'back lower left'];
+  const span = () => k === 1 ? [0, HALF] : k === 2 ? [0, Math.PI] : [0, TAU];
+  const facingOf = th => { if (k === 8) return ballFacing(); const L = FACINGS[k];
+    for (const f of L) { const t = f.dir > 0 ? th - f.home : f.home - th; const tt = ((t % TAU) + TAU) % TAU; if (tt <= HALF + 1e-9) return { f, psi: tt }; }
+    return { f: L[0], psi: 0 }; };
+  // g = rho, on [0, 1]; the radius runs from 1 (g = 0, the unit circle) to B (g = 1, fully expressed)
+  const expressed = () => 1 + rho * (B - 1);
+  const radius = expressed;
+  const place = () => expressed() * facingOf(theta).psi / HALF;
+
+  function fit(c) { const r = c.getBoundingClientRect(), d = devicePixelRatio || 1;
+    if (c.width !== Math.round(r.width * d) || c.height !== Math.round(r.height * d)) { c.width = Math.round(r.width * d); c.height = Math.round(r.height * d); }
+    const x = c.getContext('2d'); x.setTransform(d, 0, 0, d, 0, 0); return [x, r.width, r.height]; }
+
+  // ---- the disc
+  const disc = $('disc'); let geo = null;
+  function drawBall() {
+    disc.style.aspectRatio = '1 / 1';
+    const [x, w, h] = fit(disc), m = w < 420 ? 40 : 30, R = Math.min(w, h) / 2 - m, ox = w / 2, oy = h / 2, S = q => [ox + q[0] * R, oy - q[1] * R];
+    x.clearRect(0, 0, w, h); x.lineWidth = 1;
+    const gr = x.createRadialGradient(ox, oy, 0, ox, oy, R); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, css('--addr'));
+    x.globalAlpha = 0.16; x.fillStyle = gr; x.beginPath(); x.arc(ox, oy, R, 0, 7); x.fill(); x.globalAlpha = 1;
+    x.strokeStyle = css('--faint'); x.beginPath(); x.arc(ox, oy, R, 0, 7); x.stroke(); x.setLineDash([]);
+    // the three great circles that cut the eight facings, at this radius: the horizon (z = 0) and the two meridians
+    const circ = (fn, dash, col) => { x.strokeStyle = col; x.setLineDash(dash); let prev = null;
+      for (let q = 0; q <= 120; q++) { const p = rot(fn(q / 120 * TAU)).map(v => v * rho), sc = S(p); x.globalAlpha = p[2] >= 0 ? 0.9 : 0.3; if (prev) { x.beginPath(); x.moveTo(...prev); x.lineTo(...sc); x.stroke(); } prev = sc; }
+      x.setLineDash([]); x.globalAlpha = 1; };
+    circ(a => [Math.cos(a), Math.sin(a), 0], [], css('--ink')); circ(a => [Math.cos(a), 0, Math.sin(a)], [3, 4], css('--muted')); circ(a => [0, Math.cos(a), Math.sin(a)], [3, 4], css('--muted'));
+    // the turn swept from the facing's home to the direction pointed to, along the ball at this radius
+    const { d } = ballFacing(), home = [0, 0, d[2] >= 0 ? 1 : -1];
+    x.strokeStyle = css('--accent'); x.lineWidth = 3; x.beginPath();
+    for (let q = 0; q <= 40; q++) { const t = q / 40, v = unit([home[0] + (d[0] - home[0]) * t, home[1] + (d[1] - home[1]) * t, home[2] + (d[2] - home[2]) * t]), sc = S(rot(v).map(c => c * rho)); q ? x.lineTo(...sc) : x.moveTo(...sc); }
+    x.stroke(); x.lineWidth = 1;
+    // the homes, and the direction pointed to at the centre
+    x.font = `12px ${css('--mono')}`; x.textAlign = 'center';
+    for (const [p, nm] of [[[0, 0, 1], 'front h'], [[0, 0, -1], 'back h']]) { const q = rot(p), sc = S(q.map(v => v * rho));
+      x.strokeStyle = css('--ink'); x.globalAlpha = q[2] >= 0 ? 1 : 0.35; x.beginPath(); x.arc(sc[0], sc[1], 5, 0, 7); x.stroke(); x.fillStyle = css('--muted'); x.fillText(nm, sc[0], sc[1] - 9); }
+    x.globalAlpha = 1; x.fillStyle = css('--accent'); x.beginPath(); x.arc(ox, oy, 4, 0, 7); x.fill(); x.strokeStyle = css('--accent'); x.lineWidth = 2; x.beginPath(); x.arc(ox, oy, 9, 0, 7); x.stroke();
+    x.fillStyle = css('--muted'); x.textAlign = 'left'; x.lineWidth = 1; if (w < 420) { x.fillText('solid: h = 0 · drag to turn', 2, h - 20); x.fillText('pinch or slider for g', 2, h - 6); } else x.fillText('solid: h = 0 · drag to turn · pinch for g', 2, h - 6);
+  }
+  const unit = v => { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; };
+  function drawDisc() {
+    if (k === 8) return drawBall();
+    disc.style.aspectRatio = k === 2 ? '2 / 1.18' : '1 / 1';
+    const [x, w, h] = fit(disc), m = 34;
+    let ox, oy, R; if (k === 1) { R = Math.min(w, h) - 2 * m; ox = m; oy = h - m; } else if (k === 2) { R = Math.min(w / 2 - m, h - 2 * m - 20); ox = w / 2; oy = h - m - 20; } else { R = Math.min(w, h) / 2 - m; ox = w / 2; oy = h / 2; }
+    geo = { ox, oy, R };
+    const P = (r, a) => [ox + r * R * Math.cos(a), oy - r * R * Math.sin(a)], [a0, a1] = span();
+    x.clearRect(0, 0, w, h);
+    const gr = x.createRadialGradient(ox, oy, 0, ox, oy, R); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, css('--addr'));
+    x.globalAlpha = 0.16; x.fillStyle = gr; x.beginPath(); x.moveTo(ox, oy); x.arc(ox, oy, R, -a1, -a0); x.closePath(); x.fill(); x.globalAlpha = 1;
+    x.strokeStyle = css('--faint'); x.lineWidth = 1;
+    // the homes and horizons, as lines from the middle
+    const rays = new Set(); for (const f of FACINGS[k]) { rays.add(f.home); rays.add(f.home + f.dir * HALF); }
+    x.beginPath(); for (const a of rays) { x.moveTo(ox, oy); x.lineTo(...P(1, a)); } x.stroke();
+    x.beginPath(); x.arc(ox, oy, R, -a1, -a0); x.stroke(); x.setLineDash([]);
+    // this radius, every facing's quarter of it; the turn swept from the facing's home to the place
+    const { f, psi } = facingOf(theta);
+    x.strokeStyle = css('--ink'); x.lineWidth = 1.5; x.beginPath(); x.arc(ox, oy, rho * R, -a1, -a0); x.stroke();
+    x.strokeStyle = css('--accent'); x.lineWidth = 3; x.beginPath();
+    if (f.dir > 0) x.arc(ox, oy, rho * R, -(f.home + psi), -f.home); else x.arc(ox, oy, rho * R, -f.home, -(f.home - psi));
+    x.stroke(); x.lineWidth = 1; x.beginPath(); x.moveTo(ox, oy); x.lineTo(...P(rho, theta)); x.stroke();
+    const [hx, hy] = P(rho, theta); x.fillStyle = css('--accent'); x.beginPath(); x.arc(hx, hy, 4, 0, 7); x.fill();
+    x.lineWidth = 2; x.beginPath(); x.arc(hx, hy, 9, 0, 7); x.stroke();
+    // labels in the corpus's terms
+    x.fillStyle = css('--muted'); x.font = `12px ${css('--mono')}`; x.textAlign = 'center';
+    const lab = (t, a, r = 1.12) => { const [lx, ly] = P(r, a); x.fillText(t, lx, ly + 4); };
+    if (k === 1) { x.textAlign = 'left'; x.fillText('h', ox + 6, oy - R - 10); x.textAlign = 'right'; x.fillText('v', ox + R, oy + 20); x.textAlign = 'left'; x.textAlign = 'center'; x.fillText('g 0 · radius 1', ox + 52, oy + 20); }
+    else if (k === 2) { lab('h', HALF, 1.08); x.textAlign = 'right'; x.fillText('v, right', ox + R, oy + 18); x.textAlign = 'left'; x.fillText('v, left', ox - R, oy + 18); }
+    else { lab('h, front', HALF, 1.09); lab('h, back', 3 * HALF, 1.09); x.textAlign = 'right'; x.fillText('v, A', ox + R + 30, oy - 8); x.textAlign = 'left'; x.fillText('v, B', ox - R - 30, oy - 8); }
+  }
+
+  // ---- the breadths, as rulers in their own lengths. 2 facings: one line through home, a breadth each way. 4 facings: the
+  //      front breadths through the front home, the back through the back home; horizon A at the right ends, B at the left.
+  const bre = $('breadth');
+  function drawBreadth() {
+    bre.style.height = (k === 8 ? 300 : k === 4 ? 190 : 110) + 'px';
+    const [x, w, h] = fit(bre), l = 8, r = 8, W = w - l - r, E = expressed(), { f: act } = facingOf(theta);
+    const S = B;   // what a ruler spans
+    x.clearRect(0, 0, w, h); x.font = `11px ${css('--mono')}`;
+    // one breadth: from its home at hx, out in direction d (+1 right, -1 left), over length L pixels
+    function half(hx, d, L, y, face, endLabel) {
+      const X = v => hx + d * Math.min(v, S) / S * L, bh = 26;
+      x.strokeStyle = css('--ink'); x.lineWidth = 1.5; x.beginPath(); x.moveTo(hx, y - 4); x.lineTo(hx, y + bh + 4); x.stroke();
+      x.fillStyle = css('--addr'); x.globalAlpha = 0.12; x.fillRect(Math.min(hx, X(S)), y, L, bh);
+      x.globalAlpha = 0.5; x.fillRect(Math.min(hx, X(E)), y, Math.abs(X(E) - hx), bh); x.globalAlpha = 1;
+      x.strokeStyle = css('--faint'); x.lineWidth = 1; x.beginPath(); x.moveTo(hx, y); x.lineTo(X(S), y); x.lineTo(X(S), y + bh); x.lineTo(hx, y + bh); x.stroke();
+      const raw = S / (L > 300 ? 8 : 4), p = Math.pow(10, Math.floor(Math.log10(raw))), step = [1, 2, 5, 10].map(q => q * p).find(s => s >= raw);
+      x.fillStyle = css('--muted'); x.textAlign = 'center';
+      for (let v = 0; v <= S * 1.0000001; v += step) { const px = X(v); x.beginPath(); x.moveTo(px, y + bh); x.lineTo(px, y + bh + 4); x.stroke(); if (v > 0 && Math.abs(px - X(S)) > 22) x.fillText(fmt(v), px, y + bh + 15); }
+      x.strokeStyle = css('--ink'); x.beginPath(); x.moveTo(X(E), y - 3); x.lineTo(X(E), y + bh + 3); x.stroke();
+      if (face === act) { const px = X(place()); x.strokeStyle = css('--accent'); x.lineWidth = 3; x.beginPath(); x.moveTo(px, y - 6); x.lineTo(px, y + bh + 6); x.stroke();
+        x.fillStyle = css('--accent'); x.beginPath(); x.moveTo(px - 6, y - 9); x.lineTo(px + 6, y - 9); x.lineTo(px, y - 2); x.closePath(); x.fill(); }
+      x.fillStyle = css('--muted'); x.font = `12px ${css('--mono')}`; x.textAlign = d > 0 ? 'right' : 'left';
+      x.fillText(endLabel, X(S), y + bh + 32); x.font = `11px ${css('--mono')}`;
+    }
+    const far = fmt(B);
+    if (k === 1) { half(l, +1, W, 12, FACINGS[1][0], `${far} · far end`); x.textAlign = 'left'; x.fillStyle = css('--muted'); x.font = `12px ${css('--mono')}`; x.fillText('0 · h', l, h - 8); }
+    else if (k === 2) { const c = l + W / 2; half(c, +1, W / 2, 12, FACINGS[2][0], `right · ${far}`); half(c, -1, W / 2, 12, FACINGS[2][1], `left · ${far}`);
+      x.textAlign = 'center'; x.fillStyle = css('--muted'); x.font = `12px ${css('--mono')}`; x.fillText('h', c, h - 8); }
+    else if (k === 8) {   // eight breadths, each from its home (at the left of its row) to its far end
+      const { f: a8 } = ballFacing(), lw = Math.min(150, W * 0.38), L = W - lw - 8, rh = 34;
+      NAMES8.forEach((nm, i) => { const y = 6 + i * rh, hx = l + lw, X = v => hx + Math.min(v, S) / S * L, bh = 16;
+        x.fillStyle = i === a8.idx ? css('--accent') : css('--muted'); x.font = `11px ${css('--mono')}`; x.textAlign = 'left'; x.fillText(nm, l, y + 12);
+        x.fillStyle = css('--addr'); x.globalAlpha = 0.12; x.fillRect(hx, y, L, bh); x.globalAlpha = 0.5; x.fillRect(hx, y, X(E) - hx, bh); x.globalAlpha = 1;
+        x.strokeStyle = css('--ink'); x.setLineDash([3, 3]); x.beginPath(); x.moveTo(X(E / 2), y - 2); x.lineTo(X(E / 2), y + bh + 2); x.stroke(); x.setLineDash([]);
+        x.beginPath(); x.moveTo(X(E), y - 2); x.lineTo(X(E), y + bh + 2); x.moveTo(hx, y - 2); x.lineTo(hx, y + bh + 2); x.stroke();
+        if (i === a8.idx) { const px = X(place()); x.strokeStyle = css('--accent'); x.lineWidth = 3; x.beginPath(); x.moveTo(px, y - 4); x.lineTo(px, y + bh + 4); x.stroke(); x.lineWidth = 1; } });
+      x.fillStyle = css('--muted'); x.font = `12px ${css('--mono')}`; x.textAlign = 'left'; x.fillText('h', l + lw, h - 6); x.textAlign = 'right'; x.fillText(`${fmt(B)} · far end`, l + W, h - 6); }
+    else { const c = l + W / 2, F = FACINGS[4];
+      half(c, +1, W / 2, 12, F[0], `A · ${far}`); half(c, -1, W / 2, 12, F[1], `B · ${far}`);
+      half(c, -1, W / 2, 100, F[2], `B · ${far}`); half(c, +1, W / 2, 100, F[3], `A · ${far}`);
+      x.textAlign = 'center'; x.fillStyle = css('--muted'); x.font = `12px ${css('--mono')}`; x.fillText('h, front', c, 88 - 6); x.fillText('h, back', c, h - 4); }
+  }
+
+  function draw() {
+    const { f, psi } = facingOf(theta), E = expressed();
+    $('readX').innerHTML = (f.name ? `${f.name} · ` : '') + `turn <b>${(psi / HALF * 90).toFixed(1)}°</b> · h ${Math.cos(psi).toFixed(3)} · v ${Math.sin(psi).toFixed(3)} · g <b>${rho.toFixed(3)}</b> · radius <b>${fmt(E)}</b> → x = <b>${fmt(place())}</b>` + ` of ${fmt(B)}`;
+    for (const q of [1, 2, 4, 8]) $('f' + q).setAttribute('aria-pressed', k === q);
+    $('rRow').hidden = k !== 8; $('rIn').value = rho;
+        $('bOut').textContent = fmt(B); $('sweepBtn').textContent = playing ? 'Pause' : 'Sweep';
+    const fig = k === 1 ? 'the quarter circle' : k === 2 ? 'the semicircle' : k === 4 ? 'the circle' : 'the sphere';
+    $('discTitle').textContent = k === 1 ? 'The disc: turn × radius' : k === 2 ? 'The half disc: facing and turn × radius' : k === 4 ? 'The whole disc: facing and turn × radius' : 'The ball: direction × radius';
+    $('bTitle').textContent = k === 1 ? 'The breadth' : k === 2 ? 'Two breadths, left and right of h' : k === 4 ? 'Four breadths, front and back' : 'Eight breadths, one for each octant';
+    $('bCap').textContent = `The breadths are ${fig}, each laid evenly from h to B, read with no situated observer: no home, no horizon and no corner. `
+      + 'Shaded: what this radius has expressed, from h to r, where v lands. The orange mark is the place, on the breadth of the facing the disc points into.'
+      + (k === 4 ? ' v, A ends the front right breadth and the back right; v, B the two left.' : '')
+      + (k === 8 ? ' On the ball the place is read along the turn from the facing\'s h (front or back) to the direction at the centre of the view.' : '');
+    drawDisc(); drawBreadth();
+  }
+
+  // ---- input: pointer (mouse, pen, touch alike) and keys
+  function setFrom(e) { if (!geo) return; const r = disc.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+    const dx = px - geo.ox, dy = geo.oy - py, [a0, a1] = span(); let th = Math.atan2(dy, dx); if (th < 0) th += TAU;
+    if (k === 1) th = Math.max(0, Math.min(HALF, Math.atan2(Math.max(0, dy), Math.max(0, dx)))); else if (k === 2 && dy < 0) th = dx >= 0 ? 0 : Math.PI;
+    theta = Math.max(a0, Math.min(a1, th)); rho = Math.max(0, Math.min(1, Math.hypot(dx, dy) / geo.R)); draw(); }
+  let dragging = false; const ptrs = new Map(); let pinch0 = null, rho0 = rho;
+  disc.addEventListener('pointerdown', e => { playing = false; disc.setPointerCapture(e.pointerId); e.preventDefault();
+    if (k !== 8) { dragging = true; setFrom(e); return; }
+    ptrs.set(e.pointerId, [e.clientX, e.clientY]); if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch0 = Math.hypot(a[0] - b[0], a[1] - b[1]); rho0 = rho; } draw(); });
+  disc.addEventListener('pointermove', e => { if (k !== 8) { if (dragging) setFrom(e); return; }
+    if (!ptrs.has(e.pointerId)) return; const prev = ptrs.get(e.pointerId); ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+    if (ptrs.size >= 2 && pinch0) { const [a, b] = [...ptrs.values()]; rho = Math.max(0, Math.min(1, rho0 * Math.hypot(a[0] - b[0], a[1] - b[1]) / pinch0)); }
+    else { const R = disc.getBoundingClientRect().width / 2; yaw += (e.clientX - prev[0]) / R; pitch = Math.max(-1.5, Math.min(1.5, pitch + (e.clientY - prev[1]) / R)); }
+    draw(); });
+  const end = e => { dragging = false; ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch0 = null; }; disc.addEventListener('pointerup', end); disc.addEventListener('pointercancel', end);
+  disc.addEventListener('wheel', e => { if (k !== 8) return; e.preventDefault(); playing = false; rho = Math.max(0, Math.min(1, rho - e.deltaY * 0.001)); draw(); }, { passive: false });
+  $('rIn').addEventListener('input', e => { rho = Math.min(1, +e.target.value); playing = false; draw(); });
+  disc.addEventListener('keydown', e => { const key = e.key, [a0, a1] = span(); let used = true;
+    if (key === 'ArrowUp') rho = Math.min(1, rho + 0.02); else if (key === 'ArrowDown') rho = Math.max(0, rho - 0.02);
+    else if (k === 8 && key === 'ArrowLeft') yaw -= 0.05; else if (k === 8 && key === 'ArrowRight') yaw += 0.05;
+    else if (key === 'ArrowLeft') theta = Math.min(a1, theta + 0.02); else if (key === 'ArrowRight') theta = Math.max(a0, theta - 0.02); else used = false;
+    if (used) { playing = false; e.preventDefault(); draw(); } });
+  $('bIn').addEventListener('input', e => { B = bOf(+e.target.value); draw(); });
+  for (const q of [1, 2, 4, 8]) $('f' + q).addEventListener('click', () => { k = q; const [a0, a1] = span(); theta = k === 1 ? HALF - 0.55 : k === 2 ? HALF - 0.5 : HALF - 0.5; theta = Math.max(a0, Math.min(a1, theta)); draw(); });
+  $('sweepBtn').addEventListener('click', () => { playing = !playing; if (playing) { t0 = performance.now(); tOff = Math.acos(1 - 2 * rho) / (2 * Math.PI) * 9; } draw(); });
+
+  // ---- the sweep: the radius runs from 0 toward its top and back, while the turn drifts across the facings
+  let lastT = performance.now();
+  function tick(now) { const dt = (now - lastT) / 1000; lastT = now; if (playing && k === 8) { const s = (now - t0) / 1000 + tOff; rho = (0.5 - 0.5 * Math.cos(2 * Math.PI * s / 9)); yaw += dt * 0.35; pitch = 0.45 + 0.5 * Math.sin(2 * Math.PI * s / 31); draw(); }
+    else if (playing) { const s = (now - t0) / 1000 + tOff, [a0, a1] = span();
+      rho = (0.5 - 0.5 * Math.cos(2 * Math.PI * s / 9));
+      theta = k === 4 ? (a0 + (s / 40) * TAU) % TAU : (a0 + a1) / 2 + ((a1 - a0) / 2 - 0.12) * Math.sin(2 * Math.PI * s / 23); draw(); }
+    requestAnimationFrame(tick); }
+  new ResizeObserver(draw).observe(document.body);
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', draw);
+  new MutationObserver(draw).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  tOff = Math.acos(1 - 2 * rho) / (2 * Math.PI) * 9; draw(); requestAnimationFrame(tick);
+})();
+</script>
+
+</body></html>
