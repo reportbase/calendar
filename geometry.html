@@ -38,17 +38,25 @@
      second; letting go springs the gold home and rests the window on the record reached. Wheel or
      pinch: the radius. On the figure: drag P, T, H or S and everything follows; the blue stays where
      the figure leaves it. Wheel over the figure zooms the figure only.
-     Keys: ← → push the gold at 45° · ↑ ↓ radius · h blue home · t today · n numbers · [ ] the shape's b. -->
+     Keys: ← → push the gold at 45° · ↑ ↓ radius · h blue home · t today · n readout · [ ] the shape's b. -->
 <style>
   :root{--bg:#0b0d12;--panel:#12151c;--gold:#e8c86a;--teal:#1D9E75;--blue:#6aa8e8;--ink:#c9c7be;--dim:#7f8590;
         --mono:"SF Mono",Menlo,Consolas,monospace}
   html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
             overflow:hidden;overscroll-behavior:none;touch-action:none;user-select:none;-webkit-user-select:none}
   canvas{display:block;width:100%;height:100%;cursor:crosshair}
-  #nums{position:fixed;z-index:2;padding:10px 12px;background:rgba(18,21,28,.88);border:0.5px solid rgba(232,200,106,.28);
-        border-radius:10px;font:12px/1.5 var(--mono);pointer-events:none;
-        display:grid;grid-template-columns:auto auto 1fr;column-gap:12px}
-  #nums[hidden]{display:none}
+  /* THE READOUT IS A PANEL THAT OPENS AND CLOSES, closed to begin with: the button in the corner
+     opens it, its ✕ or 'n' closes it, and the dial takes back the room it used. */
+  #nums{position:fixed;z-index:2;padding:10px 12px;background:rgba(18,21,28,.92);border:0.5px solid rgba(232,200,106,.28);
+        border-radius:10px;font:12px/1.5 var(--mono);box-shadow:0 12px 32px rgba(0,0,0,.45)}
+  #nums[hidden], #numsBtn[hidden]{display:none}
+  #numsBody{display:grid;grid-template-columns:auto auto 1fr;column-gap:12px;padding-right:22px}
+  #numsClose, #numsBtn{font:12px/1 var(--mono);color:var(--dim);background:var(--panel);cursor:pointer;
+        border:0.5px solid rgba(232,200,106,.28);border-radius:6px}
+  #numsClose{position:absolute;top:8px;right:8px;width:22px;height:22px;padding:0}
+  #numsBtn{position:fixed;z-index:2;padding:7px 10px;letter-spacing:.08em}
+  #numsClose:hover, #numsBtn:hover{color:var(--ink);border-color:var(--gold)}
+  #numsClose:focus-visible, #numsBtn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   #nums .k{color:var(--gold);white-space:nowrap} #nums .v{color:#f1efe6;text-align:right;white-space:nowrap}
   #nums .o{color:var(--dim)} #nums .hd{grid-column:1/-1;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;font-size:10px;margin-top:4px}
   #nums .hd:first-child{margin-top:0}
@@ -56,7 +64,8 @@
 </head>
 <body>
 <canvas id="cv"></canvas>
-<div id="nums"></div>
+<button id="numsBtn" type="button" aria-expanded="false" aria-controls="nums">readout</button>
+<div id="nums" hidden><button id="numsClose" type="button" aria-label="Close the readout">✕</button><div id="numsBody"></div></div>
 <script>
 const PI = Math.PI, K = 5, CAP = Math.atan(2 ** K), ZMAX = Math.asinh(2 ** K);   // the window's end: the K-th corner, tan θ = 2^K
 const THRUST = 0.4, SPRING_MS = 150, TAP_PX = 6;
@@ -97,14 +106,19 @@ function liveGold(now){                                        // the gold as dr
 // ── LAYOUT: the dial and the figure share the screen ─────────────────────────────────────────────
 const cv = document.getElementById('cv'), vis = cv.getContext('2d');
 const back = document.createElement('canvas'), ctx = back.getContext('2d');   // drawn here, copied across once
-const nums = document.getElementById('nums');
+const nums = document.getElementById('nums'), numsBody = document.getElementById('numsBody'), numsBtn = document.getElementById('numsBtn');
 let W = 0, H = 0, D = 0, Lay = null, lastKey = '', force = true;
-nums.hidden = innerWidth < innerHeight;                        // a narrow screen starts without the numbers ('n')
+function setNums(on){                                         // open or close the readout; the dial re-lays itself either way
+  nums.hidden = !on; numsBtn.hidden = on; numsBtn.setAttribute('aria-expanded', String(on));
+  updateNums(); force = true;
+}
+numsBtn.addEventListener('click', () => setNums(true));
+document.getElementById('numsClose').addEventListener('click', () => setNums(false));
 function layout(){
   const land = W >= H * 1.05;
   const dial = land ? { x: 0, y: 0, w: W / 2, h: H } : { x: 0, y: H * 0.5, w: W, h: H * 0.5 };
   const fig  = land ? { x: W / 2, y: 0, w: W / 2, h: H } : { x: 0, y: 0, w: W, h: H * 0.5 };
-  nums.style.left = (dial.x + 14) + 'px'; nums.style.top = (dial.y + 14) + 'px';
+  nums.style.left = numsBtn.style.left = (dial.x + 14) + 'px'; nums.style.top = numsBtn.style.top = (dial.y + 14) + 'px';
   nums.style.maxWidth = Math.max(200, dial.w - 28) + 'px';
   const top = nums.hidden ? 40 : nums.offsetHeight + 40;
   dial.cx = dial.x + dial.w / 2; dial.cy = dial.y + dial.h - 86;
@@ -285,7 +299,7 @@ function updateNums(){
   if (nums.hidden) return;
   const th = theta(), z = zeta, t = Math.sinh(z), s = span(), f = (x, d) => (Math.abs(x) < 5e-13 ? 0 : x).toFixed(d);
   const row = (k, v, o) => '<span class="k">' + k + '</span><span class="v">' + v + '</span><span class="o">' + o + '</span>';
-  nums.innerHTML =
+  numsBody.innerHTML =
     '<span class="hd">the two angles</span>' +
     row('θ', f(th * 180 / PI, 2) + '°', 'circular angle · P · [latitude; the angle whose sine is v/c]') +
     row('ζ', f(z, 4), 'hyperbolic angle · H · [rapidity; Mercator height]') +
@@ -373,7 +387,7 @@ addEventListener('keydown', e => {
   if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { reach = clamp(reach + (e.key === 'ArrowUp' ? 0.02 : -0.02), 0, 1); rezoom(); read(); }
   if (e.key === 'h') recentre();
   if (e.key === 't') { index = clamp(Date.now() - T0, 0, N - 1); recentre(); }
-  if (e.key === 'n') { nums.hidden = !nums.hidden; updateNums(); force = true; }
+  if (e.key === 'n') setNums(nums.hidden);
   if (e.key === '[' || e.key === ']') b = clamp(b * 2 ** (e.key === ']' ? 0.25 : -0.25), 1 / 8, 8);
   if (e.key.startsWith('Arrow')) e.preventDefault();
 });
