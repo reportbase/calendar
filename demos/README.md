@@ -10,9 +10,13 @@ Each opens straight in a browser with no dependencies.
 | `standpoint.html` | Read a closed contour from a point you drag. The winding jumps by whole turns only when the point crosses the contour; ΣD, twice the area, never moves; Π ρ is always 1. | lab "the closure sheet" (`startClosure`) and the four atoms (`fourAtomRead`) |
 | `shapes-come-home.html` | Read evenly in direction, every shape gives the circle's readings and the unit circle comes back; read along its outline, the shape shows, mostly at the two ends. | labs "the recovered circle", "open the shapes", "sampling tests"; *Serial, Parallel and Nowhere* §2.4 |
 | `three-rulers.html` | One reading v/h on the folded dial (octaves or register cells, odd or even), the unfolded strip (y = g) and the octave-counting drum. | `drawHeadDial`, `drawSerialPanel`, `drawCascadePanel` |
+| `register.html` | A reader holding one value reads each new distance as a ratio, one register cell at a time. Odd registers can say "unchanged" (a cell on the corner); even ones cannot and twitch. The checksum walk comes home; a rail costs lag, not closure. | base rule (`baseRuleRead`, `boundedRuleRead`), the register strip, the checksum |
+| `convexity.html` | Keep only the tangent's quadrant: a convex loop enters each quarter once. More than four entries proves a dent; four does not prove convexity, and a shallow dent shows why. | the bearing-quadrant leaf paint |
 
 Notes carried into the pages:
 
 - Read evenly in direction, a shape's readings are tan a whatever the shape: the reach cancels. The circle coming back is by construction; the point is that the addresses carry no shape.
 - In the standpoint demo, Π ρ = 1 is telescoping and holds from any standpoint; the content is in the winding and in ΣD.
 - The drum counts octaves the way §3.3 of the paper does (octave 0 is the reader's own, from ½ to 2). In `draw.html` the cascade drum and the serial panel disagree at exact powers of two; these demos use the paper's convention throughout.
+- In the register demo the bounded rule ("ignore what you cannot span") is worse than railing on a spiky shape: once the held value is out of reach, every later look on the spike is too, and the lag grows to tens of steps. The page shows this rather than the improvement the draw project hoped for.
+- Four quadrant entries is necessary for convexity, not sufficient.

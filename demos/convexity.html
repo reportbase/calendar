@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Four Quadrants, One Loop</title>
+<!-- FOUR QUADRANTS, ONE LOOP — a standalone demo of the draw project's "bearing quadrant" leaf paint
+     (draw.html, leafPaintColor / the leaf-colour tests).
+
+     Walk a closed loop and keep, at each leaf, only which quarter of the compass the tangent points
+     into: two bits, q = floor(bearing ÷ 90°). It needs no centre, so turning or moving the loop changes
+     nothing. A convex loop turns one way the whole time, so its tangent enters each quadrant exactly
+     once: FOUR ENTRIES. Every reversal of the turning that crosses a quadrant boundary adds two more.
+
+     So more than four entries proves the loop is not convex, but four does not prove it is: a dent
+     shallow enough that its tangent never leaves the quadrant it was in is invisible to two bits. The
+     exact test, the sign of every turn between successive edges, is shown beside it. -->
+<style>
+  :root{--bg:#0b0d12;--panel:#12151c;--line:#2b2e36;--gold:#e8c86a;--teal:#1D9E75;--red:#e0705a;
+        --a1:#5aa9e6;--a2:#e8875a;--a3:#7b74d6;--a4:#e06c9f;
+        --ink:#c9c7be;--hi:#f1efe6;--dim:#8a909b;--mono:"SF Mono",Menlo,Consolas,monospace;
+        --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;color-scheme:dark}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans)}
+  main{max-width:1120px;margin:0 auto;padding:22px 16px 40px;display:flex;flex-direction:column;gap:14px}
+  h1{margin:0;font-size:22px;font-weight:600;color:var(--hi);text-wrap:balance}
+  .lede{margin:0;color:var(--dim);max-width:74ch}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .lbl{font:11px var(--mono);color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-right:2px}
+  button{font:12px var(--mono);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 10px;cursor:pointer}
+  button:hover{border-color:var(--dim)}
+  button[aria-pressed="true"]{border-color:var(--gold);color:var(--gold)}
+  button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  .stage{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px;align-items:start}
+  @media (max-width:760px){.stage{grid-template-columns:1fr}}
+  .card{background:var(--panel);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+  canvas{display:block;width:100%;max-width:100%;touch-action:none}
+  #cv{aspect-ratio:1/1;cursor:crosshair} #rose{aspect-ratio:1/1;max-width:240px;align-self:center}
+  .big{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .tile{display:flex;flex-direction:column;gap:2px}
+  .tile .k{font:10.5px var(--mono);color:var(--dim);letter-spacing:.08em;text-transform:uppercase}
+  .tile .v{font:600 30px var(--mono);color:var(--hi);font-variant-numeric:tabular-nums}
+  .tile .s{font-size:12.5px}
+  .say{margin:0;font-size:13.5px}
+  .hint{margin:0;font-size:12.5px;color:var(--dim)}
+  .ok{color:var(--teal)} .bad{color:var(--red)} .warn{color:var(--gold)}
+  .key{display:flex;flex-wrap:wrap;gap:6px 14px;font:12px var(--mono);color:var(--dim)}
+  .sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+</style>
+</head>
+<body>
+<main>
+  <h1>Four quadrants, one loop</h1>
+  <p class="lede">Walk a loop and keep only which quarter of the compass the tangent points into. A convex loop enters each quarter exactly once. Draw your own loop, or pick one.</p>
+  <div class="bar" role="group" aria-label="Loop">
+    <span class="lbl">loop</span>
+    <button class="lp" type="button" data-l="ellipse" aria-pressed="true">ellipse</button>
+    <button class="lp" type="button" data-l="kidney" aria-pressed="false">kidney</button>
+    <button class="lp" type="button" data-l="star" aria-pressed="false">star</button>
+    <button class="lp" type="button" data-l="shallow" aria-pressed="false">a shallow dent</button>
+    <button class="lp" type="button" data-l="eight" aria-pressed="false">figure eight</button>
+    <span class="lbl" style="margin-left:8px">or drag on the canvas to draw one</span>
+  </div>
+  <div class="stage">
+    <div class="card">
+      <canvas id="cv" aria-label="The loop, each leaf coloured by the quadrant its tangent points into. Drag to draw a new loop."></canvas>
+      <p class="hint">Drag to draw a loop; it closes itself when you let go.</p>
+    </div>
+    <div class="card">
+      <div class="big">
+        <div class="tile"><span class="k">quadrant entries</span><span class="v" id="ent"></span><span class="s" id="entS"></span></div>
+        <div class="tile"><span class="k">exact test</span><span class="v" id="ex"></span><span class="s" id="exS"></span></div>
+      </div>
+      <p class="say" id="say"></p>
+      <canvas id="rose" aria-label="The tangent's direction round the loop, traced on a compass"></canvas>
+      <p class="hint">The compass traces the tangent's direction as you walk the loop. A convex loop goes round it once without turning back.</p>
+      <div class="key">
+        <span><span class="sw" style="background:var(--a1)"></span>0°–90°</span><span><span class="sw" style="background:var(--a2)"></span>90°–180°</span>
+        <span><span class="sw" style="background:var(--a3)"></span>180°–270°</span><span><span class="sw" style="background:var(--a4)"></span>270°–360°</span>
+      </div>
+    </div>
+  </div>
+</main>
+<script>
+const PI = Math.PI, N = 160;
+const css = k => getComputedStyle(document.documentElement).getPropertyValue(k).trim();
+const C = {}; for (const k of ['gold', 'teal', 'red', 'a1', 'a2', 'a3', 'a4', 'ink', 'hi', 'dim', 'line', 'mono']) C[k] = css('--' + k);
+const QC = () => [C.a1, C.a2, C.a3, C.a4];
+const LOOPS = {
+  ellipse: t => [1.2 * Math.cos(t), 0.75 * Math.sin(t)],
+  kidney: t => { const r = 1 - 0.32 * Math.cos(2 * t) + 0.12 * Math.cos(t); return [r * Math.cos(t) * 1.1, r * Math.sin(t) * (1 + 0.6 * Math.sin(t) ** 2)]; },
+  star: t => { const r = 1 + 0.3 * Math.cos(5 * t); return [r * Math.cos(t), r * Math.sin(t)]; },
+  shallow: t => { const r = 1 - 0.035 * Math.exp(-((Math.atan2(Math.sin(t - 0.6), Math.cos(t - 0.6))) ** 2) / 0.02); return [1.15 * r * Math.cos(t), 0.85 * r * Math.sin(t)]; },
+  eight: t => [1.2 * Math.sin(t), 0.9 * Math.sin(t) * Math.cos(t)],
+};
+let pts = [];
+// even in length round the loop, N leaves
+function resample(P){
+  const L = [0]; for (let i = 1; i <= P.length; i++) { const a = P[i - 1], b = P[i % P.length]; L.push(L[i - 1] + Math.hypot(b[0] - a[0], b[1] - a[1])); }
+  const per = L[P.length], out = []; let j = 0;
+  for (let k = 0; k < N; k++) { const t = k / N * per; while (L[j + 1] < t) j++;
+    const a = P[j], b = P[(j + 1) % P.length], f = (t - L[j]) / Math.max(1e-12, L[j + 1] - L[j]); out.push([a[0] + f * (b[0] - a[0]), a[1] + f * (b[1] - a[1])]); }
+  return out;
+}
+function load(name){ const P = []; for (let k = 0; k < 2000; k++) P.push(LOOPS[name](2 * PI * k / 2000)); pts = resample(P); update(); }
+// ── THE READING ──────────────────────────────────────────────────────────────────────────────────
+function read(){
+  const q = [], bearing = [];
+  for (let k = 0; k < N; k++) { const a = pts[(k - 1 + N) % N], b = pts[(k + 1) % N];   // the tangent, by central difference
+    const br = ((Math.atan2(b[1] - a[1], b[0] - a[0]) % (2 * PI)) + 2 * PI) % (2 * PI); bearing.push(br); q.push(Math.floor(br / (PI / 2)) % 4); }
+  let entries = 0; for (let k = 0; k < N; k++) if (q[k] !== q[(k - 1 + N) % N]) entries++;
+  // the exact test: every turn between successive edges the same way, and the tangent going round once
+  let pos = 0, neg = 0, turn = 0;
+  for (let k = 0; k < N; k++) { const a = pts[k], b = pts[(k + 1) % N], c = pts[(k + 2) % N];
+    const ux = b[0] - a[0], uy = b[1] - a[1], vx = c[0] - b[0], vy = c[1] - b[1], cr = ux * vy - uy * vx;
+    if (cr > 1e-12) pos++; else if (cr < -1e-12) neg++; turn += Math.atan2(cr, ux * vx + uy * vy); }
+  const turning = Math.round(turn / (2 * PI)), convex = (pos === 0 || neg === 0) && Math.abs(turning) === 1;
+  return { q, bearing, entries, convex, pos, neg, turning };
+}
+// ── DRAWING ──────────────────────────────────────────────────────────────────────────────────────
+const cv = document.getElementById('cv'), rose = document.getElementById('rose');
+function ctx(c){ const D = Math.min(2, devicePixelRatio || 1), W = Math.round(c.clientWidth);
+  if (c.width !== W * D) { c.width = W * D; c.height = W * D; } const g = c.getContext('2d'); g.setTransform(D, 0, 0, D, 0, 0); g.clearRect(0, 0, W, W); return [g, W]; }
+let view = { s: 1, ox: 0, oy: 0 };
+function frame(W){ const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+  const span = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) || 1;
+  view = { s: W * 0.8 / span, ox: W / 2 - (Math.max(...xs) + Math.min(...xs)) / 2 * W * 0.8 / span, oy: W / 2 + (Math.max(...ys) + Math.min(...ys)) / 2 * W * 0.8 / span }; }
+const toS = p => [view.ox + p[0] * view.s, view.oy - p[1] * view.s];
+function draw(r){
+  const [g, W] = ctx(cv); if (!drawing) frame(W);
+  if (drawing) { g.strokeStyle = C.hi; g.lineWidth = 2; g.beginPath(); stroke.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.stroke(); return; }
+  g.lineWidth = 4; g.lineCap = 'round';
+  for (let k = 0; k < N; k++) { const a = toS(pts[k]), b = toS(pts[(k + 1) % N]); g.strokeStyle = QC()[r.q[k]]; g.beginPath(); g.moveTo(...a); g.lineTo(...b); g.stroke(); }
+  for (let k = 0; k < N; k++) if (r.q[k] !== r.q[(k - 1 + N) % N]) {     // the entries, marked
+    const p = toS(pts[k]); g.fillStyle = C.hi; g.beginPath(); g.arc(...p, 4, 0, 2 * PI); g.fill(); }
+  // the tangent compass
+  const [h, R] = ctx(rose), c = R / 2, rr = R * 0.36;
+  QC().forEach((col, i) => { h.strokeStyle = col; h.lineWidth = 8; h.beginPath(); h.arc(c, c, rr + 12, -(i + 1) * PI / 2, -i * PI / 2); h.stroke(); });
+  h.strokeStyle = C.hi; h.lineWidth = 1.5; h.beginPath();
+  r.bearing.forEach((b, k) => { const rad = rr * (0.35 + 0.65 * k / N), x = c + rad * Math.cos(b), y = c - rad * Math.sin(b); k ? h.lineTo(x, y) : h.moveTo(x, y); });
+  h.stroke();
+}
+// ── THE PANEL ────────────────────────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+function update(){
+  const r = read();
+  $('ent').innerHTML = '<span class="' + (r.entries === 4 ? 'ok' : 'bad') + '">' + r.entries + '</span>';
+  $('entS').innerHTML = r.entries === 4 ? '<span class="ok">4 ✓ consistent with convex</span>' : '<span class="bad">' + (r.entries - 4) / 2 + ' reversal' + ((r.entries - 4) / 2 === 1 ? '' : 's') + ' seen</span>';
+  $('ex').innerHTML = r.convex ? '<span class="ok">convex</span>' : '<span class="bad">not convex</span>';
+  $('exS').textContent = r.pos + ' left turns, ' + r.neg + ' right' + (Math.abs(r.turning) !== 1 ? ' · the tangent goes round ' + r.turning + ' times' : '');
+  $('say').innerHTML = r.entries > 4 ? 'More than four entries proves the loop is not convex: the tangent turned back across a quadrant boundary.'
+    : r.convex ? 'Four entries, and the exact test agrees: the loop is convex.'
+    : '<span class="warn">Four entries, but the loop is not convex.</span> The dent is shallow enough that its tangent never left the quadrant it was in, and two bits cannot see it.';
+  draw(r);
+}
+// ── DRAWING YOUR OWN ─────────────────────────────────────────────────────────────────────────────
+let drawing = false, stroke = [];
+cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); drawing = true; const b = cv.getBoundingClientRect(); stroke = [[e.clientX - b.left, e.clientY - b.top]]; draw(); });
+cv.addEventListener('pointermove', e => { if (!drawing) return; const b = cv.getBoundingClientRect(), p = [e.clientX - b.left, e.clientY - b.top], l = stroke[stroke.length - 1];
+  if (Math.hypot(p[0] - l[0], p[1] - l[1]) > 2) { stroke.push(p); draw(); } });
+cv.addEventListener('pointerup', () => { if (!drawing) return; drawing = false;
+  if (stroke.length < 12) { update(); return; }
+  pts = resample(stroke.map(([x, y]) => [(x - view.ox) / view.s, (view.oy - y) / view.s]));
+  document.querySelectorAll('.lp').forEach(b => b.setAttribute('aria-pressed', 'false')); update(); });
+cv.addEventListener('pointercancel', () => { drawing = false; update(); });
+document.querySelectorAll('.lp').forEach(b => b.onclick = () => { document.querySelectorAll('.lp').forEach(x => x.setAttribute('aria-pressed', String(x === b))); load(b.dataset.l); });
+addEventListener('resize', update);
+load('ellipse');
+</script>
+</body>
+</html>

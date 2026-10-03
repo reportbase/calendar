@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Register</title>
+<!-- THE REGISTER — a standalone demo of the draw project's base rule (draw.html: baseRuleRead,
+     boundedRuleRead, the register strip and the checksum walk; "WHY THE REGISTER IS ODD").
+
+     A reader walks round a contour and, at each leaf, reads its distance v from the centre. It does not
+     keep v. It keeps a HELD value h, and reads each new arrival only as a ratio against it, in steps of
+     σ on the log scale, with a register of S cells round a centre c = (S − 1)/2:
+         i = round( ln(v / h) / σ + c ),   clamped to 0 … S − 1   (a clamp is a RAIL)
+         h ← h · exp((i − c)·σ)            the reconstruction is fed back, not the true v
+     The first leaf founds h and says nothing. Each later look is one symbol: above the centre (the
+     arrival is farther than held), below it (nearer), or ON it: unchanged, the corner, v/h = 1.
+
+     WHY THE REGISTER IS ODD. With an odd number of cells, one cell sits on the corner, so "unchanged"
+     is a symbol, and a reader handed the value it already holds stays exactly still. With an even
+     number the cells meet at the corner and none is on it: the reader cannot say "unchanged", and h
+     twitches by exp(±σ/2) every look even on a circle. The smallest odd register, three cells, is a
+     coder; the smallest register of all, two cells, is a modulator, and it dithers.
+
+     THE CHECKSUM. Σ(i − c) is exactly ln(h_end / h_start)/σ for the value the reader holds: the log
+     ratios telescope, so round a closed loop the walk comes home, and the sum is the closure defect.
+     A RAIL does not break that. It makes the held value fall behind the shape: after a rail the gap
+     between what is held and what is there is more than half a step, and the reader catches up over
+     the looks that follow. The worst lag, in steps, is what a rail costs.
+     THE BOUNDED RULE ignores a look it cannot span instead of railing: no symbol, h unmoved. -->
+<style>
+  :root{--bg:#0b0d12;--panel:#12151c;--line:#2b2e36;--gold:#e8c86a;--cyan:#5ec4d8;--red:#e0705a;--teal:#1D9E75;
+        --ink:#c9c7be;--hi:#f1efe6;--dim:#8a909b;--mono:"SF Mono",Menlo,Consolas,monospace;
+        --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;color-scheme:dark}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans)}
+  main{max-width:1120px;margin:0 auto;padding:22px 16px 40px;display:flex;flex-direction:column;gap:14px}
+  h1{margin:0;font-size:22px;font-weight:600;color:var(--hi);text-wrap:balance}
+  .lede{margin:0;color:var(--dim);max-width:74ch}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .lbl{font:11px var(--mono);color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-right:2px}
+  .lbl.gap{margin-left:10px}
+  button{font:12px var(--mono);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 10px;cursor:pointer}
+  button:hover{border-color:var(--dim)}
+  button[aria-pressed="true"]{border-color:var(--gold);color:var(--gold)}
+  button:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  .stage{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:16px}
+  @media (max-width:760px){.stage{grid-template-columns:1fr}}
+  .card{background:var(--panel);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+  .card h2{margin:0;font-size:14px;font-weight:600;color:var(--hi)}
+  .card p{margin:0;font-size:12.5px;color:var(--dim)}
+  canvas{display:block;width:100%;max-width:100%;touch-action:none}
+  #shape{aspect-ratio:1/1} #reg{aspect-ratio:5/1} #walk{aspect-ratio:3/1}
+  .scrub{display:flex;gap:10px;align-items:center;font:12px var(--mono);color:var(--dim)}
+  .scrub input{flex:1;accent-color:var(--gold);min-width:0}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px}
+  @media (max-width:520px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  .tile{display:flex;flex-direction:column;gap:2px}
+  .tile .k{font:10.5px var(--mono);color:var(--dim);letter-spacing:.08em;text-transform:uppercase}
+  .tile .v{font:600 20px var(--mono);color:var(--hi);font-variant-numeric:tabular-nums}
+  .say{font-size:13.5px;color:var(--ink);margin:0}
+  .key{display:flex;flex-wrap:wrap;gap:6px 14px;font:12px var(--mono);color:var(--dim)}
+  .sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+  .ok{color:var(--teal)} .bad{color:var(--red)}
+</style>
+</head>
+<body>
+<main>
+  <h1>The register</h1>
+  <p class="lede">A reader walks round a shape holding one value, and reads each new distance only as a ratio against it, one cell of a register at a time.
+    With an odd number of cells, one cell sits on the corner and “unchanged” can be said. With an even number, it can’t.</p>
+  <div class="bar" role="group" aria-label="Shape and leaves">
+    <span class="lbl">shape</span>
+    <button class="shp" type="button" data-s="circle" aria-pressed="false">circle</button>
+    <button class="shp" type="button" data-s="ellipse" aria-pressed="true">ellipse</button>
+    <button class="shp" type="button" data-s="square" aria-pressed="false">square</button>
+    <button class="shp" type="button" data-s="star" aria-pressed="false">star</button>
+    <button class="shp" type="button" data-s="gear" aria-pressed="false">gear</button>
+    <button class="shp" type="button" data-s="burst" aria-pressed="false">burst</button>
+    <span class="lbl gap">leaves</span>
+    <button class="nl" type="button" data-n="64" aria-pressed="true">64</button>
+    <button class="nl" type="button" data-n="256" aria-pressed="false">256</button>
+  </div>
+  <div class="bar" role="group" aria-label="Register">
+    <span class="lbl">register</span>
+    <button class="st" type="button" data-s="31" aria-pressed="true">31 (odd)</button>
+    <button class="st" type="button" data-s="32" aria-pressed="false">32 (even)</button>
+    <button class="st" type="button" data-s="3" aria-pressed="false">3, the coder</button>
+    <button class="st" type="button" data-s="2" aria-pressed="false">2, the modulator</button>
+    <span class="lbl gap">step σ</span>
+    <button class="sg" type="button" data-m="1" aria-pressed="true">0.036</button>
+    <button class="sg" type="button" data-m="4" aria-pressed="false">0.144</button>
+    <button class="sg" type="button" data-m="16" aria-pressed="false">0.576</button>
+    <span class="lbl gap">beyond reach</span>
+    <button class="rl" type="button" data-r="rail" aria-pressed="true">rail</button>
+    <button class="rl" type="button" data-r="ignore" aria-pressed="false">ignore (bounded)</button>
+  </div>
+  <div class="stage">
+    <div class="card">
+      <h2>The walk round the shape</h2>
+      <canvas id="shape" aria-label="The shape, each leaf coloured by the symbol the reader said there"></canvas>
+      <div class="scrub"><button id="play" type="button">▶ play</button><label for="at" style="white-space:nowrap">look</label><input id="at" type="range" min="0" max="64" value="64"><span id="atv"></span></div>
+    </div>
+    <div class="card">
+      <h2>The register at this look</h2>
+      <canvas id="reg" aria-label="The register's cells: the lit cell is this look's symbol, the faint bars how often each cell was used"></canvas>
+      <p id="look"></p>
+      <h2>The checksum walk, Σ(i − c)</h2>
+      <canvas id="walk" aria-label="The running sum of the symbols, which comes home to zero round a closed loop"></canvas>
+      <div class="tiles">
+        <div class="tile"><span class="k">unchanged</span><span class="v" id="tq"></span></div>
+        <div class="tile"><span class="k">rails / ignored</span><span class="v" id="tr"></span></div>
+        <div class="tile"><span class="k">bits per look</span><span class="v" id="te"></span></div>
+        <div class="tile"><span class="k">closure defect</span><span class="v" id="td"></span></div>
+        <div class="tile"><span class="k">worst lag, steps</span><span class="v" id="tl"></span></div>
+      </div>
+      <p class="say" id="say"></p>
+      <div class="key">
+        <span><span class="sw" style="background:var(--gold)"></span>unchanged: the corner, v/h = 1</span>
+        <span><span class="sw" style="background:var(--cyan)"></span>farther than held</span>
+        <span><span class="sw" style="background:var(--red)"></span>nearer than held</span>
+        <span><span class="sw" style="background:var(--dim)"></span>the founding leaf, or a look ignored</span>
+      </div>
+    </div>
+  </div>
+</main>
+<script>
+const PI = Math.PI, BASE = Math.log(100) / 128;                         // the app's step, ln(100)/128
+const css = k => getComputedStyle(document.documentElement).getPropertyValue(k).trim();
+const C = {}; for (const k of ['gold', 'cyan', 'red', 'teal', 'ink', 'hi', 'dim', 'panel', 'line', 'mono']) C[k] = css('--' + k);
+const SH = {
+  circle: a => 1,
+  ellipse: a => 1 / Math.sqrt(Math.cos(a) ** 2 + (Math.sin(a) / 1.6) ** 2),
+  square: a => 1 / Math.max(Math.abs(Math.cos(a)), Math.abs(Math.sin(a))),
+  star: a => 1 + 0.45 * Math.cos(5 * a),
+  gear: a => 1 + 0.12 * Math.tanh(6 * Math.cos(12 * a)),
+  burst: a => 0.3 + 1.4 * Math.max(0, Math.cos(6 * a)) ** 16,
+};
+let shape = 'ellipse', NL = 64, S = 31, mul = 1, beyond = 'rail', at = 64, playing = 0;
+// ── THE LEAVES: even along the outline, the centre their mean ─────────────────────────────────────
+function leaves(){
+  const P = []; for (let k = 0; k < 4096; k++) { const a = 2 * PI * k / 4096, r = SH[shape](a); P.push([r * Math.cos(a), r * Math.sin(a)]); }
+  const L = [0]; for (let i = 1; i <= P.length; i++) { const a = P[i - 1], b = P[i % P.length]; L.push(L[i - 1] + Math.hypot(b[0] - a[0], b[1] - a[1])); }
+  const per = L[P.length], out = []; let j = 0;
+  for (let k = 0; k < NL; k++) { const t = k / NL * per; while (L[j + 1] < t) j++;
+    const a = P[j], b = P[(j + 1) % P.length], f = (t - L[j]) / (L[j + 1] - L[j]); out.push([a[0] + f * (b[0] - a[0]), a[1] + f * (b[1] - a[1])]); }
+  const cx = out.reduce((s, p) => s + p[0], 0) / NL, cy = out.reduce((s, p) => s + p[1], 0) / NL;
+  return { pts: out, c: [cx, cy], v: out.map(([x, y]) => Math.hypot(x - cx, y - cy)) };
+}
+// ── THE BASE RULE, round the loop and back to the first leaf ─────────────────────────────────────
+function readAll(v){
+  const sigma = BASE * mul, c = (S - 1) / 2, looks = [];
+  let h = v[0], hStart = v[0];
+  for (let n = 1; n <= NL; n++) {                                       // leaves 1 … N−1, then leaf 0 again: the loop closed
+    const k = n % NL, raw = Math.log(v[k] / h) / sigma + c, iu = Math.round(raw), out = iu < 0 || iu > S - 1;
+    if (out && beyond === 'ignore') { looks.push({ k, i: null, h, ignored: true, lag: Math.abs(Math.log(v[k] / h)) / sigma }); continue; }
+    const i = Math.max(0, Math.min(S - 1, iu));
+    h = h * Math.exp((i - c) * sigma);
+    looks.push({ k, i, h, rail: out, over: out ? iu - i : 0, lag: Math.abs(Math.log(v[k] / h)) / sigma });
+  }
+  return { looks, c, sigma, hStart, hEnd: h };
+}
+function summary(R){
+  const said = R.looks.filter(l => l.i !== null), counts = new Map();
+  said.forEach(l => counts.set(l.i, (counts.get(l.i) || 0) + 1));
+  let H = 0; counts.forEach(n => { const p = n / said.length; H -= p * Math.log2(p); });
+  const sum = said.reduce((s, l) => s + (l.i - R.c), 0);
+  return { quiet: said.filter(l => l.i === R.c).length, rails: said.filter(l => l.rail).length, ignored: R.looks.length - said.length,
+           H, defect: sum, n: said.length, counts, lag: Math.max(0, ...R.looks.map(l => l.lag)) };
+}
+// ── DRAWING ──────────────────────────────────────────────────────────────────────────────────────
+function ctx(cv){ const D = Math.min(2, devicePixelRatio || 1), W = Math.round(cv.clientWidth), H = Math.round(cv.clientHeight);
+  if (cv.width !== W * D || cv.height !== H * D) { cv.width = W * D; cv.height = H * D; }
+  const g = cv.getContext('2d'); g.setTransform(D, 0, 0, D, 0, 0); g.clearRect(0, 0, W, H); return [g, W, H]; }
+const symColour = (l, c) => l.i === null ? C.dim : l.rail ? C.red : l.i === c ? C.gold : l.i > c ? C.cyan : C.red;
+function drawShape(Ld, R){
+  const [g, W] = ctx(document.getElementById('shape')), s = W * 0.44 / Math.max(...Ld.v), ox = W / 2, oy = W / 2, P = q => [ox + (q[0] - Ld.c[0]) * s, oy - (q[1] - Ld.c[1]) * s];
+  g.strokeStyle = C.line; g.lineWidth = 1.5; g.beginPath(); Ld.pts.forEach((q, i) => i ? g.lineTo(...P(q)) : g.moveTo(...P(q))); g.closePath(); g.stroke();
+  // the held value, as a circle about the centre, at this look
+  const cur = at > 0 ? R.looks[at - 1] : null, hNow = cur ? cur.h : Ld.v[0];
+  g.strokeStyle = 'rgba(232,200,106,.35)'; g.setLineDash([3, 5]); g.beginPath(); g.arc(ox, oy, hNow * s, 0, 2 * PI); g.stroke(); g.setLineDash([]);
+  g.fillStyle = C.dim; g.beginPath(); g.arc(ox, oy, 3, 0, 2 * PI); g.fill();
+  const r = NL > 100 ? 3.2 : 5;
+  g.fillStyle = C.dim; g.beginPath(); g.arc(...P(Ld.pts[0]), r + 1.5, 0, 2 * PI); g.fill();          // the founding leaf
+  for (let n = 0; n < at; n++) { const l = R.looks[n]; if (l.k === 0) continue;
+    g.fillStyle = symColour(l, R.c); g.beginPath(); g.arc(...P(Ld.pts[l.k]), r, 0, 2 * PI); g.fill(); }
+  if (cur) { const q = P(Ld.pts[cur.k]); g.strokeStyle = C.hi; g.lineWidth = 2; g.beginPath(); g.arc(...q, r + 4, 0, 2 * PI); g.stroke();
+    g.strokeStyle = 'rgba(241,239,230,.4)'; g.lineWidth = 1; g.beginPath(); g.moveTo(ox, oy); g.lineTo(...q); g.stroke(); }
+}
+function drawReg(R, sm){
+  const [g, W, H] = ctx(document.getElementById('reg')), pad = 8, cw = (W - 2 * pad) / S, top = 10, bot = H - 18;
+  const mx = Math.max(1, ...sm.counts.values()), cur = at > 0 ? R.looks[at - 1] : null;
+  for (let i = 0; i < S; i++) {
+    const x = pad + i * cw, rail = i === 0 || i === S - 1;
+    g.fillStyle = '#1b1f28'; g.fillRect(x + 1, top, cw - 2, bot - top);
+    const n = sm.counts.get(i) || 0;                                     // how often this cell was said
+    g.fillStyle = i === R.c ? 'rgba(232,200,106,.45)' : i > R.c ? 'rgba(94,196,216,.4)' : 'rgba(224,112,90,.4)';
+    g.fillRect(x + 1, bot - (bot - top) * n / mx, cw - 2, (bot - top) * n / mx);
+    if (rail && S > 3) { g.strokeStyle = 'rgba(224,112,90,.8)'; g.lineWidth = 1.5; g.strokeRect(x + 1.5, top + 0.5, cw - 3, bot - top - 1); }
+    if (i === R.c) { g.strokeStyle = C.gold; g.lineWidth = 2; g.strokeRect(x + 1, top, cw - 2, bot - top); }
+    if (cur && cur.i === i) { g.fillStyle = symColour(cur, R.c); g.fillRect(x + 1, top, cw - 2, 6); g.fillRect(x + 1, bot - 4, cw - 2, 4); }
+  }
+  if (!Number.isInteger(R.c)) {                                          // the corner, with no cell on it
+    const x = pad + (R.c + 0.5) * cw; g.strokeStyle = C.gold; g.lineWidth = 1.5; g.setLineDash([3, 3]);
+    g.beginPath(); g.moveTo(x, top - 6); g.lineTo(x, bot + 4); g.stroke(); g.setLineDash([]); }
+  g.fillStyle = C.dim; g.font = '10.5px ' + C.mono; g.textAlign = 'left'; g.fillText('nearer', pad, H - 4);
+  g.textAlign = 'right'; g.fillText('farther', W - pad, H - 4);
+  g.textAlign = 'center'; g.fillStyle = C.gold; g.fillText(Number.isInteger(R.c) ? 'unchanged' : 'no cell for unchanged', W / 2, H - 4);
+}
+function drawWalk(R){
+  const [g, W, H] = ctx(document.getElementById('walk')), pad = 10, mid = H / 2;
+  const run = []; let s = 0; R.looks.forEach(l => { if (l.i !== null) s += l.i - R.c; run.push(s); });
+  const mx = Math.max(2, ...run.map(Math.abs)), X = n => pad + (W - 2 * pad) * n / Math.max(1, R.looks.length), Y = v => mid - (H / 2 - 12) * v / mx;
+  g.strokeStyle = C.line; g.beginPath(); g.moveTo(pad, mid); g.lineTo(W - pad, mid); g.stroke();
+  g.fillStyle = C.dim; g.font = '10.5px ' + C.mono; g.textAlign = 'left'; g.fillText('home: 0', pad, mid - 4);
+  g.textAlign = 'right'; g.fillText('±' + mx.toFixed(mx < 10 ? 1 : 0), W - pad, 11);
+  let prev = [X(0), Y(0)];
+  for (let n = 0; n < R.looks.length; n++) { const l = R.looks[n], p = [X(n + 1), Y(run[n])];
+    g.globalAlpha = n < at ? 1 : 0.18; g.strokeStyle = symColour(l, R.c); g.lineWidth = 2;
+    g.beginPath(); g.moveTo(...prev); g.lineTo(...p); g.stroke(); prev = p; }
+  g.globalAlpha = 1;
+}
+// ── THE PANEL ────────────────────────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+let Ld = null, R = null, sm = null;
+function compute(){ Ld = leaves(); R = readAll(Ld.v); sm = summary(R); $('at').max = R.looks.length; if (at > R.looks.length) at = R.looks.length; $('at').value = at; }
+function update(){
+  drawShape(Ld, R); drawReg(R, sm); drawWalk(R);
+  const cur = at > 0 ? R.looks[at - 1] : null;
+  $('atv').textContent = at + ' / ' + R.looks.length;
+  $('look').textContent = !cur ? 'Look 0: the first leaf founds the held value and says nothing.'
+    : cur.i === null ? 'Look ' + at + ': beyond the register’s reach, ignored; the held value does not move.'
+    : 'Look ' + at + ': distance ' + Ld.v[cur.k].toFixed(4) + ' against held ' + (at > 1 && R.looks[at - 2] ? R.looks[at - 2].h : Ld.v[0]).toFixed(4) +
+      ' → cell ' + cur.i + (cur.i === R.c ? ', unchanged' : ' (' + (cur.i > R.c ? '+' : '') + (cur.i - R.c) + ' steps)') + (cur.rail ? ', a rail: the change was ' + Math.abs(cur.over) + ' cells beyond reach' : '') + '.';
+  $('tq').textContent = sm.quiet + ' of ' + sm.n;
+  $('tr').textContent = sm.rails + ' / ' + sm.ignored;
+  $('te').textContent = sm.H.toFixed(3);
+  const d = sm.defect, closes = Math.abs(d) <= 1;
+  $('td').innerHTML = '<span class="' + (closes ? 'ok' : 'bad') + '">' + (Number.isInteger(d) ? d : d.toFixed(1)) + '</span>';
+  $('tl').innerHTML = '<span class="' + (sm.lag <= 0.5 + 1e-9 ? 'ok' : 'bad') + '">' + sm.lag.toFixed(2) + '</span>';
+  const odd = S % 2 === 1;
+  $('say').textContent = (odd ? 'Odd register: a cell sits on the corner, so “unchanged” is a symbol' + (shape === 'circle' ? ', and on the circle the reader says it every look and never moves.' : '.')
+      : 'Even register: no cell sits on the corner. The reader cannot say “unchanged”' + (shape === 'circle' ? ', so even on the circle it twitches by ×' + Math.exp(R.sigma / 2).toFixed(4) + ' and back every look.' : ', so it never rests.')) +
+    (sm.rails ? ' ' + sm.rails + ' looks railed: the change was bigger than the register can say, and the held value fell up to ' + sm.lag.toFixed(1) + ' steps behind the shape before catching up. The walk still comes home, because it sums what was held.' :
+     sm.ignored ? ' ' + sm.ignored + ' looks were beyond reach and ignored: no false symbol, but the held value waited, up to ' + sm.lag.toFixed(1) + ' steps behind.' :
+     ' Every look within half a step of the truth, and round the closed loop the walk comes home: the log ratios telescope.');
+}
+// ── HANDS ────────────────────────────────────────────────────────────────────────────────────────
+const group = (q, f) => document.querySelectorAll(q).forEach(b => b.onclick = () => {
+  document.querySelectorAll(q).forEach(x => x.setAttribute('aria-pressed', String(x === b))); f(b); stop(); compute(); at = R.looks.length; $('at').value = at; update(); });
+group('.shp', b => { shape = b.dataset.s; }); group('.nl', b => { NL = +b.dataset.n; });
+group('.st', b => { S = +b.dataset.s; }); group('.sg', b => { mul = +b.dataset.m; }); group('.rl', b => { beyond = b.dataset.r; });
+$('at').addEventListener('input', e => { stop(); at = +e.target.value; update(); });
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function stop(){ if (playing) cancelAnimationFrame(playing); playing = 0; $('play').textContent = '▶ play'; }
+$('play').onclick = () => {
+  if (playing) return stop();
+  if (at >= R.looks.length) at = 0;
+  $('play').textContent = '❚❚ pause'; let last = 0;
+  const per = Math.max(16, 2400 / R.looks.length);
+  const step = t => { if (!last) last = t; if (t - last >= per || reduceMotion) { last = t; at = reduceMotion ? R.looks.length : at + 1; $('at').value = at; update(); }
+    if (at >= R.looks.length) return stop(); playing = requestAnimationFrame(step); };
+  playing = requestAnimationFrame(step);
+};
+addEventListener('resize', update);
+compute(); update();
+</script>
+</body>
+</html>
