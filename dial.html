@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A century of milliseconds</title>
+<!-- ONE LIST: the milliseconds of a century, 3,155,760,000,000 of them. A point in the half-disc is
+     a reader: the DIRECTION is where it points, the DISTANCE is its radius. The radius sets the
+     SPAN — how much of the century the arc reaches, a decade at a stretch — and the window of that
+     span can never leave the list, so at the rim the arc IS the century: left foot 2000, right foot
+     2100. The angle picks the millisecond by the tangent, slow inside 45 degrees and running away
+     toward the feet. Moving the rung re-centres the window on the millisecond under the needle: the
+     radius changes the scale and never the date. The date is not a set of controls; it is what the
+     index reads as. -->
+<style>
+  :root{--bg:#0b0d12;--gold:#e8c86a;--teal:#1D9E75}
+  html,body{margin:0;height:100%;background:var(--bg);
+            overflow:hidden;overscroll-behavior:none;touch-action:none;user-select:none;-webkit-user-select:none}
+  canvas{display:block;width:100%;height:100%;cursor:crosshair}
+</style>
+</head>
+<body><canvas id="dial"></canvas>
+<script>
+const PI = Math.PI, K = 4, LIM = PI / 2 * 0.99;              // the last angle the rim has pixels for
+const T0 = Date.UTC(2000, 0, 1), N = 3155760000000;          // the list: a century of milliseconds
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const FOOT = Math.atan(Math.tan(LIM) / K);                   // and what the lens makes of it
+const off = (a, s) => s / 2 * Math.atan(Math.tan(a) / K) / FOOT;   // the lens, inverted: rim angle to records
+
+let index = Date.now() - T0, centre = index, angle = 0, reach = 1;
+function set(a, u){                                          // a: where it points. u: its radius, 0..1
+  const s = Math.max(1, Math.pow(N, u));
+  centre = clamp(index - off(angle, s), s / 2, N - s / 2);   // hold the millisecond while the span moves
+  index  = clamp(centre + off(a, s), 0, N - 1);              // then read the new angle
+  angle = a; reach = u;
+}
+
+// the date is what the index reads as, in fields; a field is live when the sweep can reach it
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const p = (v, n) => String(v).padStart(n, '0');
+function fields(i){ const d = new Date(T0 + i);
+  return [[[p(d.getUTCDate(), 2) + ' ', 864e5], [MON[d.getUTCMonth()] + ' ', 26298e5], [d.getUTCFullYear(), 315576e5]],
+          [[p(d.getUTCHours(), 2) + ':', 36e5], [p(d.getUTCMinutes(), 2) + ':', 6e4],
+           [p(d.getUTCSeconds(), 2) + '.', 1e3], [p(d.getUTCMilliseconds(), 3), 1]]]; }
+
+const cv = dial, ctx = cv.getContext('2d');
+let cx = 0, cy = 0, R = 1;
+function line(parts, span, y){                               // gold above the span, teal within it
+  const w = parts.reduce((t, [s]) => t + ctx.measureText(s).width, 0);
+  let x = cx - w / 2;
+  for (const [s, mag] of parts) { ctx.fillStyle = mag <= span ? '#1D9E75' : '#e8c86a';
+    ctx.fillText(s, x, y); x += ctx.measureText(s).width; }
+}
+function draw(){
+  const D = Math.min(2, devicePixelRatio || 1), W = cv.clientWidth, H = cv.clientHeight;
+  cv.width = W * D; cv.height = H * D; ctx.setTransform(D, 0, 0, D, 0, 0); ctx.clearRect(0, 0, W, H);
+  cx = W / 2; cy = H - 60; R = Math.min(W * 0.46, H - 100);
+  ctx.strokeStyle = '#e8c86a'; ctx.lineWidth = 2;
+  ctx.globalAlpha = sizing ? 1 : 0.4;
+  ctx.beginPath(); ctx.arc(cx, cy, R * reach, -PI, 0); ctx.stroke();          // the rung, where the click put it
+  ctx.globalAlpha = 1;
+  ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + R * Math.sin(angle), cy - R * Math.cos(angle)); ctx.stroke();
+  const [date, time] = fields(Math.round(index)), span = Math.max(1, Math.pow(N, reach));
+  ctx.textAlign = 'left';
+  ctx.font = '19px Menlo,Consolas,monospace'; line(date, span, cy + 26);
+  ctx.font = '15px Menlo,Consolas,monospace'; line(time, span, cy + 48);
+}
+// a pan is a sweep; a LONG PRESS then a pan moves the radius instead, holding the record it is on
+let down = false, sizing = false, timer = 0, x0 = 0, y0 = 0;
+cv.onpointerdown = e => { down = true; cv.setPointerCapture(e.pointerId);
+  x0 = e.clientX; y0 = e.clientY; timer = setTimeout(() => { sizing = true; draw(); }, 500); };
+cv.onpointermove = e => {
+  if (!down) return;
+  const b = cv.getBoundingClientRect(), dx = e.clientX - b.left - cx, dy = cy - (e.clientY - b.top);
+  if (dy < 0) return;
+  if (!sizing && Math.hypot(e.clientX - x0, e.clientY - y0) > 6) clearTimeout(timer);
+  if (sizing) set(angle, clamp(Math.hypot(dx, dy) / R, 0.02, 1));      // the scale moves, the record holds
+  else        set(clamp(Math.atan2(dx, dy), -LIM, LIM), reach);        // the record moves, the scale holds
+  draw();
+};
+cv.onpointerup = cv.onpointercancel = () => { clearTimeout(timer); down = sizing = false; draw(); };
+// the wheel does what the finger does: in and out is the rung, sideways is the sweep
+cv.addEventListener('wheel', e => {
+  const f = e.deltaMode === 1 ? 16 : 1;
+  set(clamp(angle + e.deltaX * f / 900, -LIM, LIM), clamp(reach - e.deltaY * f / 900, 0.02, 1));
+  draw(); e.preventDefault();
+}, { passive: false });
+onresize = draw; draw();
+</script>
+</body>
+</html>
