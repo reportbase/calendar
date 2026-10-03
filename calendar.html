@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calendar</title>
+<!--
+  A SIMPLE CALENDAR. The year is a compass: a heading tape of years, the one you face in the middle, the others
+  receding either side by tan of their distance — a fisheye of years. Drag it to turn, or roll the wheel over it.
+  Under it, the months as a strip — the same fisheye, the faced month centred, the neighbours receding, running on
+  months since epoch so that panning past December carries into the next year and the compass follows. Under
+  those, the days as a third strip — on days since epoch — the faced day full size and the neighbours receding,
+  every one holding a fourth strip, VERTICAL — the hours of the day, the faced hour full size, the rest receding
+  up and down — a note line per hour, typeable in place. One hour is faced across all days: the hour is a level. Notes save as you type,
+  in this browser's local storage for this file; export writes them to a JSON file and import reads one back.
+  Keys: ← → a day · ↑ ↓ a year · t today · e export · i import · wheel over a day = the hour. Three rows: the year, the months, the days — nothing else.
+-->
+<style>
+  :root{--bg:#0b0d12;--panel:#12151c;--gold2:#EF9F27;--gray:#888780;--ink:#c9c7be;--dim:#7f8590;--line:rgba(136,135,128,0.30);--gold:#e8c86a;--teal:#1D9E75;
+        --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;--mono:"SF Mono",Menlo,Consolas,monospace}
+  /* The page itself refuses the browser's edge gestures: a hard swipe from the right is a pan of a strip,
+     never a step back through history. */
+  html{overscroll-behavior-x:none}
+  html,body{margin:0;height:100%;min-height:100dvh;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--font);
+            overscroll-behavior:none;touch-action:none;-webkit-text-size-adjust:100%}
+  /* Touch: the strips take the gesture themselves. Without this the browser scrolls or zooms the page first. */
+  canvas,#week,.day{touch-action:none;-webkit-user-select:none;user-select:none}   /* a drag pans; it never sweeps a text selection */
+  .hr input{-webkit-user-select:text;user-select:text}                             /* except inside a note line */
+  .hr input{touch-action:none}                       /* the strips take the gesture even over a note line; a tap still focuses it */
+  /* 100vh on Android counts the browser's chrome, so the foot of the page lands under it: use the DYNAMIC
+     viewport height where it exists, and keep clear of the system's own inset. */
+  #wrap{width:100%;margin:0;padding:58px 0 calc(6px + env(safe-area-inset-bottom));display:flex;flex-direction:column;
+        height:100vh;height:100dvh;box-sizing:border-box}   /* the whole width; the strips begin below the menu button */
+  #compass{width:100%;height:26px;display:block;cursor:ew-resize}
+  #months{width:100%;height:44px;display:block;cursor:ew-resize;margin:10px 0 8px}   /* a little air above and below the months */
+  #week{position:relative;flex:1;min-height:0;overflow:hidden;cursor:ew-resize}
+  .day{position:absolute;top:4px;bottom:34px;width:210px;display:flex;flex-direction:column;border:0.5px solid rgba(232,200,106,0.28);border-radius:12px;overflow:hidden;background:var(--panel);transform-origin:top center;will-change:transform,left}
+  .day.faced{border-color:var(--gold)}
+  .day.wide{width:auto} .day.today header .dn::after{content:' · today';font-size:10px;color:var(--gold);letter-spacing:.08em}
+  .day header{padding:6px 10px 4px;border-bottom:0.5px solid rgba(232,200,106,0.20);display:flex;justify-content:space-between;align-items:baseline;cursor:pointer}
+  .day header .wd{font-size:12px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase} .day header .dn{font-size:20px} .day.faced header .dn{color:var(--gold)}
+  .day header .mo{font-size:10px;color:var(--dim);margin-left:6px}
+  .day .hours{position:relative;flex:1;overflow:hidden;cursor:ns-resize}
+  .hr{position:absolute;left:0;right:0;height:30px;display:flex;align-items:center;gap:8px;padding:0 8px;will-change:top}   /* every row the same size — the lens only spaces them */
+  .hr .hl{font-family:var(--mono);font-size:11px;color:var(--dim);width:56px;flex:none;text-align:right;white-space:nowrap}
+  .hr input{flex:1;min-width:0;background:transparent;border:0;border-bottom:1px solid var(--line);color:var(--ink);font-family:var(--font);font-size:15px;padding:3px 2px;outline:none}
+  .hr input::placeholder{color:#2a303c}
+  .hr.faced .hl{color:var(--gold)} .hr.faced input{border-bottom-color:var(--gold);font-size:17px}
+  #file{display:none}
+  /* The menu, as the field viewer wears it: a ☰ in the corner and a glass panel of
+     sectioned buttons. It opens on the button, closes on a choice or a press outside. */
+  #menuBtn{position:fixed;top:12px;right:14px;z-index:1000;width:34px;height:34px;display:grid;place-items:center;
+           background:none;border:0;padding:0;color:var(--dim);cursor:pointer}
+  #menuBtn:hover{color:var(--ink)}
+  #menu{position:fixed;top:54px;right:14px;z-index:1000;   /* above the day tiles, which take z up to 100 from the lens */width:210px;padding:10px;display:flex;flex-direction:column;gap:10px;
+        background:var(--panel);border:0.5px solid rgba(232,200,106,0.28);border-radius:12px;
+        -webkit-backdrop-filter:blur(9px) saturate(1.15);backdrop-filter:blur(9px) saturate(1.15);
+        box-shadow:0 18px 44px rgba(0,0,0,.5)}
+  #menu[hidden]{display:none}
+  #menu .m-sec{display:flex;flex-direction:column;gap:5px}
+  #menu .m-hd{display:flex;align-items:center;gap:8px;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);padding:0 2px}
+  #menu .m-hd::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(232,200,106,.18),transparent)}
+  #menu button{width:100%;text-align:left;background:none;border:0;border-radius:6px;padding:6px 8px;
+               color:var(--ink);font-family:var(--font);font-size:13px;line-height:1.35;cursor:pointer}
+  #menu button:hover{background:rgba(255,255,255,.07)}
+
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="compass"></canvas>
+  <canvas id="months"></canvas>
+  <input type="file" id="file" accept="application/json">
+<button id="menuBtn" aria-label="menu"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 6.5h16M4 12h16M4 17.5h16"/></svg></button>
+<div id="menu" hidden>
+  <div class="m-sec"><div class="m-hd">Go</div>
+    <button id="mToday">Today</button>
+  </div>
+  <div class="m-sec"><div class="m-hd">Notes</div>
+    <button id="mExport">Export…</button>
+    <button id="mImport">Import…</button>
+  </div>
+</div>
+  <div id="week"></div>
+</div>
+<script>
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const WD = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const key = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const store = { load(){ try { return JSON.parse(localStorage.getItem('calendar-notes') || '{}'); } catch { return {}; } }, save(n){ try { localStorage.setItem('calendar-notes', JSON.stringify(n)); return true; } catch { return false; } } };
+let notes = store.load();
+{ for (const k of Object.keys(notes)) { const m = /^(\d{4}-\d{2}-\d{2})-(\d{2})$/.exec(k); if (m) { notes[m[1] + '-' + m[2] + '00'] = notes[k]; delete notes[k]; } } }   // notes kept by hour before the half hours existed
+let savedMsg = Object.keys(notes).length ? 'loaded ' + Object.keys(notes).length + ' notes' : '';
+let sel = new Date(); sel.setHours(12, 0, 0, 0);                                   // the selected day; the week is the Monday–Sunday around it
+const $ = id => document.getElementById(id);
+const mondayOf = d => { const m = new Date(d); m.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return m; };
+const setDate = (y, m, d) => { const last = new Date(y, m + 1, 0).getDate(); sel = new Date(y, m, Math.min(d, last), 12); };
+/* PANNING IS LOOKING; TAPPING IS CHOOSING. Each strip has a focus — where the hand left it — and there is one
+   selection. A PAN moves THAT STRIP AND NOTHING ELSE: not the selection, and not another strip. Four dials,
+   each independent. A TAP (a year mark, a month tile, a day's header, an hour's label) sets the selection,
+   leaves the strip where it is, and takes the strips BENEATH it to the chosen time — a choice is the only
+   thing that moves them. The hours are a ring; the other three run on, so they never end either. */
+const lookAt = (y, m, d) => { const last = new Date(y, m + 1, 0).getDate(); const at = new Date(y, m, Math.min(d, last), 12); monthF = monthIndex(at); dayF = dayIndex(at); };
+const follow = () => { yearF = sel.getFullYear(); monthF = monthIndex(sel); dayF = dayIndex(sel); };   // a deliberate jump (a key, today, search) takes every strip with it
+/* A CHOICE ABOVE RE-MAPS THE STRIP BELOW WITHOUT MOVING IT. Pick March while the days show the 12th to the
+   18th of January and you want the 12th to the 18th of MARCH, in the same places — so the faced day keeps its
+   day-of-month and its fraction, and only the month underneath it changes. */
+const remapDay = (y, mo) => { const faced = Math.round(dayF), frac = dayF - faced, d = dateOf(faced).getDate();
+  const last = new Date(y, mo + 1, 0).getDate(); dayF = dayIndex(new Date(y, mo, Math.min(d, last), 12)) + frac; };
+
+// ── the wheel is a pan in pixels, damped — not a step per event (a trackpad sends dozens) ──
+const WHEEL = 0.9;
+const wheelK = e => e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1;
+const wheelX = e => e.deltaX * wheelK(e), wheelY = e => e.deltaY * wheelK(e);
+const wheelPx = e => wheelX(e) + wheelY(e);                  // a horizontal strip takes either direction
+
+// ── swipe physics: a flick keeps going and slows to a stop, where friction stops it. No snap. ──
+const FRICTION = 0.94, MIN_V = 0.0015;
+function vel(){ let last = null, v = 0; return { note(x, t){ if (last) { const dt = Math.max(8, t - last.t); v = 0.8 * ((x - last.x) / dt) + 0.2 * v; } last = { x, t }; }, get(){ return v; }, reset(){ last = null; v = 0; } }; }
+function coast(v0, step){                                    // v0 in items per ms; step(dItems) each frame
+  let v = v0 * 16, raf = 0;
+  const tick = () => { if (Math.abs(v) < MIN_V) { raf = 0; return; } step(v); v *= FRICTION; raf = requestAnimationFrame(tick); };
+  raf = requestAnimationFrame(tick);
+  return () => { if (raf) cancelAnimationFrame(raf); raf = 0; };
+}
+let stopY = null, stopM = null, stopD = null;
+
+// ── the compass: a heading tape of years, the faced year in the middle, the rest by tan of their distance ──
+const cv = $('compass'), ctx = cv.getContext('2d'); let yearF = sel.getFullYear(), dragY = null;
+const YEARS = 100, PITCH = Math.PI / YEARS;                                        // a century round the semicircle: the year opposite is the horizon
+function drawCompass(){
+  const DPR = Math.min(2, devicePixelRatio || 1), W = cv.clientWidth, H = cv.clientHeight; cv.width = W * DPR; cv.height = H * DPR; ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.clearRect(0, 0, W, H);
+  const cx = W / 2, base = H - 4, s = Math.max(W / 12, 92) / PITCH;                  // one year is at least 92px at the focus; tan spreads the rest to both edges
+  const serif = getComputedStyle(document.body).getPropertyValue('--font');
+  const spanY_ = Math.ceil(Math.atan((W / 2 + 60) / s) / PITCH) + 1;                   // as many years as reach the edge
+  for (let y = Math.floor(yearF) - spanY_; y <= Math.floor(yearF) + spanY_; y++) {
+    const d = (y - yearF) * PITCH; if (Math.abs(d) >= Math.PI / 2 - 0.05) continue;
+    const x = cx + Math.tan(d) * s; if (x < -20 || x > W + 20) continue;
+    const near = Math.max(0, 1 - Math.abs(d) / (Math.PI / 2));
+    const big = y === sel.getFullYear();                                        // GOLD = the selected one; nothing is raised — the lens spaces the years, it does not size them
+    ctx.fillStyle = big ? '#e8c86a' : 'rgba(201,199,190,' + (0.35 + 0.55 * near).toFixed(2) + ')'; ctx.font = (12 + 7 * near) + 'px ' + serif; ctx.textAlign = 'center';
+    ctx.fillText(String(y), x, base - 2);
+  }
+  ctx.lineWidth = 1;
+}
+const yearScale = () => Math.max(cv.clientWidth / 12, 92) / PITCH;
+const yearAt = x => Math.round(yearF + Math.atan((x - cv.clientWidth / 2) / yearScale()) / PITCH);   // the mark under a point, on the same scale
+const trackY = vel();
+cv.addEventListener('pointerdown', e => { if (stopY) { stopY(); stopY = null; } trackY.reset(); trackY.note(e.clientX, e.timeStamp); dragY = { x0: e.clientX, y0: yearF, moved: false }; cv.setPointerCapture(e.pointerId); });
+cv.addEventListener('pointermove', e => { if (!dragY) return; trackY.note(e.clientX, e.timeStamp); const dx = e.clientX - dragY.x0; if (Math.abs(dx) > 3) dragY.moved = true;
+  yearF = dragY.y0 - dx / (yearScale() * PITCH); render(false); });                                        // looking: this tape only — one year per gap at the focus   // live: the months and the week follow the faced year as you turn, as the wheel does
+cv.addEventListener('pointercancel', () => { dragY = null; });
+cv.addEventListener('pointerup', e => { if (!dragY) return; const moved = dragY.moved; dragY = null;
+  if (!moved) { const y0 = Math.floor(Math.round(monthF) / 12), y1 = yearAt(e.clientX - cv.getBoundingClientRect().left);
+    setDate(y1, sel.getMonth(), sel.getDate()); monthF += 12 * (y1 - y0); remapDay(y1, ((Math.round(monthF) % 12) + 12) % 12);
+    trackExpanded();                                                                                      // a choice above moves an open day with the strip, it does not close it
+    render(); return; }                                                                                  // a tap picks the year: the months and days become that year's, in the same places
+  stopY = coast(-trackY.get() / (yearScale() * PITCH), d => { yearF += d; render(false); }); });          // a flick coasts and stops by friction
+cv.addEventListener('wheel', e => { if (stopY) { stopY(); stopY = null; } yearF += wheelPx(e) * WHEEL / (yearScale() * PITCH); render(false); e.preventDefault(); }, { passive: false });
+
+// ── the months: a strip, as the board strip is — tiles on a semicircle, the faced month centred ──
+const mc = $('months'), mctx = mc.getContext('2d'); const MW = 96, MSPAN = 24, MPITCH = Math.PI / MSPAN;   // the months run on, so the semicircle holds a span: two years either way to the horizon
+const monthIndex = d => d.getFullYear() * 12 + d.getMonth();                                        // months since epoch: a line, not a cycle
+let monthF = monthIndex(sel), dragM = null;
+function drawMonths(){
+  const DPR = Math.min(2, devicePixelRatio || 1), W = mc.clientWidth, H = mc.clientHeight; mc.width = W * DPR; mc.height = H * DPR; mctx.setTransform(DPR, 0, 0, DPR, 0, 0); mctx.clearRect(0, 0, W, H);
+  const cx = W / 2, s = MW / MPITCH, serif = getComputedStyle(document.body).getPropertyValue('--font'), faced = Math.round(monthF);
+  const spanM = Math.ceil(Math.atan((W / 2 + MW) / s) / MPITCH) + 1;
+  for (let m = faced - spanM; m <= faced + spanM; m++) {
+    const d = (m - monthF) * MPITCH; if (Math.abs(d) >= Math.PI / 2 - 0.02) continue;
+    const x = cx + Math.tan(d) * s; const near = Math.max(0, 1 - Math.abs(d) / (Math.PI / 2)); const big = m === monthIndex(sel);
+    const y = H / 2 - 1; if (x < -80 || x > W + 80) continue;
+    const yy = Math.floor(m / 12), mm = ((m % 12) + 12) % 12;
+    mctx.fillStyle = big ? '#e8c86a' : 'rgba(201,199,190,' + (0.3 + 0.6 * near).toFixed(2) + ')'; mctx.font = (12 + 7 * near) + 'px ' + serif; mctx.textAlign = 'center';
+    mctx.fillText(MONTHS[mm].slice(0, near > 0.6 ? 9 : 3), x, y);
+    mctx.fillStyle = big ? 'rgba(232,200,106,.75)' : 'rgba(127,133,144,' + (0.25 + 0.5 * near).toFixed(2) + ')'; mctx.font = '9px ' + serif; mctx.fillText(String(yy), x, y + 14);   // every month carries its year
+  }
+}
+const monthAt = x => { const cx = mc.clientWidth / 2, s = MW / MPITCH; return Math.round(monthF + Math.atan((x - cx) / s) / MPITCH); };   // the tile under a point: the fisheye inverted, within the window
+const pickMonth = m => { const y = Math.floor(m / 12), mo = ((m % 12) + 12) % 12;
+  setDate(y, mo, sel.getDate()); remapDay(y, mo); trackExpanded(); render(); };                           // choosing a month moves an open day with it                                          // a tap: the days become that month's, in the same places; no strip moves
+const trackM = vel();
+mc.addEventListener('pointerdown', e => { if (stopM) { stopM(); stopM = null; } trackM.reset(); trackM.note(e.clientX, e.timeStamp); dragM = { x0: e.clientX, m0: monthF, moved: false }; mc.setPointerCapture(e.pointerId); });
+mc.addEventListener('pointermove', e => { if (!dragM) return; trackM.note(e.clientX, e.timeStamp); const dx = e.clientX - dragM.x0; if (Math.abs(dx) > 3) dragM.moved = true;
+  monthF = dragM.m0 - dx / MW;                                                                     // the angle stepped by pixels: one month per MW px at the focus, never inverted
+  render(false); });                                                                                      // looking: this strip only — the days stay where they are
+mc.addEventListener('pointercancel', () => { dragM = null; });
+mc.addEventListener('pointerup', e => { if (!dragM) return; const moved = dragM.moved; dragM = null;
+  if (!moved) { pickMonth(monthAt(e.clientX - mc.getBoundingClientRect().left)); return; }                                 // a tap picks the tile under the finger; the strip stays
+  stopM = coast(-trackM.get() / MW, d => { monthF += d; render(false); }); });                          // a flick coasts and stops by friction
+mc.addEventListener('wheel', e => { if (stopM) { stopM(); stopM = null; } monthF += wheelPx(e) * WHEEL / MW; render(false); e.preventDefault(); }, { passive: false });
+
+// ── the days: the third strip, on days since epoch; the faced day's box full size, the neighbours receding, all typeable ──
+const week = $('week'); const DW = 220, DSPAN = 21, DPITCH = Math.PI / DSPAN;                       // three weeks round the semicircle: the day three weeks off is the horizon
+const dayIndex = d => Math.round(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 864e5);
+const dateOf = i => { const u = new Date(i * 864e5); return new Date(u.getUTCFullYear(), u.getUTCMonth(), u.getUTCDate(), 12); };
+let dayF = dayIndex(sel), dragD = null, expanded = null; const tiles = new Map();   // expanded: the day shown alone, full width
+/* An expanded day is a VIEW of the day strip, not a selection: while it is open it follows the faced day, so
+   panning, the wheel, touch and the keys all move through the days exactly as they do in the week. */
+const trackExpanded = () => { if (expanded !== null) expanded = Math.round(dayF); };
+const SLOTS = 48;                                                                                  // the day in half hours
+let hourF = new Date().getHours() * 2, selHour = Math.round(hourF); const HH = 30, HPITCH = Math.PI / SLOTS;   // 48 slots round the semicircle: the opposite half hour is the horizon
+const slotLabel = s => { const h24 = Math.floor(s / 2), m = s % 2 ? '30' : '00', ap = h24 < 12 ? 'AM' : 'PM', h = h24 % 12 === 0 ? 12 : h24 % 12;
+  return String(h).padStart(2, ' ') + ':' + m + ' ' + ap; };                        // one hour = HH px at the focus = HPITCH of angle; the hour is one level, faced across every day
+const hkey = (k, s) => k + '-' + String(Math.floor(s / 2)).padStart(2, '0') + (s % 2 ? '30' : '00');   // 'YYYY-MM-DD-HHMM'
+function buildWeek(){
+  const faced = Math.round(dayF), today = key(new Date()); const want = new Set();
+  const spanD = Math.ceil(Math.atan((week.clientWidth / 2 + DW) / (DW / DPITCH)) / DPITCH) + 1;         // enough tiles to fill the row
+  for (let i = faced - spanD; i <= faced + spanD; i++) { want.add(i); if (tiles.has(i)) continue; const d = dateOf(i), k = key(d);
+    const el = document.createElement('div'); el.className = 'day'; el.dataset.i = i;
+    el.innerHTML = '<header><span class="wd">' + WD[(d.getDay() + 6) % 7] + '</span><span><span class="dn">' + d.getDate() + '</span><span class="mo">' + MONTHS[d.getMonth()].slice(0, 3) + (d.getMonth() === 0 && d.getDate() === 1 ? ' ' + d.getFullYear() : '') + '</span></span></header>';
+    if (k === today) el.classList.add('today');
+    const hours = document.createElement('div'); hours.className = 'hours';
+    for (let h = 0; h < SLOTS; h++) { const row = document.createElement('div'); row.className = 'hr'; row.dataset.h = h; const hk = hkey(k, h);
+      const lab = document.createElement('span'); lab.className = 'hl'; lab.textContent = slotLabel(h); lab.style.cursor = 'pointer';
+      lab.addEventListener('click', () => { selHour = h; if (dayIndex(sel) !== i) sel = dateOf(i); render(); });                      // a tap on the time picks it; the strip stays
+      row.appendChild(lab);
+      const inp = document.createElement('input'); inp.placeholder = '…'; inp.value = notes[hk] || '';
+      inp.addEventListener('input', () => { if (inp.value.trim()) notes[hk] = inp.value; else delete notes[hk]; store.save(notes); });
+      inp.addEventListener('focus', () => { let changed = false; if (dayIndex(sel) !== i) { sel = dateOf(i); changed = true; } if (selHour !== h) { selHour = h; changed = true; } if (changed) render(); });   // a click into a half hour selects it; nothing moves
+      row.appendChild(inp); hours.appendChild(row); }
+    el.appendChild(hours); week.appendChild(el); tiles.set(i, el); }
+  for (const [i, el] of tiles) if (!want.has(i)) { el.remove(); tiles.delete(i); }
+}
+function layoutHours(el){
+  const box = el.querySelector('.hours'), Hh = box.clientHeight, cy = Hh / 2, s = HH / HPITCH;
+  const wrap = a => { a = ((a % Math.PI) + Math.PI) % Math.PI; return a > Math.PI / 2 ? a - Math.PI : a; };          // the ring: the last half hour sits beside the first
+  for (const row of box.children) { const h = +row.dataset.h, d = wrap((h - hourF) * HPITCH); if (Math.abs(d) >= Math.PI / 2 - 0.02) { row.style.display = 'none'; continue; }
+    const y = cy + Math.tan(d) * s, near = Math.max(0, 1 - Math.abs(d) / (Math.PI / 2));
+    row.style.display = ''; row.style.top = (y - HH / 2) + 'px'; row.style.opacity = (0.35 + 0.65 * near).toFixed(3); row.style.zIndex = String(Math.round(near * 100)); row.classList.toggle('faced', h === selHour); }
+}
+function layoutWeek(){
+  const W = week.clientWidth, cx = W / 2, s = DW / DPITCH, faced = Math.round(dayF);
+  if (expanded !== null) {                                                                           // one day, the whole width; the hours are unchanged
+    if (!tiles.has(expanded)) buildWeek();
+    for (const [i, el] of tiles) { if (i !== expanded) { el.style.display = 'none'; continue; }
+      el.style.display = ''; el.classList.add('wide'); el.style.left = '10px'; el.style.width = (W - 20) + 'px';   // ten either side
+      el.style.transform = 'none'; el.style.opacity = '1'; el.style.zIndex = '1'; el.classList.toggle('faced', i === dayIndex(sel)); layoutHours(el); }
+    return;
+  }
+  for (const [i, el] of tiles) { const d = (i - dayF) * DPITCH; if (Math.abs(d) >= Math.PI / 2 - 0.02) { el.style.display = 'none'; continue; }
+    const x = cx + Math.tan(d) * s, near = Math.max(0, 1 - Math.abs(d) / (Math.PI / 2));
+    // every day the same size — the lens spaces them, it does not scale them
+    el.classList.remove('wide'); el.style.width = '';
+    el.style.display = ''; el.style.left = x + 'px'; el.style.transform = 'translateX(-50%)'; el.style.opacity = (0.4 + 0.6 * near).toFixed(3); el.style.zIndex = String(Math.round(near * 100)); el.classList.toggle('faced', i === dayIndex(sel)); layoutHours(el); }
+}
+const trackDX = vel(), trackDY = vel();
+// Over a note line too: a drag pans the strips, a tap still focuses the line to type in.
+week.addEventListener('pointerdown', e => { if (stopD) { stopD(); stopD = null; } trackDX.reset(); trackDY.reset(); trackDX.note(e.clientX, e.timeStamp); trackDY.note(e.clientY, e.timeStamp); dragD = { x0: e.clientX, y0: e.clientY, d0: dayF, h0: hourF, last: Math.round(dayF), lastH: Math.round(hourF), axis: null, moved: false, hdr: e.target.closest('header') ? +e.target.closest('.day').dataset.i : null }; week.setPointerCapture(e.pointerId); });
+week.addEventListener('pointermove', e => { if (!dragD) return; trackDX.note(e.clientX, e.timeStamp); trackDY.note(e.clientY, e.timeStamp); const dx = e.clientX - dragD.x0, dy = e.clientY - dragD.y0;
+  if (!dragD.axis && Math.hypot(dx, dy) > 4) dragD.axis = Math.abs(dx) >= Math.abs(dy) ? 'x' : 'y'; if (!dragD.axis) return;
+  if (!dragD.moved && document.activeElement && document.activeElement.tagName === 'INPUT') document.activeElement.blur();   // a drag that began in a line leaves it
+  dragD.moved = true;
+  if (dragD.axis === 'x') { dayF = dragD.d0 - dx / DW; trackExpanded(); buildWeek(); layoutWeek(); }      // looking: this strip only
+  else { hourF = dragD.h0 - dy / HH; layoutWeek(); } });                                                 // the ring wraps in layout; looking only — one half hour per row of travel                 // the hour: the angle stepped by pixels, faced across every day
+week.addEventListener('pointercancel', () => { dragD = null; });
+week.addEventListener('pointerup', () => { if (!dragD) return; const { moved, hdr, axis } = dragD; dragD = null;
+  if (!moved && hdr !== null) { sel = dateOf(hdr); expanded = expanded === hdr ? null : hdr; render(); return; }   // a tap on a day's header picks it and opens it to the full width; again and it is a tile once more
+  if (axis === 'x') stopD = coast(-trackDX.get() / DW, d => { dayF += d; buildWeek(); layoutWeek(); });
+  else stopD = coast(-trackDY.get() / HH, d => { hourF += d; layoutWeek(); }); });                       // a flick coasts on whichever axis was locked
+week.addEventListener('wheel', e => { if (stopD) { stopD(); stopD = null; }                             // over an hour's line too: the strips take the wheel, the line is one row tall and has nothing to scroll
+  dayF += wheelX(e) * WHEEL / DW; hourF += wheelY(e) * WHEEL / HH; trackExpanded();                                      // sideways moves the days, up and down the half hours
+  buildWeek(); layoutWeek(); e.preventDefault(); }, { passive: false });
+function render(full = true){
+  drawCompass(); drawMonths(); if (!full) { layoutWeek(); return; }
+  buildWeek(); layoutWeek();
+  
+}
+const shift = days => { sel.setDate(sel.getDate() + days); follow(); trackExpanded(); render(); };
+const goToday = () => { const now = new Date(); sel = new Date(); sel.setHours(12, 0, 0, 0); selHour = now.getHours() * 2 + (now.getMinutes() >= 30 ? 1 : 0); hourF = selHour; follow(); trackExpanded(); render(); };
+const exportNotes = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(notes, null, 2)], { type: 'application/json' })); a.download = 'calendar-notes.json'; a.click(); };
+$('file').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; try { const got = JSON.parse(await f.text()); notes = { ...notes, ...got }; store.save(notes); savedMsg = 'imported ' + Object.keys(got).length; } catch { savedMsg = 'import failed — not JSON'; } e.target.value = ''; render(); });
+addEventListener('keydown', e => { if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') shift(-1);                                          // both go back a day
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') shift(1);                                        // both go on a day
+  if (e.key === 't') goToday(); if (e.key === 'e') exportNotes(); if (e.key === 'i') $('file').click(); });
+// ── the menu ──────────────────────────────────────────────────────────────
+const menuEl = $('menu'), menuBtnEl = $('menuBtn');
+const setMenu = on => { menuEl.hidden = !on; };
+menuBtnEl.addEventListener('click', e => { e.stopPropagation(); setMenu(menuEl.hidden); });
+menuEl.addEventListener('click', e => { if (e.target.closest('button')) setMenu(false); });          // a choice closes it
+document.addEventListener('pointerdown', e => { if (menuEl.hidden) return; if (menuEl.contains(e.target) || menuBtnEl.contains(e.target)) return; setMenu(false); }, true);
+$('mToday').addEventListener('click', goToday);
+$('mExport').addEventListener('click', exportNotes);
+$('mImport').addEventListener('click', () => $('file').click());
+
+// A horizontal wheel anywhere on the page is a pan, not a history step: refuse it even off the strips.
+addEventListener('wheel', e => { if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) e.preventDefault(); }, { passive: false });
+
+addEventListener('resize', () => { drawCompass(); drawMonths(); layoutWeek(); });
+render();
+</script>
+</body>
+</html>
