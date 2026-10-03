@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unicode</title>
+<!--
+  A UNICODE BROWSER ON THE FISHEYE. Three strips, one per level of a tower Unicode already is:
+    BLOCKS     every named range of Unicode in code-point order — a strip, each tile its name, its start and its size.
+    CODE POINTS the faced block's characters — a strip of glyphs, the faced one large, the rest receding by tan.
+  Each strip: drag to pan (the angle stepped by pixels, 1:1 at the focus), wheel to step, tap to select. A pan
+  selects as the faced item changes; a tap selects without moving the strip — the gold marks the selection
+  wherever it sits. A pan at a higher level carries the strips beneath it.
+  Type in the box to search by name or hex; enter jumps to the first hit. c copies the selected character.
+  Block data is the Unicode block list, embedded; glyphs are whatever this system's fonts have.
+-->
+<style>
+  :root{--bg:#0b0d12;--panel:#12151c;--gold2:#EF9F27;--gray:#888780;--ink:#c9c7be;--dim:#7f8590;--line:rgba(136,135,128,0.30);--gold:#e8c86a;--teal:#1D9E75;
+        --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;--mono:"SF Mono",Menlo,Consolas,monospace}
+  /* The page itself refuses the browser's edge gestures: a hard swipe from the right is a pan, never a step
+     back through history. */
+  html{overscroll-behavior-x:none}
+  html,body{margin:0;height:100%;min-height:100dvh;background:var(--bg);color:var(--ink);font-family:var(--font);overflow:hidden;
+            overscroll-behavior:none;touch-action:none;-webkit-text-size-adjust:100%}
+  /* Touch: the strips and the grid take the gesture themselves (the grid needs two fingers for the pinch). */
+  canvas{touch-action:none}
+  /* 100vh on Android counts the browser's chrome: use the dynamic viewport height and the system's inset. */
+  #wrap{width:100%;margin:0;padding:58px 0 calc(10px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px;
+        height:100vh;height:100dvh;box-sizing:border-box}   /* the whole width; the strips begin below the menu button */
+  /* The menu, as the calendar and the field viewer wear it: a ☰ in the corner and a glass panel of entries. */
+  #menuBtn{position:fixed;top:12px;right:14px;z-index:1000;width:34px;height:34px;display:grid;place-items:center;
+           background:none;border:0;padding:0;color:var(--dim);cursor:pointer}
+  #menuBtn:hover{color:var(--ink)}
+  #menu{position:fixed;top:54px;right:14px;z-index:1000;width:216px;padding:10px;display:flex;flex-direction:column;gap:10px;
+        background:var(--panel);border:0.5px solid rgba(232,200,106,0.28);border-radius:12px;
+        -webkit-backdrop-filter:blur(9px) saturate(1.15);backdrop-filter:blur(9px) saturate(1.15);box-shadow:0 18px 44px rgba(0,0,0,.5)}
+  #menu[hidden]{display:none}
+  #menu .m-sec{display:flex;flex-direction:column;gap:4px}
+  #menu .m-hd{display:flex;align-items:center;gap:8px;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);padding:0 2px}
+  #menu .m-hd::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(232,200,106,.18),transparent)}
+  #menu button{width:100%;text-align:left;background:none;border:0;border-radius:6px;padding:6px 8px;color:var(--ink);
+               font-family:var(--font);font-size:13px;line-height:1.35;cursor:pointer}
+  #menu button:hover{background:rgba(255,255,255,.07)}
+  canvas{display:block;width:100%;cursor:ew-resize}
+  #blocks{height:44px}                                 /* the calendar's month strip: fitted to its two lines, no rule */
+  #points{flex:1;min-height:0}
+  #bar{display:flex;align-items:center;gap:12px}
+  #q{flex:1;background:var(--panel);border:0.5px solid rgba(232,200,106,0.28);border-radius:8px;color:var(--ink);font-family:var(--font);font-size:14px;padding:7px 10px;outline:none}
+  #q:focus{border-color:rgba(232,200,106,0.5)}
+  /* The character's panel: everything about one code point that can be derived here — no name table is
+     embedded, so a name is given only where Unicode's own rule generates it (CJK, Hangul). */
+  #info{position:fixed;inset:auto 0 0 0;z-index:900;margin:0 auto 12px;width:min(680px,calc(100% - 28px));
+        max-height:min(62vh,560px);overflow:auto;padding:14px 16px;background:var(--panel);
+        border:0.5px solid rgba(232,200,106,0.28);border-radius:12px;box-shadow:0 18px 44px rgba(0,0,0,.5)}
+  #info[hidden]{display:none}
+  #info .i-top{display:flex;align-items:center;gap:14px;margin-bottom:10px}
+  #info .i-glyph{font-size:52px;line-height:1;min-width:64px;text-align:center;color:var(--ink)}
+  #info .i-hd{flex:1} #info .i-cp{font-family:var(--mono);font-size:15px;color:var(--gold)}
+  #info .i-nm{font-size:13px;color:var(--ink);margin-top:2px} #info .i-bk{font-size:12px;color:var(--dim);margin-top:2px}
+  #info .i-x{background:none;border:0;color:var(--dim);font-size:18px;cursor:pointer;padding:2px 6px;align-self:flex-start}
+  #info .i-x:hover{color:var(--ink)}
+  #info table{width:100%;border-collapse:collapse}
+  #info td{padding:3px 0;vertical-align:top;font-size:12px;border-bottom:0.5px solid rgba(136,135,128,0.18)}
+  #info td.k{color:var(--dim);width:150px;padding-right:12px} #info td.v{font-family:var(--mono);color:var(--ink);word-break:break-all}
+  #sel{font-family:var(--mono);font-size:12px;color:var(--dim);white-space:nowrap} #sel b{color:var(--gold);font-weight:normal}
+  #big{font-size:34px;line-height:1;min-width:52px;text-align:center}
+</style>
+</head>
+<body>
+<button id="menuBtn" aria-label="menu"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 6.5h16M4 12h16M4 17.5h16"/></svg></button>
+<div id="menu" hidden>
+  <div class="m-sec"><div class="m-hd">Go</div>
+    <button id="mLatin">Basic Latin</button>
+    <button id="mEmoji">Emoticons</button>
+    <button id="mRandom">A random block</button>
+  </div>
+  <div class="m-sec"><div class="m-hd">The character</div>
+    <button id="mCopy">Copy</button>
+    <button id="mCopyHex">Copy U+…</button>
+  </div>
+  <div class="m-sec"><div class="m-hd">The grid</div>
+    <button id="mBigger">Bigger cells</button>
+    <button id="mSmaller">Smaller cells</button>
+    <button id="mFit">Fit the block</button>
+  </div>
+</div>
+<div id="info" hidden></div>
+<div id="wrap">
+  <canvas id="blocks"></canvas>
+  <canvas id="points"></canvas>
+  <div id="bar"><span id="big">—</span><input id="q" placeholder="search a block name or a hex code point — enter to jump"><span id="sel">—</span></div>
+</div>
+<script>
+const PI = Math.PI;
+// ── the block list: Unicode's named ranges (start, end, name) ──
+const BLOCKS = [[0x0000,0x007F,'Basic Latin'],[0x0080,0x00FF,'Latin-1 Supplement'],[0x0100,0x017F,'Latin Extended-A'],[0x0180,0x024F,'Latin Extended-B'],[0x0250,0x02AF,'IPA Extensions'],[0x02B0,0x02FF,'Spacing Modifier Letters'],[0x0300,0x036F,'Combining Diacritical Marks'],[0x0370,0x03FF,'Greek and Coptic'],[0x0400,0x04FF,'Cyrillic'],[0x0500,0x052F,'Cyrillic Supplement'],[0x0530,0x058F,'Armenian'],[0x0590,0x05FF,'Hebrew'],[0x0600,0x06FF,'Arabic'],[0x0700,0x074F,'Syriac'],[0x0780,0x07BF,'Thaana'],[0x07C0,0x07FF,'NKo'],[0x0800,0x083F,'Samaritan'],[0x0840,0x085F,'Mandaic'],[0x0900,0x097F,'Devanagari'],[0x0980,0x09FF,'Bengali'],[0x0A00,0x0A7F,'Gurmukhi'],[0x0A80,0x0AFF,'Gujarati'],[0x0B00,0x0B7F,'Oriya'],[0x0B80,0x0BFF,'Tamil'],[0x0C00,0x0C7F,'Telugu'],[0x0C80,0x0CFF,'Kannada'],[0x0D00,0x0D7F,'Malayalam'],[0x0D80,0x0DFF,'Sinhala'],[0x0E00,0x0E7F,'Thai'],[0x0E80,0x0EFF,'Lao'],[0x0F00,0x0FFF,'Tibetan'],[0x1000,0x109F,'Myanmar'],[0x10A0,0x10FF,'Georgian'],[0x1100,0x11FF,'Hangul Jamo'],[0x1200,0x137F,'Ethiopic'],[0x13A0,0x13FF,'Cherokee'],[0x1400,0x167F,'Unified Canadian Aboriginal Syllabics'],[0x1680,0x169F,'Ogham'],[0x16A0,0x16FF,'Runic'],[0x1700,0x171F,'Tagalog'],[0x1780,0x17FF,'Khmer'],[0x1800,0x18AF,'Mongolian'],[0x1900,0x194F,'Limbu'],[0x1A00,0x1A1F,'Buginese'],[0x1B00,0x1B7F,'Balinese'],[0x1C00,0x1C4F,'Lepcha'],[0x1D00,0x1D7F,'Phonetic Extensions'],[0x1E00,0x1EFF,'Latin Extended Additional'],[0x1F00,0x1FFF,'Greek Extended'],[0x2000,0x206F,'General Punctuation'],[0x2070,0x209F,'Superscripts and Subscripts'],[0x20A0,0x20CF,'Currency Symbols'],[0x2100,0x214F,'Letterlike Symbols'],[0x2150,0x218F,'Number Forms'],[0x2190,0x21FF,'Arrows'],[0x2200,0x22FF,'Mathematical Operators'],[0x2300,0x23FF,'Miscellaneous Technical'],[0x2400,0x243F,'Control Pictures'],[0x2460,0x24FF,'Enclosed Alphanumerics'],[0x2500,0x257F,'Box Drawing'],[0x2580,0x259F,'Block Elements'],[0x25A0,0x25FF,'Geometric Shapes'],[0x2600,0x26FF,'Miscellaneous Symbols'],[0x2700,0x27BF,'Dingbats'],[0x2800,0x28FF,'Braille Patterns'],[0x2900,0x297F,'Supplemental Arrows-B'],[0x2B00,0x2BFF,'Miscellaneous Symbols and Arrows'],[0x2C60,0x2C7F,'Latin Extended-C'],[0x2E80,0x2EFF,'CJK Radicals Supplement'],[0x3000,0x303F,'CJK Symbols and Punctuation'],[0x3040,0x309F,'Hiragana'],[0x30A0,0x30FF,'Katakana'],[0x3100,0x312F,'Bopomofo'],[0x3130,0x318F,'Hangul Compatibility Jamo'],[0x31F0,0x31FF,'Katakana Phonetic Extensions'],[0x3200,0x32FF,'Enclosed CJK Letters and Months'],[0x3300,0x33FF,'CJK Compatibility'],[0x3400,0x4DBF,'CJK Unified Ideographs Extension A'],[0x4DC0,0x4DFF,'Yijing Hexagram Symbols'],[0x4E00,0x9FFF,'CJK Unified Ideographs'],[0xA000,0xA48F,'Yi Syllables'],[0xA500,0xA63F,'Vai'],[0xA700,0xA71F,'Modifier Tone Letters'],[0xA800,0xA82F,'Syloti Nagri'],[0xA840,0xA87F,'Phags-pa'],[0xA900,0xA92F,'Kayah Li'],[0xAA00,0xAA5F,'Cham'],[0xAC00,0xD7AF,'Hangul Syllables'],[0xE000,0xF8FF,'Private Use Area'],[0xF900,0xFAFF,'CJK Compatibility Ideographs'],[0xFB00,0xFB4F,'Alphabetic Presentation Forms'],[0xFE00,0xFE0F,'Variation Selectors'],[0xFE20,0xFE2F,'Combining Half Marks'],[0xFE50,0xFE6F,'Small Form Variants'],[0xFF00,0xFFEF,'Halfwidth and Fullwidth Forms'],
+  [0x10000,0x1007F,'Linear B Syllabary'],[0x10140,0x1018F,'Ancient Greek Numbers'],[0x10190,0x101CF,'Ancient Symbols'],[0x10300,0x1032F,'Old Italic'],[0x10330,0x1034F,'Gothic'],[0x10380,0x1039F,'Ugaritic'],[0x103A0,0x103DF,'Old Persian'],[0x10400,0x1044F,'Deseret'],[0x104B0,0x104FF,'Osage'],[0x10600,0x1077F,'Linear A'],[0x10800,0x1083F,'Cypriot Syllabary'],[0x10900,0x1091F,'Phoenician'],[0x10A00,0x10A5F,'Kharoshthi'],[0x10E60,0x10E7F,'Rumi Numeral Symbols'],[0x11000,0x1107F,'Brahmi'],[0x11100,0x1114F,'Chakma'],[0x11400,0x1147F,'Newa'],[0x11800,0x1184F,'Dogra'],[0x12000,0x123FF,'Cuneiform'],[0x12400,0x1247F,'Cuneiform Numbers and Punctuation'],[0x13000,0x1342F,'Egyptian Hieroglyphs'],[0x14400,0x14646,'Anatolian Hieroglyphs'],[0x16A40,0x16A6F,'Mro'],[0x16F00,0x16F9F,'Miao'],[0x1B000,0x1B0FF,'Kana Supplement'],[0x1BC00,0x1BC9F,'Duployan'],[0x1D000,0x1D0FF,'Byzantine Musical Symbols'],[0x1D100,0x1D1FF,'Musical Symbols'],[0x1D300,0x1D35F,'Tai Xuan Jing Symbols'],[0x1D400,0x1D7FF,'Mathematical Alphanumeric Symbols'],[0x1E800,0x1E8DF,'Mende Kikakui'],[0x1F000,0x1F02F,'Mahjong Tiles'],[0x1F030,0x1F09F,'Domino Tiles'],[0x1F0A0,0x1F0FF,'Playing Cards'],[0x1F100,0x1F1FF,'Enclosed Alphanumeric Supplement'],[0x1F300,0x1F5FF,'Miscellaneous Symbols and Pictographs'],[0x1F600,0x1F64F,'Emoticons'],[0x1F650,0x1F67F,'Ornamental Dingbats'],[0x1F680,0x1F6FF,'Transport and Map Symbols'],[0x1F700,0x1F77F,'Alchemical Symbols'],[0x1F780,0x1F7FF,'Geometric Shapes Extended'],[0x1F900,0x1F9FF,'Supplemental Symbols and Pictographs'],[0x1FA70,0x1FAFF,'Symbols and Pictographs Extended-A'],
+  [0x20000,0x2A6DF,'CJK Unified Ideographs Extension B'],[0x2A700,0x2B73F,'CJK Unified Ideographs Extension C'],[0x2F800,0x2FA1F,'CJK Compatibility Ideographs Supplement'],[0x30000,0x3134F,'CJK Unified Ideographs Extension G'],
+  [0xE0000,0xE007F,'Tags'],[0xE0100,0xE01EF,'Variation Selectors Supplement'],[0xF0000,0xFFFFD,'Supplementary Private Use Area-A'],[0x100000,0x10FFFD,'Supplementary Private Use Area-B']];
+const blocksOf = p => BLOCKS.filter(b => (b[0] >> 16) === p);
+const hex = c => c.toString(16).toUpperCase().padStart(4, '0');
+const printable = c => !(c < 0x20 || (c >= 0x7F && c <= 0x9F) || (c >= 0xD800 && c <= 0xDFFF) || (c >= 0xFDD0 && c <= 0xFDEF) || (c & 0xFFFE) === 0xFFFE);
+const glyph = c => printable(c) ? String.fromCodePoint(c) : '';
+
+// ── everything about one code point that can be derived here ──────────────
+const SCRIPTS = ['Latin','Greek','Cyrillic','Arabic','Hebrew','Han','Hiragana','Katakana','Hangul','Devanagari','Bengali','Tamil','Thai','Ethiopic','Cherokee','Armenian','Georgian','Myanmar','Khmer','Mongolian','Tibetan','Syriac','Runic','Ogham','Coptic','Braille','Egyptian_Hieroglyphs','Cuneiform','Linear_B','Gothic','Common','Inherited'];
+const CATS = { Lu:'uppercase letter', Ll:'lowercase letter', Lt:'titlecase letter', Lm:'modifier letter', Lo:'other letter',
+  Mn:'nonspacing mark', Mc:'spacing mark', Me:'enclosing mark', Nd:'decimal digit', Nl:'letter number', No:'other number',
+  Pc:'connector punctuation', Pd:'dash', Ps:'open punctuation', Pe:'close punctuation', Pi:'initial quote', Pf:'final quote', Po:'other punctuation',
+  Sm:'math symbol', Sc:'currency symbol', Sk:'modifier symbol', So:'other symbol', Zs:'space', Zl:'line separator', Zp:'paragraph separator',
+  Cc:'control', Cf:'format', Cs:'surrogate', Co:'private use', Cn:'unassigned' };
+const testProp = (ch, prop) => { try { return new RegExp('\\p{' + prop + '}', 'u').test(ch); } catch { return false; } };
+const HANGUL_L = ['G','GG','N','D','DD','R','M','B','BB','S','SS','','J','JJ','C','K','T','P','H'];
+const HANGUL_V = ['A','AE','YA','YAE','EO','E','YEO','YE','O','WA','WAE','OE','YO','U','WEO','WE','WI','YU','EU','YI','I'];
+const HANGUL_T = ['','G','GG','GS','N','NJ','NH','D','L','LG','LM','LB','LS','LT','LP','LH','M','B','BS','S','SS','NG','J','C','K','T','P','H'];
+function derivedName(cp){                                                                            // no name table is embedded; these are Unicode's own rules
+  const b = BLOCKS.find(b => cp >= b[0] && cp <= b[1]);
+  if (b && /CJK Unified Ideographs/.test(b[2])) return 'CJK UNIFIED IDEOGRAPH-' + hex(cp);
+  if (b && /CJK Compatibility Ideographs/.test(b[2])) return 'CJK COMPATIBILITY IDEOGRAPH-' + hex(cp);
+  if (cp >= 0xAC00 && cp <= 0xD7A3) { const i = cp - 0xAC00; return 'HANGUL SYLLABLE ' + HANGUL_L[Math.floor(i / 588)] + HANGUL_V[Math.floor((i % 588) / 28)] + HANGUL_T[i % 28]; }
+  if (cp >= 0xE000 && cp <= 0xF8FF) return 'PRIVATE USE-' + hex(cp);
+  if (cp >= 0x1F600 && cp <= 0x1F64F) return null;
+  return null;
+}
+function charInfo(cp){
+  const ch = printable(cp) ? String.fromCodePoint(cp) : '';
+  const b = BLOCKS.find(b => cp >= b[0] && cp <= b[1]);
+  const rows = [];
+  const utf8 = ch ? [...new TextEncoder().encode(ch)].map(v => v.toString(16).toUpperCase().padStart(2, '0')) : [];
+  const utf16 = ch ? [...Array(ch.length).keys()].map(i => ch.charCodeAt(i).toString(16).toUpperCase().padStart(4, '0')) : [];
+  rows.push(['code point', 'U+' + hex(cp) + '   ·   ' + cp.toLocaleString() + ' decimal   ·   0b' + cp.toString(2)]);
+  rows.push(['block', (b ? b[2] + '  (U+' + hex(b[0]) + '–U+' + hex(b[1]) + ')' : 'unassigned range')]);
+  rows.push(['plane', (cp >> 16) + '  ·  ' + (cp <= 0xFFFF ? 'basic multilingual' : 'supplementary')]);
+  if (ch) { const cat = Object.keys(CATS).find(c => testProp(ch, 'gc=' + c)); if (cat) rows.push(['category', cat + '  ' + CATS[cat]]);
+    const sc = SCRIPTS.find(s => testProp(ch, 'Script=' + s)); if (sc) rows.push(['script', sc.replace(/_/g, ' ')]);
+    const traits = [['letter','Alphabetic'],['number','N'],['mark','M'],['punctuation','P'],['symbol','S'],['whitespace','White_Space'],['emoji','Emoji'],['ideographic','Ideographic']]
+      .filter(([, prop]) => testProp(ch, prop)).map(([n]) => n);
+    if (traits.length) rows.push(['is', traits.join(' · ')]);
+    if (/\d/u.test(ch) || testProp(ch, 'Nd')) rows.push(['digit value', String(Number(ch))]);
+    const up = ch.toUpperCase(), lo = ch.toLowerCase();
+    if (up !== ch || lo !== ch) rows.push(['case', (up !== ch ? 'upper ' + up + '  ' : '') + (lo !== ch ? 'lower ' + lo : '')]);
+  }
+  rows.push(['utf-8', utf8.length ? utf8.join(' ') + '   (' + utf8.length + (utf8.length === 1 ? ' byte)' : ' bytes)') : '—']);
+  rows.push(['utf-16', utf16.length ? utf16.join(' ') + (utf16.length > 1 ? '   (surrogate pair)' : '') : '—']);
+  rows.push(['html', '&#' + cp + ';   ·   &#x' + hex(cp) + ';']);
+  rows.push(['css / js', '\\' + cp.toString(16).toUpperCase() + '   ·   \\u{' + cp.toString(16).toUpperCase() + '}']);
+  rows.push(['url', ch ? encodeURIComponent(ch) : '—']);
+  if (ch) { const nfd = ch.normalize('NFD'), nfkc = ch.normalize('NFKC');
+    if (nfd !== ch) rows.push(['nfd', [...nfd].map(c => 'U+' + hex(c.codePointAt(0))).join(' ')]);
+    if (nfkc !== ch) rows.push(['nfkc', [...nfkc].map(c => 'U+' + hex(c.codePointAt(0))).join(' ')]); }
+  return rows;
+}
+
+// ── the selection, and each strip's own focus ──
+let selPlane = 0, selBlockI = 0, selCp = 0x0041;
+const selBlock = () => BLOCKS[Math.min(selBlockI, BLOCKS.length - 1)];
+const $ = id => document.getElementById(id), serif = () => getComputedStyle(document.body).getPropertyValue('--font');
+const setCp = c => { selCp = c; selPlane = c >> 16; const i = BLOCKS.findIndex(b => c >= b[0] && c <= b[1]); if (i >= 0) selBlockI = i; };
+
+// ── the wheel is a pan in pixels, damped — not a step per event (a trackpad sends dozens) ──
+const WHEEL = 0.9;
+const wheelK = e => e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1;
+const wheelX = e => e.deltaX * wheelK(e), wheelY = e => e.deltaY * wheelK(e);
+const wheelPx = e => wheelX(e) + wheelY(e);                  // a horizontal strip takes either direction
+
+// ── swipe physics: a flick keeps going and slows to a stop. No snap — it stops where friction stops it. ──
+const FRICTION = 0.94, MIN_V = 0.0015;                       // per frame; MIN_V in tiles, so a slow drift ends
+function vel(){ let last = null, v = 0; return { note(x, t){ if (last) { const dt = Math.max(8, t - last.t); v = 0.8 * ((x - last.x) / dt) + 0.2 * v; } last = { x, t }; }, get(){ return v; }, reset(){ last = null; v = 0; } }; }
+function coast(v0, step){                                    // v0 in tiles per ms; step(dTiles) each frame
+  let v = v0 * 16, raf = 0;
+  const tick = () => { if (Math.abs(v) < MIN_V) { raf = 0; return; } step(v); v *= FRICTION; raf = requestAnimationFrame(tick); };
+  raf = requestAnimationFrame(tick);
+  return () => { if (raf) cancelAnimationFrame(raf); raf = 0; };
+}
+function coast2(vx0, vy0, step){                             // the same in two axes, for the grid
+  let vx = vx0 * 16, vy = vy0 * 16, raf = 0;
+  const tick = () => { if (Math.hypot(vx, vy) < MIN_V) { raf = 0; return; } step(vx, vy); vx *= FRICTION; vy *= FRICTION; raf = requestAnimationFrame(tick); };
+  raf = requestAnimationFrame(tick);
+  return () => { if (raf) cancelAnimationFrame(raf); raf = 0; };
+}
+// ── a strip: a RING of tiles on a semicircle. Panning is looking; tapping is choosing. ──
+//    The focus is unbounded and every index is read modulo the count, so a strip turns for ever and the last
+//    tile sits beside the first. A pan moves the focus and NOTHING else — no selection, no strip beneath it
+//    changes. A tap sets the selection where the tile is, and never moves the strip.
+function makeStrip(el, cfg){
+  const ctx = el.getContext('2d'); let drag = null, stop = null; const track = vel();
+  const st = { focus: 0, draw, at, el, ctx };
+  const pitch = () => PI / cfg.count();                                                                // the whole list round the semicircle
+  const scale = () => cfg.w() * cfg.count() / PI;                                                      // one item = cfg.w() px at the focus
+  const wrapI = i => { const n = cfg.count(); return ((i % n) + n) % n; };
+  const delta = (i, f) => { const n = cfg.count(); let d = i - f; d = ((d % n) + n) % n; return d > n / 2 ? d - n : d; };   // the ring: the short way round
+  function draw(){
+    const DPR = Math.min(2, devicePixelRatio || 1), W = el.clientWidth, H = el.clientHeight; el.width = W * DPR; el.height = H * DPR; ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.clearRect(0, 0, W, H);
+    const cx = W / 2, s = scale(), n = cfg.count(), p = pitch(), sel = cfg.sel();
+    const faced = wrapI(Math.round(st.focus));
+    const span = Math.min(Math.floor(n / 2), Math.ceil(Math.atan((W / 2 + cfg.w()) / s) / p) + 1);       // every tile that reaches the edge — the rest are past the horizon
+    for (let k = -span; k <= span; k++) { const i = wrapI(faced + k);
+      const d = delta(i, st.focus) * p; if (Math.abs(d) >= PI / 2 - 0.02) continue;
+      const x = cx + Math.tan(d) * s; if (x < -cfg.w() || x > W + cfg.w()) continue;
+      cfg.tile(ctx, x, H, i, Math.max(0, 1 - Math.abs(d) / (PI / 2)), i === sel);
+    }
+  }
+  function at(x){ const cx = el.clientWidth / 2; return wrapI(Math.round(st.focus + Math.atan((x - cx) / scale()) / pitch())); }
+  el.addEventListener('pointerdown', e => { if (stop) { stop(); stop = null; } track.reset(); track.note(e.clientX, e.timeStamp); drag = { x0: e.clientX, f0: st.focus, moved: false }; el.setPointerCapture(e.pointerId); });
+  el.addEventListener('pointermove', e => { if (!drag) return; track.note(e.clientX, e.timeStamp); const dx = e.clientX - drag.x0; if (Math.abs(dx) > 3) drag.moved = true;
+    st.focus = drag.f0 - dx / cfg.w(); render(); });                                                  // looking: the angle stepped by pixels, nothing picked
+  el.addEventListener('pointercancel', () => { drag = null; });
+  el.addEventListener('pointerup', e => { if (!drag) return; const moved = drag.moved; drag = null;
+    if (!moved) { cfg.pick(at(e.clientX - el.getBoundingClientRect().left)); render(); return; }       // choosing: the tile under the finger, the strip stays
+    stop = coast(-track.get() / cfg.w(), d => { st.focus += d; render(); }); });                       // a flick coasts and stops by friction — no settle
+  el.addEventListener('wheel', e => { if (stop) { stop(); stop = null; } st.focus += wheelPx(e) * WHEEL / cfg.w(); render(); e.preventDefault(); }, { passive: false });
+  return st;
+}
+// blocks — one strip for all of Unicode: 146 named ranges in code-point order, the plane read off each tile
+const blocksStrip = makeStrip($('blocks'), { w: () => 170, count: () => BLOCKS.length, sel: () => selBlockI,
+  pick(i){ selBlockI = i; selCp = selBlock()[0]; selPlane = selCp >> 16; points.focus = 0; },           // a chosen block sets the code points to its start
+  tile(ctx, x, H, i, near, on){ const b = BLOCKS[i]; if (!b) return; const y = H / 2 - 1;                 // the calendar's months: name on the line, its detail beneath
+    ctx.textAlign = 'center'; ctx.fillStyle = on ? '#e8c86a' : 'rgba(201,199,190,' + (0.3 + 0.6 * near).toFixed(2) + ')'; ctx.font = (12 + 7 * near) + 'px ' + serif();
+    const label = b[2].length > (near > 0.6 ? 24 : 13) ? b[2].slice(0, near > 0.6 ? 23 : 12) + '…' : b[2]; ctx.fillText(label, x, y);
+    ctx.fillStyle = on ? 'rgba(232,200,106,0.75)' : 'rgba(127,133,144,' + (0.25 + 0.5 * near).toFixed(2) + ')'; ctx.font = '9px ' + serif();
+    ctx.fillText('U+' + hex(b[0]) + ' · ' + (b[1] - b[0] + 1) + ((b[0] >> 16) ? ' · plane ' + (b[0] >> 16) : ''), x, y + 14); } });
+// code points — A GRID, and a fisheye on both axes: sixteen columns as Unicode is conventionally laid out,
+// the faced cell at natural size in the middle, the rest receding by tan across and down. Panning moves the
+// focus in x and y and picks nothing; a tap chooses the cell under the finger and leaves the grid where it is.
+const points = (() => {
+  const el = $('points'), ctx = el.getContext('2d');
+  let fx = 0, fy = 0, drag = null, stop = null; const tx = vel(), ty = vel();
+  const count = () => selBlock()[1] - selBlock()[0] + 1;
+  const wrap = (i, n) => ((i % n) + n) % n;
+  const delta = (i, f, n) => { let d = i - f; d = ((d % n) + n) % n; return d > n / 2 ? d - n : d; };
+  /* THE SHAPE OF THE GRID, from the space and the block: the cell at which the whole block would exactly fill
+     the box is √(W·H/n); take it, hold it between a readable 52px and a roomy 132px, and let the columns be
+     however many of those fit across — so a small block lays itself out square and a large one packs. The
+     columns then divide the width exactly, and the rows follow from the count. */
+  let zoom = 1;                                                                                       // pinch scales the CELLS ONLY — the columns and rows never re-flow, so the zoom is smooth
+  /* The shape is fixed by the space and the block: the cell at which the whole block would fill the box,
+     held between 52 and 132px, gives the column count, and the rows follow. Zoom then scales that cell:
+     smaller cells mean more of the same columns reach the edges, larger mean fewer. Nothing re-lays out. */
+  const base = () => { const W = el.clientWidth, H = el.clientHeight, n = Math.max(1, count());
+    const c = Math.max(52, Math.min(132, Math.sqrt(W * H / n)));
+    const cols = Math.max(1, Math.min(n, Math.round(W / c))); return { cols, rows: Math.ceil(n / cols), c: W / cols }; };
+  /* THE CELL'S FLOOR AND CEILING. 44px is the smallest at which a glyph and its hex still read. The ceiling is
+     the shorter side of the box over 2.6 — held between 132 and 260px — so a cell can grow to a comfortable
+     card, about two and a half of them across the short way, without one glyph swallowing the page. The zoom is
+     clamped to the range those two allow, so a pinch comes to a stop instead of running on with nothing
+     happening; the unzoomed cell always sits inside it, since the base is held between 52 and 132px. */
+  const MINC = 44, MAXC = () => Math.max(132, Math.min(260, Math.min(el.clientWidth, el.clientHeight) / 2.6));
+  const shape = () => { const b = base(), w = Math.max(MINC, Math.min(MAXC(), b.c * zoom)); return { cols: b.cols, rows: b.rows, w, h: w }; };
+  const PX = () => PI / shape().cols, PY = () => PI / Math.max(1, shape().rows);                      // each axis: its whole ring round a semicircle
+  const cell = () => { const s = shape(); return { w: s.w, h: s.h }; };
+  const rows = () => shape().rows, COLS_ = () => shape().cols;
+  function draw(){
+    const DPR = Math.min(2, devicePixelRatio || 1), W = el.clientWidth, H = el.clientHeight; el.width = W * DPR; el.height = H * DPR; ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.clearRect(0, 0, W, H);
+    const sh = shape(), c = { w: sh.w, h: sh.h }, COLS = sh.cols, R = sh.rows, px = PI / COLS, py = PI / Math.max(1, R), sx = c.w * COLS / PI, sy = c.h * R / PI, cx = W / 2, cy = H / 2, n = count(), base = selBlock()[0];
+    const selI = selCp - base, selC = wrap(selI, COLS), selR = Math.floor(selI / COLS);
+    const spanY = Math.min(Math.floor(R / 2), Math.ceil(Math.atan((H / 2 + c.h) / sy) / py) + 1), spanX = Math.min(Math.floor(COLS / 2), Math.ceil(Math.atan((W / 2 + c.w) / sx) / px) + 1);   // fill the box in both axes
+    for (let dr = -spanY; dr <= spanY; dr++) { const r = wrap(Math.round(fy) + dr, R); const dy = delta(r, fy, R) * py; if (Math.abs(dy) >= PI / 2 - 0.02) continue;
+      const y = cy + Math.tan(dy) * sy, nearY = Math.max(0, 1 - Math.abs(dy) / (PI / 2));
+      for (let dc = -spanX; dc <= spanX; dc++) { const col = wrap(Math.round(fx) + dc, COLS); const dx = delta(col, fx, COLS) * px; if (Math.abs(dx) >= PI / 2 - 0.02) continue;
+        const i = r * COLS + col; if (i >= n) continue;
+        const x = cx + Math.tan(dx) * sx, nearX = Math.max(0, 1 - Math.abs(dx) / (PI / 2)), near = nearX * nearY;
+        const w = c.w * 0.86;                                                    // every cell the same size — the lens spaces them, it does not scale them
+        if (x + w < 0 || x - w > W || y + w < 0 || y - w > H) continue;
+        const cp = base + i, on = cp === selCp;
+        ctx.fillStyle = on ? 'rgba(232,200,106,.12)' : 'rgba(255,255,255,' + (0.012 + 0.035 * near).toFixed(3) + ')';
+        ctx.strokeStyle = on ? '#e8c86a' : 'rgba(136,135,128,' + (0.35 + 0.65 * near).toFixed(2) + ')';
+        ctx.beginPath(); ctx.roundRect(x - w / 2, y - w / 2, w, w, 8); ctx.fill(); ctx.stroke();
+        ctx.textAlign = 'center'; const g = glyph(cp);
+        if (g) { ctx.fillStyle = on ? '#c9c7be' : 'rgba(201,199,190,' + (0.45 + 0.55 * near).toFixed(2) + ')'; ctx.font = (w * 0.5) + 'px ' + serif(); ctx.fillText(g, x, y + w * 0.17); }
+        else { ctx.fillStyle = 'rgba(136,135,128,.7)'; ctx.font = (w * 0.28) + 'px ' + serif(); ctx.fillText('·', x, y + w * 0.1); }
+        ctx.fillStyle = on ? '#e8c86a' : 'rgba(127,133,144,' + (0.25 + 0.5 * near).toFixed(2) + ')'; ctx.font = '9px ' + getComputedStyle(document.body).getPropertyValue('--mono'); ctx.fillText(hex(cp), x, y + w / 2 - 4);
+      } }
+  }
+  function at(qx, qy){ const sh = shape(), COLS = sh.cols, R = sh.rows, sx = sh.w * COLS / PI, sy = sh.h * R / PI, W = el.clientWidth, H = el.clientHeight;
+    const col = wrap(Math.round(fx + Math.atan((qx - W / 2) / sx) / (PI / COLS)), COLS), r = wrap(Math.round(fy + Math.atan((qy - H / 2) / sy) / (PI / Math.max(1, R))), R);
+    const i = r * COLS + col; return i < count() ? selBlock()[0] + i : null; }
+  const setZoom = z => { const b = base();                                                            // the cell only; the focused cell keeps its place
+    zoom = Math.max(MINC / b.c, Math.min(MAXC() / b.c, z)); };                                        // clamped to the sizes the cell may actually take
+  // ── pinch: two fingers scale the cells; one finger still pans ──
+  const touches = new Map(); let pinch = null;
+  el.addEventListener('pointerdown', e => { if (stop) { stop(); stop = null; }
+    touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (touches.size === 2) { const [a, b] = [...touches.values()]; pinch = { d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, z0: zoom }; drag = null; return; }
+    tx.reset(); ty.reset(); tx.note(e.clientX, e.timeStamp); ty.note(e.clientY, e.timeStamp); drag = { x0: e.clientX, y0: e.clientY, fx0: fx, fy0: fy, moved: false }; el.setPointerCapture(e.pointerId); });
+  el.addEventListener('pointermove', e => {
+    if (touches.has(e.pointerId)) touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch && touches.size === 2) { const [a, b] = [...touches.values()]; const r = Math.hypot(a.x - b.x, a.y - b.y) / pinch.d0; setZoom(pinch.z0 * Math.pow(r, 1.8)); render(); return; }   // 1.8: the fingers' ratio, sharpened
+    if (!drag) return; tx.note(e.clientX, e.timeStamp); ty.note(e.clientY, e.timeStamp); const c = cell(), dx = e.clientX - drag.x0, dy = e.clientY - drag.y0;
+    if (Math.hypot(dx, dy) > 4) drag.moved = true; fx = drag.fx0 - dx / c.w; fy = drag.fy0 - dy / c.h; render(); });        // looking: this grid only, in both axes
+  el.addEventListener('pointercancel', e => { touches.delete(e.pointerId); if (touches.size < 2) pinch = null; drag = null; });
+  el.addEventListener('pointerup', e => { touches.delete(e.pointerId); if (touches.size < 2) pinch = null;
+    if (!drag) return; const moved = drag.moved; drag = null;
+    if (!moved) { const r = el.getBoundingClientRect(), cp = at(e.clientX - r.left, e.clientY - r.top); if (cp !== null) { selCp = cp; render(); showInfo(true); } else render(); return; }   // choosing: the cell under the finger opens its panel; the grid stays
+    const c = cell();
+    stop = coast2(-tx.get() / c.w, -ty.get() / c.h, (dx, dy) => { fx += dx; fy += dy; render(); }); });   // a flick coasts in both axes and stops by friction
+  el.addEventListener('wheel', e => { if (stop) { stop(); stop = null; }
+    if (e.ctrlKey) { setZoom(zoom * Math.exp(-wheelY(e) / 150)); render(); e.preventDefault(); return; }   // a trackpad pinch arrives as ctrl-wheel  // a trackpad pinch arrives as ctrl-wheel
+    const c = cell(); fx += wheelX(e) * WHEEL / c.w; fy += wheelY(e) * WHEEL / c.h;                      // sideways moves the columns, up and down the rows
+    render(); e.preventDefault(); }, { passive: false });
+  return { draw, nudgeZoom: f => setZoom(zoom * f), fit: () => setZoom(1), get cols(){ return shape().cols; },
+    set focus(v){ const C = shape().cols, i = Math.max(0, Math.round(v)); fx = i % C; fy = Math.floor(i / C); }, get focus(){ const C = shape().cols; return Math.round(fy) * C + Math.round(fx); } };
+})();
+function render(){ blocksStrip.draw(); points.draw();
+  const b = selBlock(); $('big').textContent = glyph(selCp) || '·';
+  $('sel').innerHTML = '<b>U+' + hex(selCp) + '</b> · ' + b[2] + ' · plane ' + selPlane; }
+// the strips' foci start on the selection; a pan at a higher level carries those beneath (in pick), a tap does not
+const syncFoci = () => { blocksStrip.focus = selBlockI; points.focus = selCp - selBlock()[0]; };
+syncFoci();
+// search
+$('q').addEventListener('keydown', e => { if (e.key !== 'Enter') return; const q = $('q').value.trim();
+  const m = /^(u\+)?([0-9a-f]{2,6})$/i.exec(q);
+  if (m) { const c = parseInt(m[2], 16); if (c <= 0x10FFFF) { setCp(c); syncFoci(); render(); return; } }
+  const b = BLOCKS.find(b => b[2].toLowerCase().includes(q.toLowerCase())); if (b) { setCp(b[0]); syncFoci(); render(); } });
+addEventListener('keydown', e => { if (document.activeElement === $('q')) return;
+  if (e.key === 'c' && glyph(selCp)) { navigator.clipboard && navigator.clipboard.writeText(glyph(selCp)); } });
+// A horizontal wheel anywhere on the page is a pan, not a history step: refuse it even off the strips.
+addEventListener('wheel', e => { if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) e.preventDefault(); }, { passive: false });
+// ── the menu ──────────────────────────────────────────────────────────────
+const menuEl = $('menu'), menuBtnEl = $('menuBtn');
+const setMenu = on => { menuEl.hidden = !on; };
+menuBtnEl.addEventListener('click', e => { e.stopPropagation(); setMenu(menuEl.hidden); });
+menuEl.addEventListener('click', e => { if (e.target.closest('button')) setMenu(false); });
+document.addEventListener('pointerdown', e => { if (menuEl.hidden) return; if (menuEl.contains(e.target) || menuBtnEl.contains(e.target)) return; setMenu(false); }, true);
+const goBlock = cp => { setCp(cp); syncFoci(); render(); };
+$('mLatin').addEventListener('click', () => goBlock(0x0041));
+$('mEmoji').addEventListener('click', () => goBlock(0x1F600));
+$('mRandom').addEventListener('click', () => goBlock(BLOCKS[Math.floor(Math.random() * BLOCKS.length)][0]));
+$('mCopy').addEventListener('click', () => { const g = glyph(selCp); if (g && navigator.clipboard) navigator.clipboard.writeText(g); });
+$('mCopyHex').addEventListener('click', () => { if (navigator.clipboard) navigator.clipboard.writeText('U+' + hex(selCp)); });
+$('mBigger').addEventListener('click', () => { points.nudgeZoom(1.4); render(); });
+$('mSmaller').addEventListener('click', () => { points.nudgeZoom(1 / 1.4); render(); });
+$('mFit').addEventListener('click', () => { points.fit(); render(); });
+
+// ── the character's panel: enter, or a click on a cell ─────────────────────
+const infoEl = $('info');
+const showInfo = on => { if (!on) { infoEl.hidden = true; return; }
+  const b = BLOCKS.find(b => selCp >= b[0] && selCp <= b[1]), nm = derivedName(selCp);
+  infoEl.innerHTML = '<div class="i-top"><div class="i-glyph">' + (glyph(selCp) || '·') + '</div>' +
+    '<div class="i-hd"><div class="i-cp">U+' + hex(selCp) + '</div>' +
+    (nm ? '<div class="i-nm">' + nm + '</div>' : '') +
+    '<div class="i-bk">' + (b ? b[2] : 'unassigned') + '</div></div>' +
+    '<button class="i-x" aria-label="close">×</button></div>' +
+    '<table>' + charInfo(selCp).map(([k, v]) => '<tr><td class="k">' + k + '</td><td class="v">' + String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</td></tr>').join('') + '</table>';
+  infoEl.hidden = false;
+  infoEl.querySelector('.i-x').addEventListener('click', () => showInfo(false)); };
+const infoOpen = () => !infoEl.hidden;
+const refreshInfo = () => { if (infoOpen()) showInfo(true); };
+
+// ── the keyboard: arrows move the selection, tab steps a block, enter opens the panel ──
+const stepCp = d => { const b = selBlock(), n = b[1] - b[0] + 1, i = ((selCp - b[0] + d) % n + n) % n; selCp = b[0] + i; syncFoci(); render(); refreshInfo(); };
+const stepBlock = d => { selBlockI = ((selBlockI + d) % BLOCKS.length + BLOCKS.length) % BLOCKS.length; selCp = selBlock()[0]; selPlane = selCp >> 16; syncFoci(); render(); refreshInfo(); };
+addEventListener('keydown', e => {
+  if (document.activeElement === $('q')) { if (e.key === 'Escape') $('q').blur(); return; }
+  const k = e.key;
+  if (k === 'ArrowRight') { stepCp(1); e.preventDefault(); }
+  else if (k === 'ArrowLeft') { stepCp(-1); e.preventDefault(); }
+  else if (k === 'ArrowDown') { stepCp(points.cols); e.preventDefault(); }
+  else if (k === 'ArrowUp') { stepCp(-points.cols); e.preventDefault(); }
+  else if (k === 'PageDown') { stepBlock(1); e.preventDefault(); }
+  else if (k === 'PageUp') { stepBlock(-1); e.preventDefault(); }
+  else if (k === 'Tab') { stepBlock(e.shiftKey ? -1 : 1); e.preventDefault(); }
+  else if (k === 'Enter') { showInfo(!infoOpen()); e.preventDefault(); }
+  else if (k === 'Escape') { showInfo(false); setMenu(false); }
+  else if (k === '/') { $('q').focus(); e.preventDefault(); }
+});
+
+addEventListener('resize', render);
+setCp(0x0041); syncFoci(); render();
+</script>
+</body>
+</html>

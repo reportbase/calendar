@@ -12,6 +12,8 @@ Each opens straight in a browser with no dependencies.
 | `three-rulers.html` | One reading v/h on the folded dial (octaves or register cells, odd or even), the unfolded strip (y = g) and the octave-counting drum. | `drawHeadDial`, `drawSerialPanel`, `drawCascadePanel` |
 | `register.html` | A reader holding one value reads each new distance as a ratio, one register cell at a time. Odd registers can say "unchanged" (a cell on the corner); even ones cannot and twitch. The checksum walk comes home; a rail costs lag, not closure. | base rule (`baseRuleRead`, `boundedRuleRead`), the register strip, the checksum |
 | `convexity.html` | Keep only the tangent's quadrant: a convex loop enters each quarter once. More than four entries proves a dent; four does not prove convexity, and a shallow dent shows why. | the bearing-quadrant leaf paint |
+| `unicode.html` | A Unicode browser on the fisheye: blocks on one strip, the code points of the focused block on a two-axis fisheye grid, search by block name or hex, and a panel for the chosen character. | added as is |
+| `tns.html` | *Continuous curves on the arc*: the standard number line over 37 bottom views, chosen from the menu: slope charts and waves, the bridge theorem's K_N reconstruction, one to four atoms, v₁ v₂ h, the pointing sphere, the fold, torus vs sphere, the bouquets, the aperture atom, the beam, the sky under boost, radar, the trit, the Wigner turn, three gaps and ?(x). | added as is |
 
 Notes carried into the pages:
 

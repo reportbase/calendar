@@ -33,6 +33,8 @@ Standalone pages, one idea each, pulled out of the draw project's labs. See [dem
 | [three-rulers.html](https://reportbase.github.io/calendar/demos/three-rulers.html) | One reading on the folded dial, the unfolded strip (y = g) and the octave-counting drum. |
 | [register.html](https://reportbase.github.io/calendar/demos/register.html) | Odd registers can say "unchanged", even ones cannot; the checksum walk, rails and lag. |
 | [convexity.html](https://reportbase.github.io/calendar/demos/convexity.html) | Two bits of tangent quadrant: four entries for a convex loop, and the dent two bits cannot see. |
+| [unicode.html](https://reportbase.github.io/calendar/demos/unicode.html) | A Unicode browser on the fisheye: a strip of blocks over a grid of code points, with search and a character panel. |
+| [tns.html](https://reportbase.github.io/calendar/demos/tns.html) | Continuous curves on the arc: one standard number line over 37 bottom views, from the atom and the bridge theorem to the pointing sphere, the bouquets, the sky under boost, radar, three gaps and ?(x). |
 
 ## Sweeps — [dials/](dials/)
 
