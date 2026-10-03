@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The dial's geometry</title>
+<!-- THE DIAL AND ITS FIGURE, SIDE BY SIDE. The dial is the navigation dial of city-dial.html (gold
+     needle pushes, blue needle points, the radius sets the window) on dial.html's list, a century of
+     milliseconds. Beside it, drawn from the same state, is the figure the dial is made of: a centre O,
+     a unit circle, the tangent line at its apex A, and the unit hyperbola that touches the same line.
+
+       P  the blue needle's tip on the circle, at angle θ from the apex       (cos θ, sin θ)
+       T  where the needle's line meets the tangent: tan θ, the VALUE        (1, tan θ)
+       H  the hyperbola point level with T: ζ is what the gold has pushed    (cosh ζ, sinh ζ)
+       S  where the line O–H meets the tangent, level with P                 (1, tanh ζ)
+
+     so sin θ = tanh ζ and tan θ = sinh ζ: θ = gd(ζ), the gudermannian. The shaded sectors are the two
+     angles as areas — an angle is twice its sector's area, on the circle (θ) and the hyperbola (ζ) alike.
+
+     VOCABULARY (GEOMETRY.md): geometry names first, other fields' names in brackets. θ is the circular
+     angle [latitude; the angle whose sine is v/c]. ζ is the hyperbolic angle [rapidity; Mercator height].
+     tan θ = sinh ζ is the tangent [proper velocity; gnomonic distance]. The horizon is θ = 90°
+     [speed of light; the pole; the vanishing point]. The radius is a logarithm of scale [exponent].
+
+     HANDS. On the dial: pan away from the hub and the gold needle's angle adds ζ at tan(gold) · 0.4 a
+     second; letting go springs the gold home and rests the window on the record reached. Wheel or
+     pinch: the radius. On the figure: drag P, T, H or S and everything follows; the blue stays where
+     the figure leaves it. Wheel over the figure zooms the figure only.
+     Keys: ← → push the gold at 45° · ↑ ↓ radius · h blue home · t today · n numbers. -->
+<style>
+  :root{--bg:#0b0d12;--panel:#12151c;--gold:#e8c86a;--teal:#1D9E75;--blue:#6aa8e8;--ink:#c9c7be;--dim:#7f8590;
+        --mono:"SF Mono",Menlo,Consolas,monospace}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+            overflow:hidden;overscroll-behavior:none;touch-action:none;user-select:none;-webkit-user-select:none}
+  canvas{display:block;width:100%;height:100%;cursor:crosshair}
+  #nums{position:fixed;z-index:2;padding:10px 12px;background:rgba(18,21,28,.88);border:0.5px solid rgba(232,200,106,.28);
+        border-radius:10px;font:12px/1.5 var(--mono);pointer-events:none;
+        display:grid;grid-template-columns:auto auto 1fr;column-gap:12px}
+  #nums[hidden]{display:none}
+  #nums .k{color:var(--gold);white-space:nowrap} #nums .v{color:#f1efe6;text-align:right;white-space:nowrap}
+  #nums .o{color:var(--dim)} #nums .hd{grid-column:1/-1;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;font-size:10px;margin-top:4px}
+  #nums .hd:first-child{margin-top:0}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="nums"></div>
+<script>
+const PI = Math.PI, K = 5, CAP = Math.atan(2 ** K), ZMAX = Math.asinh(2 ** K);   // the window's end: the K-th corner, tan θ = 2^K
+const THRUST = 0.4, SPRING_MS = 150, TAP_PX = 6;
+const T0 = Date.UTC(2000, 0, 1), N = 3155760000000;                              // the list: a century of milliseconds
+const BG = '#0b0d12', GOLD = '#e8c86a', TEAL = '#1D9E75', BLUE = '#6aa8e8', INK = '#c9c7be', DIM = '#7f8590';
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+// ── THE STATE: a record, a window round it, and the hyperbolic angle ζ between them ──────────────
+let index = clamp(Date.now() - T0, 0, N - 1), centre = index, reach = 0.45, zeta = 0;
+let gold = 0, held = false, thrusting = false, springAt = -1, last = 0, figZoom = 1;
+const span = () => Math.max(1, Math.pow(N, reach));            // the radius is a logarithm: window = N^r
+const unit = s => s / 2 / 2 ** K;                              // one unit = the 45° corner; the window's half is 2^K units
+const theta = () => Math.atan(Math.sinh(zeta));                // the circular angle of ζ: θ = gd(ζ)
+function read(){ index = clamp(centre + unit(span()) * Math.sinh(zeta), 0, N - 1); }   // the value is the tangent: unit · sinh ζ = unit · tan θ
+function recentre(){                                           // the window onto the record; ζ keeps only what the list's ends force
+  const s = span(); centre = clamp(index, s / 2, N - s / 2);
+  zeta = clamp(Math.asinh((index - centre) / unit(s)), -ZMAX, ZMAX);
+}
+function rezoom(){                                             // a new radius keeps the record and restates ζ in the new unit
+  const s = span(), c = clamp(centre, s / 2, N - s / 2);
+  if (Math.abs(index - c) <= s / 2) { centre = c; zeta = clamp(Math.asinh((index - c) / unit(s)), -ZMAX, ZMAX); }
+  else recentre();
+}
+function liveGold(now){                                        // the gold as drawn: the hand, or the spring back to the apex
+  if (held) return thrusting ? gold : 0;
+  if (springAt >= 0) { const t = (now - springAt) / SPRING_MS; if (t >= 1) { springAt = -1; return 0; } return gold * Math.pow(1 - t, 3); }
+  return 0;
+}
+
+// ── LAYOUT: the dial and the figure share the screen ─────────────────────────────────────────────
+const cv = document.getElementById('cv'), vis = cv.getContext('2d');
+const back = document.createElement('canvas'), ctx = back.getContext('2d');   // drawn here, copied across once
+const nums = document.getElementById('nums');
+let W = 0, H = 0, D = 0, Lay = null, lastKey = '', force = true;
+nums.hidden = innerWidth < innerHeight;                        // a narrow screen starts without the numbers ('n')
+function layout(){
+  const land = W >= H * 1.05;
+  const dial = land ? { x: 0, y: 0, w: W / 2, h: H } : { x: 0, y: H * 0.5, w: W, h: H * 0.5 };
+  const fig  = land ? { x: W / 2, y: 0, w: W / 2, h: H } : { x: 0, y: 0, w: W, h: H * 0.5 };
+  nums.style.left = (dial.x + 14) + 'px'; nums.style.top = (dial.y + 14) + 'px';
+  nums.style.maxWidth = Math.max(200, dial.w - 28) + 'px';
+  const top = nums.hidden ? 40 : nums.offsetHeight + 40;
+  dial.cx = dial.x + dial.w / 2; dial.cy = dial.y + dial.h - 86;
+  dial.R = Math.max(40, Math.min(dial.w * 0.44, dial.cy - dial.y - top));
+  fig.ox = fig.x + fig.w / 2; fig.oy = fig.y + fig.h - 46;
+  fig.L = Math.max(10, Math.min(fig.w / 5, (fig.h - 90) / 3.2)) * figZoom;
+  Lay = { dial, fig };
+}
+const inBox = (b, x, y) => x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h;
+
+// ── THE READOUT: the record's fields, coloured by what this radius reaches ───────────────────────
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const pad = (v, n) => String(v).padStart(n, '0');
+function fields(i){ const d = new Date(T0 + Math.round(i));
+  return [[[pad(d.getUTCDate(), 2) + ' ', 864e5], [MON[d.getUTCMonth()] + ' ', 26298e5], [String(d.getUTCFullYear()), 315576e5]],
+          [[pad(d.getUTCHours(), 2) + ':', 36e5], [pad(d.getUTCMinutes(), 2) + ':', 6e4],
+           [pad(d.getUTCSeconds(), 2) + '.', 1e3], [pad(d.getUTCMilliseconds(), 3), 1]]]; }
+const band = mag => { const s = span(); return mag <= unit(s) ? TEAL : mag <= s / 2 ? BLUE : GOLD; };   // within a unit · within the window · out of reach
+function fmtDur(ms){
+  if (ms < 1) return ms.toPrecision(2) + ' ms';
+  for (const [u, n] of [[315576e5, 'y'], [864e5, 'd'], [36e5, 'h'], [6e4, 'min'], [1e3, 's'], [1, 'ms']])
+    if (ms >= u) { const v = ms / u; return v.toFixed(v >= 100 ? 0 : v >= 10 ? 1 : 2) + ' ' + n; }
+}
+function line(parts, cx, y){
+  const w = parts.reduce((t, [s]) => t + ctx.measureText(s).width, 0); let x = cx - w / 2;
+  for (const [s, mag] of parts) { ctx.fillStyle = band(mag); ctx.fillText(s, x, y); x += ctx.measureText(s).width; }
+}
+
+// ── THE DIAL ─────────────────────────────────────────────────────────────────────────────────────
+function needle(cx, cy, a, r, color, width){
+  ctx.strokeStyle = color; ctx.lineWidth = width;
+  ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + r * Math.sin(a), cy - r * Math.cos(a)); ctx.stroke();
+}
+function drawDial(g){
+  const { cx, cy, R } = Lay.dial;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = 'rgba(201,199,190,.18)'; ctx.lineWidth = 1;                 // the horizon: 90°, never reached
+  ctx.beginPath(); ctx.moveTo(cx - R - 14, cy); ctx.lineTo(cx + R + 14, cy); ctx.stroke();
+  ctx.strokeStyle = 'rgba(232,200,106,.22)'; ctx.beginPath(); ctx.arc(cx, cy, R, -PI, 0); ctx.stroke();
+  const rr = Math.max(8, R * reach);                                           // the rung: where the radius is
+  ctx.strokeStyle = GOLD; ctx.globalAlpha = 0.55; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(cx, cy, rr, -PI, 0); ctx.stroke(); ctx.globalAlpha = 1;
+  for (let k = 0; k <= K; k++) for (const sg of [-1, 1]) {                     // the corners: tan θ = 1, 2, 4 … 2^K
+    const a = sg * Math.atan(2 ** k), sx = Math.sin(a), cy_ = Math.cos(a);
+    ctx.strokeStyle = k === 0 ? GOLD : 'rgba(232,200,106,.6)'; ctx.lineWidth = k === 0 ? 2 : 1.2;
+    ctx.beginPath(); ctx.moveTo(cx + (rr - 7) * sx, cy - (rr - 7) * cy_); ctx.lineTo(cx + (rr + 7) * sx, cy - (rr + 7) * cy_); ctx.stroke();
+  }
+  needle(cx, cy, g, R, GOLD, 2.5);                                             // the gold: a rate
+  if (Math.abs(zeta) > 1e-9) {                                                 // the blue: a place, θ = gd(ζ)
+    const th = theta(), tx = cx + R * Math.sin(th), ty = cy - R * Math.cos(th);
+    needle(cx, cy, th, R, BLUE, 2.5);
+    ctx.setLineDash([4, 5]); ctx.strokeStyle = 'rgba(106,168,232,.55)'; ctx.lineWidth = 1;   // the tip's sideways reach: R · sin θ = R · tanh ζ
+    ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(tx, cy); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = BLUE; ctx.beginPath(); ctx.arc(tx, ty, 4, 0, 2 * PI); ctx.fill();
+  }
+  ctx.fillStyle = GOLD; ctx.beginPath(); ctx.arc(cx, cy, 4, 0, 2 * PI); ctx.fill();
+  const [date, time] = fields(index), s = span();
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.font = '19px ' + getComputedStyle(document.body).getPropertyValue('--mono'); line(date, cx, cy + 30);
+  ctx.font = '15px ' + getComputedStyle(document.body).getPropertyValue('--mono'); line(time, cx, cy + 52);
+  ctx.font = '12px ' + getComputedStyle(document.body).getPropertyValue('--mono'); ctx.fillStyle = DIM; ctx.textAlign = 'center';
+  ctx.fillText('window ' + fmtDur(s) + ' · unit ' + fmtDur(unit(s)) + ' · r ' + reach.toFixed(3), cx, cy + 74);
+}
+
+// ── THE FIGURE: centre, circle, tangent, hyperbola — the dial's own geometry ──────────────────────
+const fp = (u, v) => [Lay.fig.ox + Lay.fig.L * v, Lay.fig.oy - Lay.fig.L * u];   // (u along the axis, v sideways) → screen
+function handles(){ const th = theta(), z = zeta;
+  return { P: fp(Math.cos(th), Math.sin(th)), T: fp(1, Math.tan(th)), H: fp(Math.cosh(z), Math.sinh(z)), S: fp(1, Math.tanh(z)) }; }
+function drawFigure(){
+  const f = Lay.fig, s = f.L, th = theta(), z = zeta, [ox, oy] = [f.ox, f.oy], mono = getComputedStyle(document.body).getPropertyValue('--mono');
+  ctx.save(); ctx.beginPath(); ctx.rect(f.x, f.y, f.w, f.h); ctx.clip();
+  // THE TWO ANGLES AS AREAS: θ is twice the circular sector O-A-P, ζ twice the hyperbolic sector O-A-H
+  ctx.fillStyle = 'rgba(106,168,232,.16)'; ctx.beginPath(); ctx.moveTo(ox, oy);
+  ctx.arc(ox, oy, s, -PI / 2, -PI / 2 + th, th < 0); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = 'rgba(29,158,117,.16)'; ctx.beginPath(); ctx.moveTo(ox, oy);
+  for (let i = 0; i <= 80; i++) { const t = z * i / 80; ctx.lineTo(...fp(Math.cosh(t), Math.sinh(t))); }
+  ctx.closePath(); ctx.fill();
+  ctx.lineCap = 'round';
+  ctx.setLineDash([5, 7]); ctx.strokeStyle = 'rgba(127,133,144,.6)'; ctx.lineWidth = 1;   // the axis, through the apex
+  ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox, f.y); ctx.stroke(); ctx.setLineDash([]);
+  ctx.strokeStyle = 'rgba(232,200,106,.55)'; ctx.lineWidth = 1.5;               // the tangent line at the apex
+  ctx.beginPath(); ctx.moveTo(f.x, oy - s); ctx.lineTo(f.x + f.w, oy - s); ctx.stroke();
+  ctx.strokeStyle = GOLD; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(ox, oy, s, -PI, 0); ctx.stroke();   // the circle
+  const tMax = Math.asinh((f.w / 2) / s + 1);                                   // the hyperbola, as far as the figure shows
+  ctx.strokeStyle = TEAL; ctx.lineWidth = 2.5; ctx.beginPath();
+  for (let i = 0; i <= 160; i++) { const t = -tMax + 2 * tMax * i / 160; const [x, y] = fp(Math.cosh(t), Math.sinh(t)); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+  ctx.stroke();
+  ctx.font = '11px ' + mono; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (let k = 0; k <= K; k++) for (const sg of [-1, 1]) {                     // the corners on the tangent: tan θ = 2^k
+    const [x, y] = fp(1, sg * 2 ** k);
+    ctx.strokeStyle = 'rgba(232,200,106,.7)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, y - 6); ctx.lineTo(x, y + 6); ctx.stroke();
+    ctx.fillStyle = 'rgba(232,200,106,.7)'; ctx.fillText((sg < 0 ? '−' : '') + (2 ** k), x, y + 9);
+  }
+  const h = handles();
+  ctx.strokeStyle = BLUE; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(...h.T); ctx.stroke();   // the needle's line, O–P–T
+  ctx.setLineDash([7, 6]); ctx.strokeStyle = TEAL; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(...h.H); ctx.stroke();
+  ctx.setLineDash([3, 5]); ctx.strokeStyle = 'rgba(201,199,190,.6)'; ctx.lineWidth = 1;   // the two levels: P with S, T with H
+  ctx.beginPath(); ctx.moveTo(...h.P); ctx.lineTo(...h.S); ctx.moveTo(...h.T); ctx.lineTo(...h.H); ctx.stroke(); ctx.setLineDash([]);
+  ctx.strokeStyle = 'rgba(106,168,232,.8)'; ctx.lineWidth = 1.5;               // θ at the centre
+  ctx.beginPath(); ctx.arc(ox, oy, s * 0.22, -PI / 2, -PI / 2 + th, th < 0); ctx.stroke();
+  const dot = ([x, y], c, r, label, dx, dy) => { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * PI); ctx.fill();
+    if (label) { ctx.font = '600 15px ' + mono; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, x + dx, y + dy); } };
+  const side = zeta < 0 ? -1 : 1;
+  dot(fp(1, 0), GOLD, 3.5, 'A', -14 * side, -12);
+  dot([ox, oy], '#f1efe6', 4, 'O', -14, 10);
+  dot(h.S, TEAL, 5, 'S', -14 * side, -14);
+  dot(h.P, BLUE, 6, 'P', -16 * side, 6);
+  dot(h.T, GOLD, 6, 'T', 16 * side, 14);
+  dot(h.H, TEAL, 6, 'H', 16 * side, -6);
+  ctx.font = '12px ' + mono; ctx.fillStyle = DIM; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText('drag P, T, H or S · wheel zooms the figure', ox, f.y + f.h - 12);
+  ctx.restore();
+}
+
+// ── THE NUMBERS: geometry names first, other fields' names after ─────────────────────────────────
+function updateNums(){
+  if (nums.hidden) return;
+  const th = theta(), z = zeta, t = Math.sinh(z), s = span(), f = (x, d) => (Math.abs(x) < 5e-13 ? 0 : x).toFixed(d);
+  const row = (k, v, o) => '<span class="k">' + k + '</span><span class="v">' + v + '</span><span class="o">' + o + '</span>';
+  nums.innerHTML =
+    '<span class="hd">the two angles</span>' +
+    row('θ', f(th * 180 / PI, 2) + '°', 'circular angle · P · [latitude; the angle whose sine is v/c]') +
+    row('ζ', f(z, 4), 'hyperbolic angle · H · [rapidity; Mercator height]') +
+    '<span class="hd">their ratios, one figure</span>' +
+    row('tan θ = sinh ζ', f(t, 4), 'T · the value, in units · [proper velocity; gnomonic distance]') +
+    row('sin θ = tanh ζ', f(Math.tanh(z), 4), 'S · [v/c; Klein-disc radius]') +
+    row('sec θ = cosh ζ', f(Math.cosh(z), 4), 'H · [Lorentz γ; Mercator stretch]') +
+    row('log₂ |tan θ|', t ? f(Math.log2(Math.abs(t)), 2) : '—', 'corners passed · [octaves]') +
+    '<span class="hd">the radius, a logarithm</span>' +
+    row('r', f(reach, 3), 'window = N^r = ' + fmtDur(s) + ' · [exponent]') +
+    row('unit', fmtDur(unit(s)), 'the 45° corner · window half = 2^' + K + ' units');
+}
+
+// ── DRAWING: only when something moved, sized only when the size did, copied across in one act ───
+function draw(now){
+  const w = Math.round(cv.clientWidth), h = Math.round(cv.clientHeight), d = Math.min(2, devicePixelRatio || 1);
+  if (!w || !h) return;                                         // a pane with no size yet: draw nothing, remember nothing
+  if (Math.abs(w - W) > 1 || Math.abs(h - H) > 1 || d !== D) {
+    W = w; H = h; D = d; cv.width = back.width = W * D; cv.height = back.height = H * D; force = true;
+  }
+  const g = liveGold(now);
+  const key = [Math.round(index), zeta.toFixed(7), g.toFixed(5), reach.toFixed(5), figZoom.toFixed(4), W, H, nums.hidden].join();
+  if (key === lastKey && !force) return;
+  lastKey = key;
+  updateNums(); if (force) layout(); force = false;
+  ctx.setTransform(D, 0, 0, D, 0, 0); ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
+  drawFigure(); drawDial(g);
+  vis.globalCompositeOperation = 'copy'; vis.drawImage(back, 0, 0);
+}
+function step(now){
+  const dt = Math.min(0.05, (now - (last || now)) / 1000); last = now;
+  if (held && thrusting) { zeta = clamp(zeta + Math.tan(gold) * THRUST * dt, -ZMAX, ZMAX); read(); }   // the gold adds ζ through its tangent
+  draw(now); requestAnimationFrame(step);
+}
+
+// ── HANDS ─────────────────────────────────────────────────────────────────────────────────────────
+const local = e => { const b = cv.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
+function aim(x, y){ const { cx, cy } = Lay.dial; gold = clamp(Math.atan2(x - cx, Math.max(0, cy - y)), -CAP, CAP); }
+function setZeta(z){ zeta = clamp(z, -ZMAX, ZMAX); read(); }
+function dragFigure(which, x, y){                               // each handle sets ζ by its own coordinate
+  const f = Lay.fig, u = (f.oy - y) / f.L, v = (x - f.ox) / f.L;
+  if (which === 'P') setZeta(Math.asinh(Math.tan(clamp(Math.atan2(v, Math.max(0, u)), -CAP, CAP))));
+  else if (which === 'S') setZeta(Math.atanh(clamp(v, -Math.tanh(ZMAX), Math.tanh(ZMAX))));
+  else setZeta(Math.asinh(v));                                  // T and H: the tangent, sinh ζ
+}
+function pick(x, y){ let best = 'P', bd = 30;
+  for (const [n, [hx, hy]] of Object.entries(handles())) { const d = Math.hypot(hx - x, hy - y); if (d < bd) { bd = d; best = n; } }
+  return best; }
+const touching = new Map(); let mode = null, which = 'P', pinch = null, x0 = 0, y0 = 0;
+const fingers = () => { const [a, b] = [...touching.values()]; return Math.max(8, Math.hypot(a.x - b.x, a.y - b.y)); };
+function letGo(){ if (mode === 'dial') { held = false; if (thrusting) springAt = performance.now(); thrusting = false; recentre(); } }
+cv.addEventListener('pointerdown', e => {
+  cv.setPointerCapture(e.pointerId); touching.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (touching.size === 2) { letGo(); mode = 'pinch'; pinch = { d0: fingers(), r0: reach }; return; }   // two fingers: the radius
+  if (touching.size > 2) return;
+  const [x, y] = local(e); x0 = x; y0 = y;
+  if (inBox(Lay.fig, x, y)) { mode = 'fig'; which = pick(x, y); dragFigure(which, x, y); }
+  else { mode = 'dial'; held = true; thrusting = false; springAt = -1; }
+});
+cv.addEventListener('pointermove', e => {
+  if (!touching.has(e.pointerId)) return; touching.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  const [x, y] = local(e);
+  if (mode === 'pinch' && touching.size === 2) { reach = clamp(pinch.r0 + Math.log2(fingers() / pinch.d0) * 0.25, 0, 1); rezoom(); read(); }
+  else if (mode === 'fig') dragFigure(which, x, y);
+  else if (mode === 'dial') { if (!thrusting && Math.hypot(x - x0, y - y0) > TAP_PX) thrusting = true; if (thrusting) aim(x, y); }   // a tap changes nothing
+});
+const up = e => { touching.delete(e.pointerId);
+  if (mode === 'pinch') { if (touching.size < 2) { pinch = null; mode = null; } return; }
+  letGo(); mode = null; };
+cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+cv.addEventListener('wheel', e => {
+  const [x, y] = local(e), f = e.deltaMode === 1 ? 16 : 1;
+  if (inBox(Lay.fig, x, y)) { figZoom = clamp(figZoom * Math.exp(-e.deltaY * f * 0.0015), 0.2, 8); force = true; }   // the figure's own zoom
+  else {
+    if (e.deltaX) setZeta(zeta + e.deltaX * f / 2000);
+    // as city-dial: the wheel pushed away closes the radius; a trackpad pinch (ctrlKey) opens with the fingers
+    if (e.deltaY) { reach = clamp(reach + (e.ctrlKey ? -e.deltaY / 200 : e.deltaY / 400) * f, 0, 1); rezoom(); read(); }
+  }
+  e.preventDefault();
+}, { passive: false });
+addEventListener('keydown', e => {
+  if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.repeat) {
+    mode = 'dial'; held = true; thrusting = true; springAt = -1; gold = (e.key === 'ArrowLeft' ? -1 : 1) * PI / 4; }
+  if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { reach = clamp(reach + (e.key === 'ArrowUp' ? 0.02 : -0.02), 0, 1); rezoom(); read(); }
+  if (e.key === 'h') recentre();
+  if (e.key === 't') { index = clamp(Date.now() - T0, 0, N - 1); recentre(); }
+  if (e.key === 'n') { nums.hidden = !nums.hidden; updateNums(); force = true; }
+  if (e.key.startsWith('Arrow')) e.preventDefault();
+});
+addEventListener('keyup', e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { letGo(); mode = null; } });
+addEventListener('resize', () => { force = true; });
+requestAnimationFrame(step);
+</script>
+</body>
+</html>
