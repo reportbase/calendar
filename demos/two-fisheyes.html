@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Two Fisheyes, One Array</title>
+<!-- TWO FISHEYES ON ONE ARRAY — a standalone demo of the draw project's lab of the same name
+     (draw.html, TWO_FISHEYES_CORE and startFisheyes).
+
+     One array of N values is laid evenly round a semicircle: element i at angle iπ/N. A view is a
+     focus φ and a scale s = N·w/π (w = an element's width at the focus), and puts element i at
+         x = s · tan(reduce(iπ/N − φ)),
+     which is the tangent lens of the navigation dial. tan(θ − φ) is a Möbius map of tan θ, and so is
+     the scale, so EVERY VIEW IS A MÖBIUS CHART OF ONE PROJECTIVE LINE. Positions and distances differ
+     from view to view; the cross ratio of four elements does not:
+         cr(a, b, c, d) = ((a − c)(b − d)) / ((a − d)(b − c)).
+     So an element can be sent from one view to another as ONE NUMBER, its cross ratio against three
+     landmarks both views share, and the receiver solves for its own pixel:
+         x = (A·v·p0 − u·p1) / (A·v − u),   u = p0 − p2,  v = p1 − p2.
+     Three shared landmarks fix the whole map, so A can predict where every element lands in B. Break
+     B's chart with a warp that is not Möbius and the prediction peels away, a send lands wrong, and a
+     fourth element's cross ratio no longer agrees: two views can detect a broken chart.
+
+     Beyond each window, one bar per octave: rung r holds the elements from atan(2^r) to atan(2^(r+1))
+     off the focus, the dial's own corners, summarised as a mean with a whisker for the spread. -->
+<style>
+  :root{--bg:#0b0d12;--panel:#12151c;--line:#2b2e36;--gold:#e8c86a;--teal:#1D9E75;--blue:#6aa8e8;
+        --violet:#b493f0;--red:#e0705a;--ink:#c9c7be;--hi:#f1efe6;--dim:#8a909b;
+        --mono:"SF Mono",Menlo,Consolas,monospace;--sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+        color-scheme:dark}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans)}
+  main{max-width:1120px;margin:0 auto;padding:22px 16px 40px;display:flex;flex-direction:column;gap:16px}
+  h1{margin:0;font-size:22px;font-weight:600;color:var(--hi);text-wrap:balance}
+  .lede{margin:0;color:var(--dim);max-width:72ch}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .bar .lbl{font:11px var(--mono);color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-right:2px}
+  button{font:12px var(--mono);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;
+         padding:7px 10px;cursor:pointer}
+  button:hover{border-color:var(--dim)}
+  button[aria-pressed="true"]{border-color:var(--gold);color:var(--gold)}
+  button:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  .view{display:flex;flex-direction:column;gap:6px}
+  .vhead{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;font:12px var(--mono);color:var(--dim)}
+  .vhead .name{color:var(--hi);font-weight:600;font-size:14px}
+  .vhead label{display:flex;gap:8px;align-items:center}
+  input[type=range]{accent-color:var(--gold);width:150px;max-width:40vw}
+  canvas{display:block;width:100%;height:170px;background:var(--panel);border-radius:10px;touch-action:none;cursor:grab}
+  canvas:active{cursor:grabbing}
+  #report{font:13px/1.65 var(--mono);background:var(--panel);border-radius:10px;padding:12px 14px;min-height:5em;
+          white-space:pre-wrap;overflow-wrap:anywhere;margin:0}
+  .ok{color:var(--teal)} .bad{color:var(--red)} .n{color:var(--hi)} .v{color:var(--violet)} .g{color:var(--gold)}
+  .key{display:flex;flex-wrap:wrap;gap:6px 18px;font:12px var(--mono);color:var(--dim)}
+  .sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+</style>
+</head>
+<body>
+<main>
+  <h1>Two fisheyes, one array</h1>
+  <p class="lede">One list of values laid evenly round a semicircle, seen through two windows with different focus and zoom.
+    Positions and distances disagree between the windows. The cross ratio of any four elements does not, so a single number names an element in both.</p>
+
+  <div class="bar" role="group" aria-label="What a click does">
+    <span class="lbl">click a bar</span>
+    <button id="mSend" type="button" aria-pressed="true">send it to the other view</button>
+    <button id="mFour" type="button" aria-pressed="false">pick four</button>
+  </div>
+  <div class="bar" role="group" aria-label="Options">
+    <span class="lbl">show</span>
+    <button id="tPred" type="button" aria-pressed="true">A’s predictions in B</button>
+    <button id="tOct" type="button" aria-pressed="true">octave bars</button>
+    <button id="tBreak" type="button" aria-pressed="false">break B’s chart</button>
+    <span class="lbl" style="margin-left:10px">N</span>
+    <button class="nb" type="button" data-n="1000" aria-pressed="false">1,000</button>
+    <button class="nb" type="button" data-n="100000" aria-pressed="true">100,000</button>
+    <button class="nb" type="button" data-n="1000000" aria-pressed="false">1,000,000</button>
+  </div>
+
+  <section class="view" aria-label="View A">
+    <div class="vhead"><span class="name">A</span><span id="fA"></span>
+      <label for="wA">element width <input id="wA" type="range" min="3" max="80" value="30"><span id="wAv"></span></label></div>
+    <canvas id="cA" aria-label="View A of the array: drag to move the focus, click a bar"></canvas>
+  </section>
+  <section class="view" aria-label="View B">
+    <div class="vhead"><span class="name">B</span><span id="fB"></span>
+      <label for="wB">element width <input id="wB" type="range" min="3" max="80" value="5"><span id="wBv"></span></label></div>
+    <canvas id="cB" aria-label="View B of the array: drag to move the focus, click a bar"></canvas>
+  </section>
+
+  <pre id="report" aria-live="polite"></pre>
+  <div class="key">
+    <span><span class="sw" style="background:var(--gold)"></span>landmarks, shared by both views</span>
+    <span><span class="sw" style="background:var(--violet)"></span>where A predicts each element lands in B</span>
+    <span><span class="sw" style="background:var(--blue)"></span>the element sent, or the four picked</span>
+    <span>drag a view to move its focus · the side bars summarise each octave beyond the window</span>
+  </div>
+</main>
+<script>
+const PI = Math.PI;
+// ── THE CORE: one array on a semicircle, each view a Möbius chart of it ──────────────────────────
+let N = 100000;
+const reduce = d => { d = (d + PI / 2) % PI; if (d < 0) d += PI; return d - PI / 2; };   // into [−π/2, π/2)
+const scaleOf = v => N * v.w / PI;                                     // neighbours at the focus are w apart
+const cr = (a, b, c, d) => ((a - c) * (b - d)) / ((a - d) * (b - c));
+const solve = (A, p0, p1, p2) => { const u = p0 - p2, v = p1 - p2; return (A * v * p0 - u * p1) / (A * v - u); };
+const views = { A: { name: 'A', phi: 0, w: 30, ox: 0 }, B: { name: 'B', phi: 0, w: 5, ox: 0 } };
+let broken = false, showPred = true, showOct = true, mode = 'send';
+const halfOf = v => v.half || 300;
+// THE BREAK: a warp that is not Möbius, applied to B only. Its own inverse is known to B, so B still
+// reads its own bars correctly; what it can no longer do is agree with A about cross ratios.
+const K = () => 0.3 / halfOf(views.B);
+const warp = p => p + K() * p * Math.abs(p);
+const unwarp = q => Math.sign(q) * (Math.sqrt(1 + 4 * K() * Math.abs(q)) - 1) / (2 * K());
+function pos(v, i){                                                    // element i's pixel offset from the view's centre
+  const p = Math.tan(reduce(i * PI / N - v.phi)) * scaleOf(v);
+  return (v === views.B && broken) ? warp(p) : p;
+}
+function indexAt(v, p){                                                // the view reading its own pixel back as an element
+  if (v === views.B && broken) p = unwarp(p);
+  const i = Math.round((v.phi + Math.atan(p / scaleOf(v))) * N / PI);
+  return ((i % N) + N) % N;
+}
+// the values: smooth country with a little grain, computed on demand so N can be a million
+function magnitude(i){
+  const t = i / N, h = Math.sin(i * 12.9898 + 78.233) * 43758.5453;
+  return 0.52 + 0.2 * Math.sin(2 * PI * 7 * t) + 0.14 * Math.sin(2 * PI * 23 * t + 1) + 0.07 * Math.sin(2 * PI * 61 * t + 2) + 0.06 * (h - Math.floor(h) - 0.5);
+}
+let pre = null, pre2 = null;                                           // prefix sums, for the octave bars in O(1)
+function prefix(){
+  pre = new Float64Array(N + 1); pre2 = new Float64Array(N + 1);
+  for (let i = 0; i < N; i++) { const m = magnitude(i); pre[i + 1] = pre[i] + m; pre2[i + 1] = pre2[i] + m * m; }
+}
+function rangeSum(arr, a, b){                                          // sum over elements a .. b−1, wrapping round the array
+  const n = b - a; if (n <= 0) return 0;
+  a = ((a % N) + N) % N; const e = a + n;
+  return e <= N ? arr[e] - arr[a] : (arr[N] - arr[a]) + arr[e - N];
+}
+// ── LANDMARKS: three elements both views can see. Where the two windows overlap, the first, middle and
+// last tenth of the overlap; where they do not, the three of twelve fixed candidates whose worst angle
+// off either focus is smallest, so neither view holds one near its horizon.
+function landmarks(){
+  const win = v => Math.floor(Math.atan(halfOf(v) / scaleOf(v)) * N / PI);
+  const fA = views.A.phi * N / PI, fB = fA + reduce(views.B.phi - views.A.phi) * N / PI;
+  const lo = Math.ceil(Math.max(fA - win(views.A), fB - win(views.B))), hi = Math.floor(Math.min(fA + win(views.A), fB + win(views.B)));
+  if (hi - lo >= 6) {
+    const pick = t => (((Math.round(lo + t * (hi - lo))) % N) + N) % N;
+    return [pick(0.1), pick(0.5), pick(0.9)];
+  }
+  const c = [];
+  for (let k = 0; k < 12; k++) {
+    const i = Math.round(k * N / 12);
+    const worst = Math.max(Math.abs(reduce(i * PI / N - views.A.phi)), Math.abs(reduce(i * PI / N - views.B.phi)));
+    c.push([worst, i]);
+  }
+  c.sort((a, b) => a[0] - b[0]);
+  return c.slice(0, 3).map(x => x[1]).sort((a, b) => a - b);
+}
+const address = (v, L, i) => cr(pos(v, L[0]), pos(v, L[1]), pos(v, L[2]), pos(v, i));
+const predict = (from, to, L, i) => solve(address(from, L, i), pos(to, L[0]), pos(to, L[1]), pos(to, L[2]));
+
+// ── STATE OF THE PAGE ─────────────────────────────────────────────────────────────────────────────
+let picks = [], sent = null, report = '';
+const fmt = n => n.toLocaleString('en-US');
+function focusIndex(v){ return ((Math.round(v.phi * N / PI) % N) + N) % N; }
+
+// ── DRAWING ───────────────────────────────────────────────────────────────────────────────────────
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const C = {};
+function size(cv){
+  const D = Math.min(2, devicePixelRatio || 1), W = Math.round(cv.clientWidth), H = Math.round(cv.clientHeight);
+  if (cv.width !== W * D || cv.height !== H * D) { cv.width = W * D; cv.height = H * D; }
+  const g = cv.getContext('2d'); g.setTransform(D, 0, 0, D, 0, 0); return [g, W, H];
+}
+const GUT = 54;                                                        // room each side for the octave bars
+function drawView(v, cv){
+  const [g, W, H] = size(cv);
+  const gut = showOct ? Math.min(GUT, W * 0.12) : 0;
+  v.half = W / 2 - gut; v.ox = W / 2;
+  g.clearRect(0, 0, W, H);
+  const base = H - 26, top = 16, s = scaleOf(v), L = landmarks();
+  // the bars: every element the window can hold
+  const amax = Math.atan(v.half / s), f = v.phi;
+  const iLo = Math.ceil((f - amax) * N / PI), iHi = Math.floor((f + amax) * N / PI);
+  g.fillStyle = C.ink;
+  for (let k = iLo; k <= iHi; k++) {
+    const i = ((k % N) + N) % N, x = v.ox + pos(v, i);
+    if (x < v.ox - v.half - 1 || x > v.ox + v.half + 1) continue;
+    const a = reduce(i * PI / N - f), sp = v.w / Math.cos(a) ** 2;      // the local spacing, wider toward the edges
+    const bw = Math.max(1, Math.min(sp * 0.72, 40)), h = magnitude(i) * (base - top);
+    g.globalAlpha = 0.35 + 0.5 * Math.cos(a); g.fillRect(x - bw / 2, base - h, bw, h);
+  }
+  g.globalAlpha = 1;
+  // the focus
+  g.strokeStyle = C.dim; g.setLineDash([3, 4]); g.beginPath(); g.moveTo(v.ox, top - 8); g.lineTo(v.ox, base); g.stroke(); g.setLineDash([]);
+  // the landmarks
+  for (const i of L) {
+    const x = v.ox + pos(v, i);
+    if (x < 0 || x > W) continue;
+    g.fillStyle = C.gold; g.beginPath(); g.moveTo(x, base + 3); g.lineTo(x - 5, base + 11); g.lineTo(x + 5, base + 11); g.fill();
+  }
+  // A's predictions, drawn in B
+  if (v === views.B && showPred) {
+    g.strokeStyle = C.violet; g.lineWidth = 1.5;
+    const step = Math.max(1, Math.ceil((iHi - iLo) / 70));
+    for (let k = iLo; k <= iHi; k += step) {
+      const i = ((k % N) + N) % N; if (L.includes(i)) continue;
+      const x = v.ox + predict(views.A, views.B, L, i);
+      if (!(x >= 0 && x <= W)) continue;
+      const y = base - magnitude(i) * (base - top) - 7;
+      g.beginPath(); g.arc(x, y, 3.5, 0, 2 * PI); g.stroke();
+    }
+    g.lineWidth = 1;
+  }
+  // the element sent, or the four picked
+  const marks = sent ? [[sent.i, '↓']] : picks.map((i, k) => [i, 'abcd'[k]]);
+  for (const [i, lab] of marks) {
+    const x = v.ox + pos(v, i);
+    if (x < -20 || x > W + 20) continue;
+    g.strokeStyle = C.blue; g.lineWidth = 2; g.beginPath(); g.moveTo(x, top - 6); g.lineTo(x, base); g.stroke(); g.lineWidth = 1;
+    g.fillStyle = C.blue; g.font = '600 13px ' + C.mono; g.textAlign = 'center'; g.fillText(lab, x, top - 8 + 4);
+  }
+  // one bar per octave beyond the window, both sides
+  if (showOct) octaves(g, v, W, base, top, gut);
+  // the axis label
+  g.fillStyle = C.dim; g.font = '11px ' + C.mono; g.textAlign = 'center';
+  g.fillText('focus ' + fmt(focusIndex(v)), v.ox, H - 8);
+}
+function octaves(g, v, W, base, top, gut){
+  const s = scaleOf(v), r0 = Math.max(0, Math.floor(Math.log2(v.half / s)) + 1), f = focusIndex(v);
+  const rungs = [];
+  for (let r = r0; r <= r0 + 7; r++) {
+    const kLo = Math.ceil(Math.atan(2 ** r) * N / PI), kHi = Math.min(Math.ceil(Math.atan(2 ** (r + 1)) * N / PI), Math.floor(N / 2));
+    if (kHi <= kLo) break;
+    rungs.push([r, kLo, kHi]);
+  }
+  const bw = Math.max(3, (gut - 8) / Math.max(1, rungs.length) - 2);
+  g.font = '10px ' + C.mono; g.textAlign = 'center';
+  for (const side of [-1, 1]) {
+    rungs.forEach(([r, kLo, kHi], j) => {
+      const a = side > 0 ? f + kLo : f - kHi + 1, n = kHi - kLo;
+      const mean = rangeSum(pre, a, a + n) / n, sd = Math.sqrt(Math.max(0, rangeSum(pre2, a, a + n) / n - mean * mean));
+      const x = side > 0 ? W - gut + 4 + j * (bw + 2) + bw / 2 : gut - 4 - j * (bw + 2) - bw / 2;
+      const h = mean * (base - top);
+      g.fillStyle = C.teal; g.globalAlpha = 0.85; g.fillRect(x - bw / 2, base - h, bw, h); g.globalAlpha = 1;
+      g.strokeStyle = C.hi; g.beginPath(); g.moveTo(x, base - h - sd * (base - top)); g.lineTo(x, base - h + sd * (base - top)); g.stroke();
+    });
+  }
+  g.fillStyle = C.dim;
+  g.fillText('octaves', gut / 2, top - 4); g.fillText('octaves', W - gut / 2, top - 4);
+}
+let raf = 0;
+function draw(){ if (raf) return; raf = requestAnimationFrame(() => { raf = 0; drawView(views.A, cA); drawView(views.B, cB); heads(); audit(); }); }
+
+// ── THE REPORT ────────────────────────────────────────────────────────────────────────────────────
+function heads(){
+  for (const k of ['A', 'B']) {
+    document.getElementById('f' + k).textContent = 'focus ' + fmt(focusIndex(views[k])) + ' of ' + fmt(N);
+    document.getElementById('w' + k + 'v').textContent = views[k].w + ' px';
+  }
+}
+function audit(){                                                       // does B still agree with A about cross ratios?
+  const L = landmarks(), f = focusIndex(views.B);
+  let probe = f; while (L.includes(probe)) probe = (probe + 1) % N;
+  const gA = address(views.A, L, probe), gB = address(views.B, L, probe);
+  const ok = Math.abs(gA - gB) <= 1e-6 * Math.max(1, Math.abs(gA), Math.abs(gB));
+  // how far A's predictions sit from B's bars, over what B shows
+  const v = views.B, s = scaleOf(v), am = Math.atan(v.half / s), errs = [];
+  for (let k = Math.ceil((v.phi - am) * N / PI), e = Math.floor((v.phi + am) * N / PI), st = Math.max(1, Math.ceil((e - k) / 200)); k <= e; k += st) {
+    const i = ((k % N) + N) % N; if (L.includes(i)) continue;
+    errs.push(Math.abs(predict(views.A, views.B, L, i) - pos(v, i)));
+  }
+  errs.sort((a, b) => a - b);
+  const med = errs.length ? errs[errs.length >> 1] : 0, max = errs.length ? errs[errs.length - 1] : 0;
+  const lines = [report,
+    '',
+    'landmarks ' + L.map(fmt).join(', ') + '   ·   element ' + fmt(probe) + ' against them: ' +
+      '<span class="n">' + gA.toPrecision(8) + '</span> in A, <span class="n">' + gB.toPrecision(8) + '</span> in B   ' +
+      (ok ? '<span class="ok">agree: B’s chart is projective</span>' : '<span class="bad">disagree: B’s chart is broken</span>'),
+    'A’s predictions in B: median off by <span class="v">' + med.toFixed(med < 0.01 ? 6 : 2) + ' px</span>, worst ' + max.toFixed(max < 0.01 ? 6 : 1) + ' px'];
+  document.getElementById('report').innerHTML = lines.join('\n');
+}
+const ESC = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+
+// ── HANDS ─────────────────────────────────────────────────────────────────────────────────────────
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function glide(v, phiTo){                                              // turn a view to a new focus, the short way round
+  const from = v.phi, d = reduce(phiTo - from), t0 = performance.now(), T = reduceMotion ? 0 : 450;
+  const step = now => { const t = T ? Math.min(1, (now - t0) / T) : 1, e = 1 - Math.pow(1 - t, 3);
+    v.phi = from + d * e; draw(); if (t < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+function clickAt(v, x){
+  const other = v === views.A ? views.B : views.A, i = indexAt(v, x - v.ox), L = landmarks();
+  if (mode === 'send') {
+    // a landmark's cross ratio against the landmarks is 0, 1 or ∞: it is sent by name instead
+    const A = L.includes(i) ? NaN : address(v, L, i);                  // the one number that crosses
+    const j = L.includes(i) ? i : indexAt(other, solve(A, pos(other, L[0]), pos(other, L[1]), pos(other, L[2])));
+    sent = { i }; picks = [];
+    const ok = j === i;
+    report = (L.includes(i) ? v.name + ' sends element ' + fmt(i) + ', which is a landmark, by name\n' :
+      v.name + ' sends element ' + fmt(i) + ' as one number: <span class="n">' + A.toPrecision(12) + '</span>\n') +
+      other.name + ' solves it against its own landmarks and lands on ' + fmt(j) + '   ' +
+      (ok ? '<span class="ok">✓ the same element</span>' : '<span class="bad">✗ off by ' + fmt(Math.abs(j - i)) + ' elements</span>') +
+      '\nIn ' + v.name + ' it sat ' + Math.round(pos(v, i)) + ' px from the focus; nothing about pixels was sent.';
+    glide(other, j * PI / N);
+  } else {
+    sent = null;
+    if (picks.length >= 4) picks = [];
+    picks.push(i);
+    if (picks.length < 4) report = 'picked ' + picks.map((p, k) => 'abcd'[k] + ' = ' + fmt(p)).join(', ') + '  ·  ' + (4 - picks.length) + ' more';
+    else {
+      const [a, b, c, d] = picks, P = vv => picks.map(p => pos(vv, p));
+      const [pa, pb, pc, pd] = P(views.A), [qa, qb, qc, qd] = P(views.B);
+      report = 'four elements ' + picks.map((p, k) => 'abcd'[k] + ' = ' + fmt(p)).join(', ') + '\n' +
+        'cross ratio   A <span class="n">' + cr(pa, pb, pc, pd).toPrecision(10) + '</span>   B <span class="n">' + cr(qa, qb, qc, qd).toPrecision(10) + '</span>\n' +
+        'distance a→b  A <span class="n">' + Math.abs(pb - pa).toFixed(1) + ' px</span>   B <span class="n">' + Math.abs(qb - qa).toFixed(1) + ' px</span>   positions and distances disagree; the cross ratio does not';
+    }
+  }
+  draw();
+}
+for (const [k, cv] of [['A', cA], ['B', cB]]) {
+  const v = views[k]; let drag = null;
+  cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); drag = { x0: e.clientX, x: e.clientX, moved: false }; });
+  cv.addEventListener('pointermove', e => {
+    if (!drag) return; const dx = e.clientX - drag.x;
+    if (Math.abs(e.clientX - drag.x0) > 4) drag.moved = true;
+    if (drag.moved) { v.phi -= dx * PI / (N * v.w); drag.x = e.clientX; draw(); }
+  });
+  const up = e => { if (!drag) return; const d = drag; drag = null;
+    if (!d.moved) { const r = cv.getBoundingClientRect(); clickAt(v, e.clientX - r.left); } };
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', () => { drag = null; });
+  cv.addEventListener('wheel', e => { v.phi += (e.deltaX || e.deltaY) * PI / (N * v.w); draw(); e.preventDefault(); }, { passive: false });
+  const w = document.getElementById('w' + k);
+  w.addEventListener('input', () => { v.w = +w.value; draw(); });
+}
+const press = (el, on) => el.setAttribute('aria-pressed', String(on));
+mSend.onclick = () => { mode = 'send'; press(mSend, true); press(mFour, false); picks = []; report = 'Click a bar in either view to send it across.'; draw(); };
+mFour.onclick = () => { mode = 'four'; press(mFour, true); press(mSend, false); sent = null; picks = []; report = 'Click four bars in either view.'; draw(); };
+tPred.onclick = () => { showPred = !showPred; press(tPred, showPred); draw(); };
+tOct.onclick = () => { showOct = !showOct; press(tOct, showOct); draw(); };
+tBreak.onclick = () => { broken = !broken; press(tBreak, broken);
+  report = broken ? 'B’s chart is now warped by p + 0.3·p·|p|/half, which is not a Möbius map. Watch the violet circles peel away toward B’s edges, then send an element from near B’s edge.' : 'B’s chart is projective again.'; draw(); };
+for (const b of document.querySelectorAll('.nb')) b.onclick = () => {
+  const fa = focusIndex(views.A) / N, fb = focusIndex(views.B) / N;
+  N = +b.dataset.n; for (const x of document.querySelectorAll('.nb')) press(x, x === b);
+  views.A.phi = Math.round(fa * N) * PI / N; views.B.phi = Math.round(fb * N) * PI / N;
+  picks = []; sent = null; prefix(); report = 'N = ' + fmt(N) + '.'; draw();
+};
+addEventListener('resize', draw);
+// ── START: two different zooms on overlapping windows ─────────────────────────────────────────────
+for (const k of ['ink', 'gold', 'teal', 'blue', 'violet', 'dim', 'hi', 'mono']) C[k] = css('--' + k);
+views.A.phi = 31234 * PI / N; views.B.phi = 31210 * PI / N;
+prefix();
+report = 'Click a bar in either view to send it across. The other view jumps to the same element, though it was given only one number.';
+draw();
+</script>
+</body>
+</html>

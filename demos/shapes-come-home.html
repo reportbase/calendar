@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Every Shape Comes Home</title>
+<!-- EVERY SHAPE COMES HOME — a standalone demo of the draw project's labs "the recovered circle",
+     "open the shapes" and "sampling tests" (draw.html: recoveredRun, runUncloseTests, runSamplingTests),
+     and of Serial, Parallel and Nowhere §2.4.
+
+     A shape is read from its centre. Each reading is a pair: h across, v up, and the reader keeps only
+     their relation, s = v/h, which it holds as the sweep g = (2/π)·atan(s): 0 pure horizontal, ½ the
+     corner, 1 pure vertical. The histograms below are drawn in g.
+
+     READ EVENLY IN DIRECTION, the address of each reading is its direction a, and s = tan a whatever the
+     shape: the reach R multiplies v and h alike and cancels. So every shape gives the same readings,
+     flat in g, the Cauchy, and the census, which puts each reading back at (cos a, sin a), returns the
+     unit circle. This is true by construction, which is the point: the addresses carry no shape. The
+     shape is in the magnitudes, the reach R at each address, which this view draws as the bars.
+
+     READ ALONG THE OUTLINE, evenly in length, the addresses are where the walk happens to be, and the
+     shape shows in the readings themselves: the census bunches, and the histogram tilts, most of all at
+     the two ends, home (g → 0) and the horizon (g → 1). The corner share, the readings before g = ½, can
+     move too for a shape that is not the same under a quarter turn. -->
+<style>
+  :root{--bg:#0b0d12;--panel:#12151c;--line:#2b2e36;--gold:#e8c86a;--teal:#1D9E75;--coral:#e0876a;--blue:#6aa8e8;
+        --ink:#c9c7be;--hi:#f1efe6;--dim:#8a909b;--mono:"SF Mono",Menlo,Consolas,monospace;
+        --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;color-scheme:dark}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans)}
+  main{max-width:1120px;margin:0 auto;padding:22px 16px 40px;display:flex;flex-direction:column;gap:16px}
+  h1{margin:0;font-size:22px;font-weight:600;color:var(--hi);text-wrap:balance}
+  .lede{margin:0;color:var(--dim);max-width:72ch}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .lbl{font:11px var(--mono);color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-right:2px}
+  button{font:12px var(--mono);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 10px;cursor:pointer}
+  button:hover{border-color:var(--dim)}
+  button[aria-pressed="true"]{border-color:var(--gold);color:var(--gold)}
+  button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media (max-width:760px){.cols{grid-template-columns:1fr}}
+  .col{background:var(--panel);border-radius:12px;padding:14px 14px 12px;display:flex;flex-direction:column;gap:10px;min-width:0}
+  .col h2{margin:0;font-size:15px;font-weight:600;color:var(--hi)}
+  .col p{margin:0;font-size:13px;color:var(--dim)}
+  canvas{display:block;width:100%;max-width:100%}
+  .pic{aspect-ratio:2/1} .hist{aspect-ratio:3/1}
+  .rows{display:grid;grid-template-columns:auto auto auto;gap:3px 14px;font:12.5px var(--mono);font-variant-numeric:tabular-nums}
+  .rows > span:nth-child(3n+1){color:var(--dim)} .rows > span:nth-child(3n){color:var(--dim)}
+  .rows .hd{color:var(--dim)}
+  .moved{color:var(--coral)} .same{color:var(--teal)}
+</style>
+</head>
+<body>
+<main>
+  <h1>Every shape comes home</h1>
+  <p class="lede">Read a shape from its centre and keep only the relation v/h. Read evenly in direction, every shape gives the circle’s readings, and the unit circle comes back.
+    Read along its outline, the shape shows, mostly at the two ends.</p>
+  <div class="bar" role="group" aria-label="Shape">
+    <span class="lbl">shape</span>
+    <button class="shp" type="button" data-s="circle" aria-pressed="false">circle</button>
+    <button class="shp" type="button" data-s="ellipse" aria-pressed="true">ellipse, b = 2</button>
+    <button class="shp" type="button" data-s="square" aria-pressed="false">square</button>
+    <button class="shp" type="button" data-s="star" aria-pressed="false">star</button>
+    <button class="shp" type="button" data-s="egg" aria-pressed="false">egg</button>
+    <button class="shp" type="button" data-s="clover" aria-pressed="false">clover</button>
+  </div>
+  <div class="cols">
+    <section class="col" aria-label="Read evenly in direction">
+      <h2>Read evenly in direction</h2>
+      <p>Each reading’s address is its direction. The reach cancels, so the readings are the circle’s for every shape. The bars are the magnitudes: the shape lives there.</p>
+      <canvas class="pic" id="pD" aria-label="The shape with readings taken evenly in direction, and the census circle"></canvas>
+      <canvas class="hist" id="hD" aria-label="Histogram of the readings in g"></canvas>
+      <div class="rows" id="rD"></div>
+    </section>
+    <section class="col" aria-label="Read along the outline">
+      <h2>Read along the outline</h2>
+      <p>Each reading’s address is where an even walk round the outline happens to be. Now the readings carry the shape, and the census bunches.</p>
+      <canvas class="pic" id="pO" aria-label="The shape with readings taken evenly along its outline, and the census circle"></canvas>
+      <canvas class="hist" id="hO" aria-label="Histogram of the readings in g"></canvas>
+      <div class="rows" id="rO"></div>
+    </section>
+  </div>
+</main>
+<script>
+const PI = Math.PI, M = 720, BINS = 30;
+const css = k => getComputedStyle(document.documentElement).getPropertyValue(k).trim();
+const C = {}; for (const k of ['gold', 'teal', 'coral', 'blue', 'ink', 'hi', 'dim', 'panel', 'mono', 'line']) C[k] = css('--' + k);
+// ── SHAPES, as a reach R(a) from the centre in each direction ────────────────────────────────────
+const SH = {
+  circle: a => 1,
+  ellipse: a => 1 / Math.sqrt(Math.cos(a) ** 2 + (Math.sin(a) / 2) ** 2),
+  square: a => 1 / Math.max(Math.abs(Math.cos(a)), Math.abs(Math.sin(a))),
+  star: a => 1 + 0.4 * Math.cos(5 * a),
+  egg: a => 1 + 0.22 * Math.cos(a),
+  clover: a => 0.3 + Math.abs(Math.cos(2 * a)),
+};
+let shape = 'ellipse';
+const outline = () => { const P = []; for (let k = 0; k < 4096; k++) { const a = 2 * PI * k / 4096, r = SH[shape](a); P.push([r * Math.cos(a), r * Math.sin(a)]); } return P; };
+function centroid(P){                                                    // the area centroid
+  let A = 0, cx = 0, cy = 0;
+  for (let i = 0; i < P.length; i++) { const [x0, y0] = P[i], [x1, y1] = P[(i + 1) % P.length], c = x0 * y1 - x1 * y0;
+    A += c; cx += (x0 + x1) * c; cy += (y0 + y1) * c; }
+  return [cx / (3 * A), cy / (3 * A)];
+}
+const gOf = (v, h) => (2 / PI) * Math.atan(Math.abs(v) / Math.max(Math.abs(h), 1e-15));
+// ── THE TWO READINGS ─────────────────────────────────────────────────────────────────────────────
+function byDirection(){                                                  // even in the turn, from the centre
+  const out = [];
+  for (let k = 0; k < M; k++) { const a = 2 * PI * (k + 0.5) / M, R = SH[shape](a);
+    const h = R * Math.cos(a), v = R * Math.sin(a); out.push({ x: h, y: v, h, v, R }); }
+  return out;
+}
+function byOutline(){                                                    // even in length along the outline
+  const P = outline(), [cx, cy] = centroid(P), L = [0];
+  for (let i = 1; i <= P.length; i++) { const a = P[i - 1], b = P[i % P.length]; L.push(L[i - 1] + Math.hypot(b[0] - a[0], b[1] - a[1])); }
+  const per = L[P.length], out = []; let j = 0;
+  for (let k = 0; k < M; k++) { const t = (k + 0.5) / M * per; while (L[j + 1] < t) j++;
+    const a = P[j], b = P[(j + 1) % P.length], f = (t - L[j]) / (L[j + 1] - L[j]);
+    const x = a[0] + f * (b[0] - a[0]), y = a[1] + f * (b[1] - a[1]); out.push({ x, y, h: x - cx, v: y - cy, R: Math.hypot(x - cx, y - cy) }); }
+  return out;
+}
+function stats(rs){
+  const g = rs.map(r => gOf(r.v, r.h)), s = rs.map(r => Math.abs(r.v) / Math.max(Math.abs(r.h), 1e-15)).sort((a, b) => a - b);
+  const share = f => g.filter(f).length / g.length;
+  return { g, corner: share(x => x < 0.5), head: share(x => x < 0.1), tail: share(x => x > 0.9), middle: s[s.length >> 1] };
+}
+// ── DRAWING ──────────────────────────────────────────────────────────────────────────────────────
+function ctx(cv){ const D = Math.min(2, devicePixelRatio || 1), W = Math.round(cv.clientWidth), H = Math.round(cv.clientHeight);
+  if (cv.width !== W * D || cv.height !== H * D) { cv.width = W * D; cv.height = H * D; }
+  const g = cv.getContext('2d'); g.setTransform(D, 0, 0, D, 0, 0); g.clearRect(0, 0, W, H); return [g, W, H]; }
+function pic(cv, rs, bars){
+  const [g, W, H] = ctx(cv), Rm = Math.max(...Object.values(SH).map(() => 0), ...outline().map(([x, y]) => Math.hypot(x, y)));
+  const s = H * 0.42 / Rm, cx = W * 0.25, cy = H / 2;
+  // the shape, and the readings on it
+  g.strokeStyle = C.line; g.lineWidth = 1.5; g.beginPath(); outline().forEach(([x, y], i) => i ? g.lineTo(cx + x * s, cy - y * s) : g.moveTo(cx + x * s, cy - y * s)); g.closePath(); g.stroke();
+  if (bars) { g.strokeStyle = 'rgba(224,135,106,.35)'; g.lineWidth = 1;          // the magnitudes: the reach at each address
+    rs.forEach((r, k) => { if (k % 6) return; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + r.x * s, cy - r.y * s); g.stroke(); }); }
+  g.fillStyle = C.coral; rs.forEach((r, k) => { if (k % 3) return; g.beginPath(); g.arc(cx + r.x * s, cy - r.y * s, 1.6, 0, 2 * PI); g.fill(); });
+  g.fillStyle = C.dim; g.font = '11px ' + C.mono; g.textAlign = 'center'; g.fillText('the shape, read', cx, H - 6);
+  // the census: every reading put back at (cos a, sin a), a = its direction from the reading alone
+  const ux = W * 0.75, rr = H * 0.36;
+  // drawn as a density: each tick's length is how many readings landed in that direction, against even
+  const NB = 90, cnt = new Array(NB).fill(0);
+  rs.forEach(r => { const a = Math.atan2(r.v, r.h); cnt[Math.floor(((a / (2 * PI)) % 1 + 1) % 1 * NB) % NB]++; });
+  const even = rs.length / NB;
+  g.strokeStyle = C.line; g.lineWidth = 1.5; g.beginPath(); g.arc(ux, cy, rr * 0.82, 0, 2 * PI); g.stroke();
+  g.strokeStyle = C.teal; g.lineWidth = Math.max(1.5, 2 * PI * rr / NB * 0.55);
+  cnt.forEach((c, i) => { const a = 2 * PI * (i + 0.5) / NB, len = rr * 0.22 * Math.min(2.6, c / even);
+    g.beginPath(); g.moveTo(ux + rr * 0.82 * Math.cos(a), cy - rr * 0.82 * Math.sin(a));
+    g.lineTo(ux + (rr * 0.82 + len) * Math.cos(a), cy - (rr * 0.82 + len) * Math.sin(a)); g.stroke(); });
+  g.fillStyle = C.dim; g.fillText('the census, by direction', ux, H - 6);
+}
+function hist(cv, st){
+  const [g, W, H] = ctx(cv), pad = 22, top = 8, bot = H - 18, cnt = new Array(BINS).fill(0);
+  st.g.forEach(x => cnt[Math.min(BINS - 1, Math.floor(x * BINS))]++);
+  const flat = st.g.length / BINS, mx = Math.max(flat * 2.2, ...cnt), bw = (W - 2 * pad) / BINS;
+  cnt.forEach((c, i) => { const h = (bot - top) * c / mx; g.fillStyle = (i < BINS * 0.1 || i >= BINS * 0.9) ? C.coral : C.teal; g.globalAlpha = 0.85;
+    g.fillRect(pad + i * bw + 1, bot - h, bw - 2, h); });
+  g.globalAlpha = 1;
+  const fy = bot - (bot - top) * flat / mx;                              // the circle's own level: flat in g
+  g.strokeStyle = C.hi; g.setLineDash([4, 4]); g.beginPath(); g.moveTo(pad, fy); g.lineTo(W - pad, fy); g.stroke(); g.setLineDash([]);
+  g.strokeStyle = C.gold; g.beginPath(); g.moveTo(W / 2, top); g.lineTo(W / 2, bot); g.stroke();   // the corner, g = ½
+  g.fillStyle = C.dim; g.font = '11px ' + C.mono; g.textAlign = 'left'; g.fillText('g 0 home', pad, H - 4);
+  g.textAlign = 'center'; g.fillStyle = C.gold; g.fillText('½ corner', W / 2, H - 4);
+  g.textAlign = 'right'; g.fillStyle = C.dim; g.fillText('1 horizon', W - pad, H - 4);
+}
+function rows(el, st){
+  const CIRC = { corner: 0.5, head: 0.1, tail: 0.1, middle: 1 };
+  const cls = (v, c) => Math.abs(v - c) < 0.01 ? 'same' : 'moved';
+  el.innerHTML = '<span class="hd"></span><span class="hd">this shape</span><span class="hd">circle</span>' +
+    [['before the corner', 'corner', st.corner], ['at home (g < 0.1)', 'head', st.head], ['at the horizon (g > 0.9)', 'tail', st.tail], ['middle reading v/h', 'middle', st.middle]]
+      .map(([lab, k, v]) => '<span>' + lab + '</span><span class="' + cls(v, CIRC[k]) + '">' + v.toFixed(3) + '</span><span>' + CIRC[k].toFixed(3) + '</span>').join('');
+}
+function update(){
+  const d = byDirection(), o = byOutline(), sd = stats(d), so = stats(o);
+  pic(pD, d, true); pic(pO, o, false); hist(hD, sd); hist(hO, so); rows(rD, sd); rows(rO, so);
+}
+document.querySelectorAll('.shp').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.shp').forEach(x => x.setAttribute('aria-pressed', String(x === b))); shape = b.dataset.s; update(); });
+addEventListener('resize', update);
+update();
+</script>
+</body>
+</html>

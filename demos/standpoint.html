@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Standpoint</title>
+<!-- THE STANDPOINT — a standalone demo of two of the draw project's instruments: the closure sheet
+     (startClosure, closureRead) and the four atoms (fourAtomRead).
+
+     A closed contour is a ring of leaves. A reader standing at o reads each step from leaf a to leaf b
+     as the pair A = a − o, B = b − o, and from it three things:
+         ρ  = |B| / |A|                 how much nearer or farther the next leaf is
+         Δθ = atan2(A × B, A · B)       how far the line of sight turned
+         D  = A × B                     the disagreement: twice the area the step sweeps from o
+     Round the whole loop:
+         Π ρ = 1, always. The sizes telescope; nothing about the standpoint can change it.
+         Σ Δθ = 2π·w, the WINDING NUMBER: an integer, which jumps by one whole turn when o crosses the
+               contour and nowhere else.
+         Σ D = Σ a × b − o × Σ(b − a) = Σ a × b, twice the signed area, the same from every standpoint,
+               because Σ(b − a) = 0 round a closed loop.
+     So the standpoint moves the reading's angle in whole turns and never moves its area.
+
+     THE FOUR ATOMS colour the contour by which quarter-turn the line of sight is in, counted from where
+     the walk began: azure, ember, indigo, rose. Seen from inside, the colours go round once per turn;
+     from outside, the line of sight swings and comes back, and the sweep is exactly zero.
+
+     The plane behind is shaded by the winding number of each place: a reading you could take there. -->
+<style>
+  :root{--bg:#0b0d12;--panel:#12151c;--line:#2b2e36;--gold:#e8c86a;--violet:#b493f0;--teal:#1D9E75;--red:#e0705a;
+        --a1:#5aa9e6;--a2:#e8875a;--a3:#7b74d6;--a4:#e06c9f;
+        --ink:#c9c7be;--hi:#f1efe6;--dim:#8a909b;--mono:"SF Mono",Menlo,Consolas,monospace;
+        --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;color-scheme:dark}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans)}
+  main{max-width:1120px;margin:0 auto;padding:22px 16px 40px;display:flex;flex-direction:column;gap:16px}
+  h1{margin:0;font-size:22px;font-weight:600;color:var(--hi);text-wrap:balance}
+  .lede{margin:0;color:var(--dim);max-width:72ch}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .lbl{font:11px var(--mono);color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-right:2px}
+  button{font:12px var(--mono);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 10px;cursor:pointer}
+  button:hover{border-color:var(--dim)}
+  button[aria-pressed="true"]{border-color:var(--gold);color:var(--gold)}
+  button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  .stage{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px;align-items:start}
+  @media (max-width:760px){.stage{grid-template-columns:1fr}}
+  canvas{display:block;width:100%;aspect-ratio:1/1;max-width:100%;background:var(--panel);border-radius:12px;touch-action:none;cursor:crosshair}
+  .side{display:flex;flex-direction:column;gap:12px;min-width:0}
+  .card{background:var(--panel);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+  .big{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .tile{display:flex;flex-direction:column;gap:2px}
+  .tile .k{font:11px var(--mono);color:var(--dim);letter-spacing:.08em;text-transform:uppercase}
+  .tile .v{font:600 26px var(--mono);color:var(--hi);font-variant-numeric:tabular-nums}
+  .tile .s{font-size:12px;color:var(--dim)}
+  .rows{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font:13px var(--mono);font-variant-numeric:tabular-nums}
+  .rows > span:nth-child(odd){color:var(--dim)}
+  .note{font-size:13px;color:var(--ink);margin:0}
+  .key{display:flex;flex-wrap:wrap;gap:6px 14px;font:12px var(--mono);color:var(--dim)}
+  .sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+</style>
+</head>
+<body>
+<main>
+  <h1>The standpoint</h1>
+  <p class="lede">Read a closed contour from a point you choose. Moving the point changes how the line of sight turns, but only in whole turns, and only when the point crosses the contour.
+    The area the reading sweeps never changes.</p>
+  <div class="bar" role="group" aria-label="Contour">
+    <span class="lbl">contour</span>
+    <button class="shp" type="button" data-s="limacon" aria-pressed="true">limaçon (loop inside a loop)</button>
+    <button class="shp" type="button" data-s="eight" aria-pressed="false">figure eight</button>
+    <button class="shp" type="button" data-s="star" aria-pressed="false">star</button>
+    <button class="shp" type="button" data-s="square" aria-pressed="false">square</button>
+    <button class="shp" type="button" data-s="twice" aria-pressed="false">circle walked twice</button>
+  </div>
+  <div class="bar" role="group" aria-label="Colour">
+    <span class="lbl">colour the contour by</span>
+    <button class="col" type="button" data-c="atoms" aria-pressed="true">quarter-turn of the line of sight</button>
+    <button class="col" type="button" data-c="sign" aria-pressed="false">sign of D</button>
+    <button id="tSpokes" type="button" aria-pressed="false">lines of sight</button>
+  </div>
+  <div class="stage">
+    <canvas id="cv" aria-label="The contour on a plane shaded by winding number. Drag anywhere to move the standpoint."></canvas>
+    <div class="side">
+      <div class="card">
+        <div class="big">
+          <div class="tile"><span class="k">winding</span><span class="v" id="w"></span><span class="s">turns of the line of sight</span></div>
+          <div class="tile"><span class="k">Σ D</span><span class="v" id="sd"></span><span class="s">twice the signed area</span></div>
+        </div>
+        <div class="rows" id="rows"></div>
+        <p class="note" id="say"></p>
+      </div>
+      <div class="card">
+        <div class="key" id="key"></div>
+        <p class="note" style="color:var(--dim)">Drag anywhere on the plane to move the standpoint. The shading is the winding number each place would read: the darker, the more turns.</p>
+      </div>
+    </div>
+  </div>
+</main>
+<script>
+const PI = Math.PI, NL = 120;
+const css = k => getComputedStyle(document.documentElement).getPropertyValue(k).trim();
+const C = {}; for (const k of ['gold', 'violet', 'teal', 'red', 'a1', 'a2', 'a3', 'a4', 'ink', 'hi', 'dim', 'panel', 'mono']) C[k] = css('--' + k);
+// ── THE CONTOURS, each a closed ring of NL leaves, centred and scaled so the farthest is 1 ─────────
+const SHAPES = {
+  limacon: t => { const r = 0.5 + Math.cos(t); return [r * Math.cos(t), r * Math.sin(t)]; },
+  eight: t => [Math.sin(t), Math.sin(t) * Math.cos(t)],
+  star: t => { const r = 1 + 0.45 * Math.cos(5 * t); return [r * Math.cos(t), r * Math.sin(t)]; },
+  square: t => { const c = Math.cos(t), s = Math.sin(t), m = Math.max(Math.abs(c), Math.abs(s)); return [c / m, s / m]; },
+  twice: t => [Math.cos(2 * t), Math.sin(2 * t)],
+};
+const START = { limacon: [-0.25, 0], eight: [0.45, 0.05], star: [0, 0], square: [0, 0], twice: [0, 0] };
+let shape = 'limacon', L = [], o = [0, 0], colour = 'atoms', spokes = false, wmap = null;
+function load(name){
+  shape = name; const f = SHAPES[name]; L = [];
+  for (let k = 0; k < NL; k++) L.push(f(2 * PI * k / NL));
+  const mx = L.reduce((s, p) => s + p[0], 0) / NL, my = L.reduce((s, p) => s + p[1], 0) / NL;
+  L = L.map(([x, y]) => [x - mx, y - my]);
+  const R = Math.max(...L.map(([x, y]) => Math.hypot(x, y))); L = L.map(([x, y]) => [x / R, y / R]);
+  o = START[name].slice(); wmap = null; update();
+}
+// ── THE READING FROM o ───────────────────────────────────────────────────────────────────────────
+function read(ox, oy){
+  let logp = 0, turn = 0, sumD = 0, flips = 0, prevSign = 0, onIt = false;
+  const steps = [];
+  for (let k = 0; k < NL; k++) {
+    const a = L[k], b = L[(k + 1) % NL];
+    const Ax = a[0] - ox, Ay = a[1] - oy, Bx = b[0] - ox, By = b[1] - oy;
+    const ra = Math.hypot(Ax, Ay), rb = Math.hypot(Bx, By);
+    if (ra < 1e-9 || rb < 1e-9) onIt = true;
+    const D = Ax * By - Bx * Ay, dot = Ax * Bx + Ay * By, dth = Math.atan2(D, dot);
+    logp += Math.log(rb / ra); turn += dth; sumD += D;
+    const sg = Math.sign(D); if (k > 0 && sg && prevSign && sg !== prevSign) flips++; if (sg) prevSign = sg;
+    steps.push({ D, dth, phi: Math.atan2(Ay, Ax) });
+  }
+  return { prod: Math.exp(logp), turn, w: Math.round(turn / (2 * PI)), sumD, flips, onIt, steps };
+}
+// ── DRAWING ──────────────────────────────────────────────────────────────────────────────────────
+const cv = document.getElementById('cv'); let W = 0, S = 1;
+const toS = ([x, y]) => [W / 2 + x * S, W / 2 - y * S], toW = (X, Y) => [(X - W / 2) / S, (W / 2 - Y) / S];
+function winding(){                                                     // the winding number of every place, once per contour
+  const G = 90, img = new Float32Array(G * G);
+  for (let j = 0; j < G; j++) for (let i = 0; i < G; i++) {
+    const [x, y] = toW((i + 0.5) * W / G, (j + 0.5) * W / G); let t = 0;
+    for (let k = 0; k < NL; k++) { const a = L[k], b = L[(k + 1) % NL];
+      const Ax = a[0] - x, Ay = a[1] - y, Bx = b[0] - x, By = b[1] - y; t += Math.atan2(Ax * By - Bx * Ay, Ax * Bx + Ay * By); }
+    img[j * G + i] = Math.round(t / (2 * PI));
+  }
+  return { G, img };
+}
+function draw(r){
+  const D = Math.min(2, devicePixelRatio || 1), w = Math.round(cv.clientWidth);
+  if (w !== W || cv.width !== w * D) { W = w; cv.width = cv.height = w * D; wmap = null; }
+  S = W * 0.36; const g = cv.getContext('2d'); g.setTransform(D, 0, 0, D, 0, 0); g.clearRect(0, 0, W, W);
+  if (!wmap) wmap = winding();
+  const { G, img } = wmap, cell = W / G;                                // the plane, shaded by winding
+  for (let j = 0; j < G; j++) for (let i = 0; i < G; i++) { const v = img[j * G + i]; if (!v) continue;
+    g.fillStyle = v > 0 ? 'rgba(29,158,117,' + Math.min(0.55, 0.2 * v) + ')' : 'rgba(224,112,90,' + Math.min(0.55, 0.2 * -v) + ')';
+    g.fillRect(i * cell, j * cell, cell + 0.6, cell + 0.6); }
+  if (spokes) { g.strokeStyle = 'rgba(201,199,190,.18)'; g.lineWidth = 1; const [ox, oy] = toS(o);
+    for (let k = 0; k < NL; k += 2) { const [x, y] = toS(L[k]); g.beginPath(); g.moveTo(ox, oy); g.lineTo(x, y); g.stroke(); } }
+  // the contour, step by step, in the chosen colouring
+  const atomC = [C.a1, C.a2, C.a3, C.a4]; let phi = r.steps[0].phi;
+  g.lineWidth = 3.5; g.lineCap = 'round';
+  for (let k = 0; k < NL; k++) {
+    const st = r.steps[k], a = toS(L[k]), b = toS(L[(k + 1) % NL]);
+    let col;
+    if (colour === 'sign') col = st.D >= 0 ? C.gold : C.violet;
+    else { const psi = ((phi - r.steps[0].phi) / (2 * PI)) % 1, q = Math.floor(((psi % 1) + 1) % 1 * 4); col = atomC[q]; }
+    g.strokeStyle = col; g.beginPath(); g.moveTo(...a); g.lineTo(...b); g.stroke();
+    phi += st.dth;
+  }
+  const [x0, y0] = toS(L[0]); g.fillStyle = C.hi; g.beginPath(); g.arc(x0, y0, 4, 0, 2 * PI); g.fill();   // where the walk starts
+  const [ox, oy] = toS(o);                                              // the standpoint
+  g.strokeStyle = C.hi; g.lineWidth = 2; g.beginPath(); g.arc(ox, oy, 9, 0, 2 * PI); g.stroke();
+  g.fillStyle = C.gold; g.beginPath(); g.arc(ox, oy, 4, 0, 2 * PI); g.fill();
+}
+// ── THE PANEL ────────────────────────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+function update(){
+  const r = read(o[0], o[1]);
+  $('w').textContent = r.onIt ? '—' : String(r.w);
+  $('sd').textContent = r.sumD.toFixed(4);
+  $('rows').innerHTML = [
+    ['line of sight swept', r.onIt ? '—' : (r.turn * 180 / PI).toFixed(1) + '°'],
+    ['Π ρ round the loop', r.prod.toFixed(9)],
+    ['D changes sign', r.flips + ' times'],
+    ['standpoint', '(' + o[0].toFixed(3) + ', ' + o[1].toFixed(3) + ')'],
+  ].map(([a, b]) => '<span>' + a + '</span><span>' + b + '</span>').join('');
+  $('say').textContent = r.onIt ? 'The standpoint is on the contour: the line of sight to that leaf has no direction.'
+    : r.w === 0 ? 'Outside: the line of sight swings and comes back. The sweep is exactly zero, and ΣD is the same as anywhere else.'
+    : 'The line of sight goes round ' + Math.abs(r.w) + (Math.abs(r.w) === 1 ? ' whole turn' : ' whole turns') + (r.w < 0 ? ' clockwise' : '') +
+      '. Cross the contour and this jumps by one; ΣD does not move. Π ρ is 1 everywhere because the sizes telescope.';
+  $('key').innerHTML = colour === 'atoms'
+    ? ['first quarter-turn', 'second', 'third', 'fourth'].map((t, i) => '<span><span class="sw" style="background:' + [C.a1, C.a2, C.a3, C.a4][i] + '"></span>' + t + '</span>').join('')
+    : '<span><span class="sw" style="background:' + C.gold + '"></span>D > 0: the step turns anticlockwise from here</span><span><span class="sw" style="background:' + C.violet + '"></span>D < 0: clockwise</span>';
+  draw(r);
+}
+// ── HANDS ────────────────────────────────────────────────────────────────────────────────────────
+let drag = false;
+const move = e => { const b = cv.getBoundingClientRect(); o = toW(e.clientX - b.left, e.clientY - b.top);
+  o = o.map(v => Math.max(-1.35, Math.min(1.35, v))); update(); };
+cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); drag = true; move(e); });
+cv.addEventListener('pointermove', e => { if (drag) move(e); });
+cv.addEventListener('pointerup', () => { drag = false; }); cv.addEventListener('pointercancel', () => { drag = false; });
+const press = (q, el) => document.querySelectorAll(q).forEach(b => b.setAttribute('aria-pressed', String(b === el)));
+document.querySelectorAll('.shp').forEach(b => b.onclick = () => { press('.shp', b); load(b.dataset.s); });
+document.querySelectorAll('.col').forEach(b => b.onclick = () => { press('.col', b); colour = b.dataset.c; update(); });
+$('tSpokes').onclick = () => { spokes = !spokes; $('tSpokes').setAttribute('aria-pressed', String(spokes)); update(); };
+addEventListener('resize', () => update());
+load('limacon');
+</script>
+</body>
+</html>

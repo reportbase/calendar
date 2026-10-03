@@ -1,0 +1,193 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Grow or Slide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Serif+Display&display=swap">
+<style>
+  :root{ color-scheme: dark; --ground:#0c0c11; --panel:#14141b; --line:rgba(255,255,255,0.09); --ink:#c8c8d0; --dim:#6e6e7a;
+    --bright:#e6e4ee; --teal:#8ce6cd; --orange:#f08024; }
+  html,body{height:100%;margin:0}
+  body{background:var(--ground);color:var(--ink);font-family:'DM Mono',ui-monospace,Menlo,Consolas,monospace;font-size:13px;
+    overflow:hidden;user-select:none;-webkit-user-select:none}
+  #wrap{position:fixed;inset:0}
+  canvas{display:block;width:100%;height:100%;touch-action:manipulation;cursor:pointer}
+  .btn{position:absolute;right:10px;top:calc(10px + env(safe-area-inset-top,0px));font-family:inherit;font-size:12px;color:var(--ink);
+    background:var(--panel);border:1px solid rgba(255,255,255,0.18);border-radius:6px;padding:10px 12px;min-height:40px;cursor:pointer;touch-action:manipulation}
+  .btn:hover{background:#1f1f28;color:#fff}
+  .overlay{position:absolute;inset:0;display:flex;align-items:safe center;justify-content:center;padding:16px;
+    background:rgba(10,10,14,0.86);overflow-y:auto;touch-action:pan-y}
+  .overlay[hidden]{display:none}
+  .card{max-width:540px;width:100%;box-sizing:border-box;margin:auto 0;background:var(--panel);border:1px solid var(--line);
+    border-radius:8px;padding:20px;display:flex;flex-direction:column;gap:12px}
+  .card h2{font-family:'DM Serif Display',Georgia,serif;font-weight:400;font-size:21px;margin:0;color:var(--bright)}
+  .card p{margin:0;line-height:1.6}
+  .card p.dim{color:var(--dim);font-size:12px}
+  .card button{font-family:inherit;font-size:14px;color:var(--teal);background:var(--panel);border:1px solid var(--teal);
+    border-radius:6px;padding:12px 20px;min-height:48px;cursor:pointer;align-self:flex-start;touch-action:manipulation}
+</style>
+
+<div id="wrap">
+  <canvas id="c" aria-label="Two things seen as outline over time: their two ends move alike. Tap one to follow its address back to the complete picture."></canvas>
+  <button class="btn" id="again">new pair</button>
+  <div class="overlay" id="intro">
+    <div class="card">
+      <h2>Grow or Slide</h2>
+      <p>Two things, each reaching a reader only as its outline: its two ends, arriving moment by moment. Below each thing,
+      its ends are kept over time, the newest at the top.</p>
+      <p>Both swing right and left. One of them stretches evenly, every part keeping its share of the length; the other
+      grows and shrinks from its middle out, its two halves riding with its two ends. Their outlines are the same: both ends swinging, out of step. Their shapes differ, and are bumpy, and the ends do not care. The two ends carry correctly; which point is the
+      thing's place is not in the outline.</p>
+      <p>Tap a thing to follow its address back to the complete picture: what the thing is, its own marks. Then the motion
+      can be understood. Tap again to return to the outline. New pair shuffles which is which.</p>
+      <button id="go">begin</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+  const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+  let W = 0, H = 0;
+  function fit() { const d = Math.min(2, devicePixelRatio || 1); W = cv.clientWidth; H = cv.clientHeight; cv.width = Math.round(W * d); cv.height = Math.round(H * d); ctx.setTransform(d, 0, 0, d, 0, 0); }
+  addEventListener('resize', fit);
+
+  // ══ The two things, in their own lengths, measured from the left end (which itself swings by sh). Length L(t). ══
+  //   GROW: its marks are fixed shares of its length; they stretch away from the left end.
+  //   SLIDE: every mark moves with the right end; marks enter, or leave, at the left end.
+  const L0 = 2, AMP = 0.8, OMEGA = 2 * Math.PI / 6, STEP = 0.25;
+  const len = t => L0 + AMP * Math.sin(OMEGA * t);
+  // and the whole thing swings right and left as well: its left end moves by sh(t), in the same cycle, out of step
+  const SWING = 0.7, PHI = -1.3, sh = t => SWING * Math.sin(OMEGA * t + PHI);
+  const marks = (kind, t) => {
+    const L = len(t), out = [];
+    if (kind === 'grow') { for (let k = 0; k <= 8; k++) out.push({ x: (k / 8) * L, k }); }
+    else if (kind === 'middle') {   // each half rides with its own end; marks are born, and die, at the middle
+      for (let k = 0; k * STEP < L / 2; k++) out.push({ x: k * STEP, k });
+      for (let k = 0; L - k * STEP > L / 2; k++) out.push({ x: L - k * STEP, k: k + 1 });
+    }
+    else {   // material label a (where the mark was at t = 0); it has moved by L(t) − L(0)
+      const shift = L - L0;
+      for (let k = -40; k <= 40; k++) { const x = k * STEP + shift; if (x >= -1e-9 && x <= L + 1e-9) out.push({ x, k }); }
+    }
+    return out;
+  };
+
+  let kinds = ['grow', 'slide'], open = [false, false], clock = 0, hist = [], playing = false, last = 0;
+  // each thing has a shape of its own, with perturbations, carried by its own material: a share of its length when it
+  // grows, a fixed label when it slides. The ends do not depend on it.
+  let shapes = [];
+  const bumps = () => Array.from({ length: 4 }, () => ({ a: 0.06 + Math.random() * 0.16, f: 2 + Math.random() * 9, p: Math.random() * 7 }));
+  const newShape = () => ({ top: bumps(), bot: bumps(), base: 0.55 + Math.random() * 0.3, lean: (Math.random() - 0.5) * 0.4 });
+  const half = (B, base, u) => Math.max(0.12, base + B.reduce((q, b) => q + b.a * Math.sin(b.f * u + b.p), 0));
+  const matOf = (kind, x, t) => kind === 'grow' ? (x / len(t)) * L0 : x - (len(t) - L0);
+  // the middle-out thing: the left half keeps its labels from the left end, the right half from the right end; where they
+  // meet, new material (or the seam of what was taken away) is bridged smoothly
+  function halfAt(i, side, x, t) {
+    const S = shapes[i], B = side ? S.bot : S.top, base = side ? S.base - S.lean : S.base + S.lean;
+    if (kinds[i] !== 'middle') return half(B, base, matOf(kinds[i], x, t));
+    const L = len(t), uL = x, uR = x - (L - L0), band = 0.3, f = Math.min(1, Math.max(0, (x - L / 2 + band / 2) / band)), e = f * f * (3 - 2 * f);
+    return (1 - e) * half(B, base, uL) + e * half(B, base, uR);
+  }
+  function shuffle() { kinds = Math.random() < 0.5 ? ['grow', 'middle'] : ['middle', 'grow']; open = [false, false]; shapes = [newShape(), newShape()]; }
+  function silhouette(i, X, cy, sc, t) {
+    const kind = kinds[i], S = shapes[i], L = len(t), n = 90, P = [];
+    for (let k = 0; k <= n; k++) { const x = L * k / n; P.push([X(x + sh(t)), cy - halfAt(i, 0, x, t) * sc]); }
+    for (let k = n; k >= 0; k--) { const x = L * k / n; P.push([X(x + sh(t)), cy + halfAt(i, 1, x, t) * sc]); }
+    ctx.beginPath(); P.forEach(([a, b], k) => k ? ctx.lineTo(a, b) : ctx.moveTo(a, b)); ctx.closePath();
+  }
+
+  const SAY = {
+    outline: ['left end: swinging', 'right end: swinging, out of step with it', 'which point is its place: not in the outline'],
+    grow: ['its marks stretch evenly between its ends', 'every share of it keeps its share of the length', 'it grew, and shrank, all along its length'],
+    middle: ['its two halves ride with its two ends', 'new marks appear at its middle, and vanish there', 'it grew, and shrank, from the middle out'],
+    slide: ['every mark moves with the right end', 'new marks enter at the left end, and leave there', 'it moved with its right end, and grew at its back'],
+  };
+
+  function frame() {
+    ctx.fillStyle = '#0a0a0e'; ctx.fillRect(0, 0, W, H);
+    const narrow = W < 640, cols = narrow ? 1 : 2, gut = 16, top = narrow ? 112 : 108;
+    cycle(gut);
+    const colW = (W - gut * (cols + 1)) / cols, rowH = narrow ? (H - top - 16) / 2 : H - top - 16;
+    for (let i = 0; i < 2; i++) {
+      const x0 = narrow ? gut : gut + i * (colW + gut), y0 = narrow ? top + i * rowH : top, w = colW, h = rowH - (narrow ? 10 : 0);
+      lane(i, x0, y0, w, h);
+    }
+  }
+  function lane(i, x0, y0, w, h) {
+    const kind = kinds[i], full = open[i], maxL = L0 + AMP, pad = 18;
+    const X = x => x0 + pad + ((x + SWING + 0.1) / (maxL + 2 * SWING + 0.3)) * (w - 2 * pad);
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1; ctx.strokeRect(x0 + 0.5, y0 + 0.5, w - 1, h - 1);
+    ctx.font = '12px "DM Mono", monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = full ? '#8ce6cd' : '#9a9aa6';
+    ctx.fillText((i ? 'another thing' : 'one thing') + (full ? ': the complete picture' : ': its outline'), x0 + 10, y0 + 18);
+    // now: the thing as it reaches the reader
+    const L = len(clock), by = y0 + 30, bh = 56, cy = by + bh / 2, sc = bh / 2 / 1.25;
+    if (full) {
+      silhouette(i, X, cy, sc, clock); ctx.fillStyle = '#26384a'; ctx.fill();
+      ctx.save(); silhouette(i, X, cy, sc, clock); ctx.clip();
+      for (const m of marks(kind, clock)) { ctx.fillStyle = m.k % 2 ? '#e3c33b' : '#f08024'; ctx.fillRect(X(m.x + sh(clock)) - 1.5, by - 4, 3, bh + 8); }
+      ctx.restore();
+    }
+    silhouette(i, X, cy, sc, clock); ctx.strokeStyle = '#e6e4ee'; ctx.lineWidth = 1.5; ctx.stroke();
+    // the record over time, newest at the top: the ends, and with the complete picture the marks too
+    const ty = by + bh + 12, th = h - (ty - y0) - 70, dtRow = 1 / 30;
+    ctx.save(); ctx.beginPath(); ctx.rect(x0 + 1, ty, w - 2, th); ctx.clip();
+    for (let r = 0; r < hist.length; r++) {
+      const t = hist[hist.length - 1 - r], y = ty + r * (th / 240); if (y > ty + th) break;
+      const Lt = len(t);
+      ctx.fillStyle = 'rgba(230,228,238,0.85)'; ctx.fillRect(X(sh(t)) - 1, y, 2, 1.5); ctx.fillRect(X(Lt + sh(t)) - 1, y, 2, 1.5);
+      if (full) for (const m of marks(kind, t)) { ctx.fillStyle = m.k % 2 ? 'rgba(227,195,59,0.6)' : 'rgba(240,128,36,0.6)'; ctx.fillRect(X(m.x + sh(t)) - 0.6, y, 1.2, 1.5); }
+    }
+    ctx.restore();
+    ctx.fillStyle = '#6e6e7a'; ctx.font = '11px "DM Mono", monospace'; ctx.fillText('earlier ↓', x0 + 10, ty + th + 14);
+    // readout
+    const say = full ? SAY[kind] : SAY.outline;
+    ctx.font = (W < 640 ? 11 : 12) + 'px "DM Mono", monospace';
+    say.forEach((t, k) => { ctx.fillStyle = k === 2 ? (full ? '#8ce6cd' : '#f08024') : '#c8c8d0'; ctx.fillText(t, x0 + 10, ty + th + 32 + k * 16); });
+    lanes[i] = { x0, y0, w, h };
+  }
+  const lanes = [];
+  // the right end's pair: how far it is from the middle of its swing (across) and how fast it moves (up), in the same terms.
+  // One cycle takes it once round: the four facings, the closure bar sweeping horizontal, vertical, horizontal, vertical.
+  const trail = [];
+  function cycle(gut) {
+    const R = 34, cx = gut + R + 4, cy = 14 + R, th = OMEGA * clock;
+    // each end runs one cycle; its pair, each in its own terms, goes once round
+    const re = AMP + SWING * Math.cos(PHI), im = SWING * Math.sin(PHI), psiR = Math.atan2(im, re);
+    const ends = [{ ph: th + PHI, col: '#e3c33b', name: 'left' }, { ph: th + psiR, col: '#8ce6cd', name: 'right' }];
+    trail.push(ends.map(e => [Math.sin(e.ph), Math.cos(e.ph)])); if (trail.length > 330) trail.shift();
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(cx - R - 4, cy); ctx.lineTo(cx + R + 4, cy); ctx.moveTo(cx, cy - R - 4); ctx.lineTo(cx, cy + R + 4); ctx.stroke();
+    ends.forEach((e, k) => {
+      ctx.strokeStyle = k ? 'rgba(140,230,205,0.4)' : 'rgba(227,195,59,0.4)'; ctx.beginPath();
+      trail.forEach((T, n) => { const x = cx + T[k][0] * R, y = cy - T[k][1] * R; n ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.stroke();
+      ctx.fillStyle = e.col; ctx.beginPath(); ctx.arc(cx + Math.sin(e.ph) * R, cy - Math.cos(e.ph) * R, 3.5, 0, 7); ctx.fill();
+    });
+    const word = e => (Math.sin(e.ph) >= 0 ? 'out' : 'back') + ', ' + (Math.cos(e.ph) >= 0 ? 'going out' : 'coming back');
+    ctx.font = (W < 640 ? 11 : 12) + 'px "DM Mono", monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    const tx = cx + R + 16, mw = W - tx - 130;
+    const lines = W < 640 ? ['each end: how far out', '(across), how fast (up)', 'left ' + word(ends[0]).split(',')[0] + ' · right ' + word(ends[1]).split(',')[0]]
+      : ['each end, both things: how far from the middle of its swing (across), how fast (up)', 'each runs one cycle, once round: four facings', 'left: ' + word(ends[0]) + '  ·  right: ' + word(ends[1])];
+    lines.forEach((t, k) => { ctx.fillStyle = k === 2 ? '#e6e4ee' : '#9a9aa6'; ctx.fillText(t, tx, 24 + k * 17, Math.max(120, mw)); });
+  }
+
+  function loop(now) {
+    const dt = Math.min(0.05, (now - last) / 1000 || 0); last = now; clock += dt;
+    hist.push(clock); if (hist.length > 400) hist.shift();
+    frame(); if (playing) requestAnimationFrame(loop);
+  }
+  cv.addEventListener('pointerup', e => {
+    const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+    lanes.forEach((b, i) => { if (b && x >= b.x0 && x <= b.x0 + b.w && y >= b.y0 && y <= b.y0 + b.h) open[i] = !open[i]; });
+  });
+  addEventListener('keydown', e => { if (e.key === '1') open[0] = !open[0]; if (e.key === '2') open[1] = !open[1]; });
+  document.getElementById('again').addEventListener('click', shuffle);
+  document.getElementById('go').addEventListener('click', () => {
+    document.getElementById('intro').hidden = true; fit(); shuffle(); playing = true; last = performance.now(); requestAnimationFrame(loop);
+  });
+  fit();
+})();
+</script>
+
+</body></html>
