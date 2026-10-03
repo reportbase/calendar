@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Two Models of Observation</title>
+<style>
+  :root { --bg:#0e0f12; --panel:#16181d; --fg:#e8e6e1; --muted:#8b8f98; --line:#2a2d35; --shape:#c9c4b8;
+          --stored:#7fb2ff; --stale:#ff6b8a; --addr:#e0a64a; --reader:#6fcf8e; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--fg); font:14px/1.4 system-ui, -apple-system, sans-serif; overflow:hidden; }
+  canvas { display:block; width:100vw; height:100vh; touch-action:none; }
+  .bar { position:fixed; left:50%; bottom:14px; transform:translateX(-50%); display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:center;
+         background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:8px 10px; max-width:calc(100vw - 24px); }
+  button { background:#20232a; color:var(--fg); border:1px solid var(--line); border-radius:8px; padding:8px 12px; font:inherit; cursor:pointer; min-height:36px; }
+  button.on { border-color:var(--reader); color:var(--reader); }
+  @media (max-width:600px) { .bar { gap:6px; padding:6px; } button { padding:6px 10px; } }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="bar">
+  <button id="play" class="on">circling</button>
+  <button id="change">change the shape</button>
+  <button id="clear">start again</button>
+</div>
+<script>
+// One reader circles one shape. Left: the view from nowhere's model, every payload placed at x, y and kept.
+// Right: addresses only, the reader keeps the bearings to the corners it sees now, and nothing else.
+// Change the shape and watch which one goes stale.
+const TAU = Math.PI * 2, RAYS = 48;
+let BASE = [[-0.9,-0.55],[-0.2,-0.9],[0.35,-0.35],[0.95,-0.7],[0.8,0.25],[0.2,0.95],[-0.35,0.45],[-0.9,0.6]];
+const ORIG = BASE.map(p => p.slice());
+let t = 0, playing = true, stored = [], changed = false;
+const R = 3.0, HALF = 1.05 * Math.asin(1 / R);
+function hit(poly, sx, sy, th) { const ux = Math.cos(th), uy = Math.sin(th); let best = null;
+  for (let i = 0; i < poly.length; i++) { const a = poly[i], b = poly[(i + 1) % poly.length];
+    const ax = a[0] - sx, ay = a[1] - sy, bx = b[0] - sx, by = b[1] - sy, sa = ax * uy - ay * ux, sb = bx * uy - by * ux;
+    if ((sa > 0) === (sb > 0)) continue; const f = sa / (sa - sb), px = ax + (bx - ax) * f, py = ay + (by - ay) * f, r = px * ux + py * uy;
+    if (r > 0 && (best === null || r < best)) best = r; } return best; }
+function segDist(p, a, b) { const dx = b[0] - a[0], dy = b[1] - a[1], L = dx * dx + dy * dy, u = L ? Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L)) : 0; return Math.hypot(p[0] - a[0] - u * dx, p[1] - a[1] - u * dy); }
+const onOutline = p => { let d = Infinity; for (let i = 0; i < BASE.length; i++) d = Math.min(d, segDist(p, BASE[i], BASE[(i + 1) % BASE.length])); return d < 0.01; };
+function visibleCorners(sx, sy, face) { const out = [];
+  BASE.forEach((c, i) => { const a = Math.atan2(c[1] - sy, c[0] - sx), d = Math.hypot(c[0] - sx, c[1] - sy);
+    if (Math.abs(((a - face + Math.PI) % TAU + TAU) % TAU - Math.PI) > HALF) return; const r = hit(BASE, sx, sy, a); if (r !== null && Math.abs(r - d) < 1e-6) out.push(i); }); return out; }
+const cv = document.getElementById('c'), ctx = cv.getContext('2d'); let W, H, panes;
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+function resize() { const dpr = window.devicePixelRatio || 1; W = innerWidth; H = innerHeight; cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const barH = W < 600 ? 110 : 80, vertical = W < 700;
+  if (vertical) { const h = (H - barH - 20) / 2; panes = [{ x:0, y:0, w:W, h }, { x:0, y:h, w:W, h }]; }
+  else { const h = H - barH; panes = [{ x:0, y:0, w:W / 2, h }, { x:W / 2, y:0, w:W / 2, h }]; }
+  panes.forEach(p => { p.S = Math.min(p.w, p.h - 50) / 7.2; p.ox = p.x + p.w / 2; p.oy = p.y + 40 + (p.h - 40) / 2; }); }
+const P = (p, x, y) => [p.ox + x * p.S, p.oy - y * p.S];
+function frame() {
+  if (playing) t++;
+  const al = t * 0.012, sx = R * Math.cos(al), sy = R * Math.sin(al), face = al + Math.PI;
+  // the stored model: every ray's point placed in the world and kept
+  if (playing && t % 3 === 0) for (let j = 0; j < RAYS; j++) { const a = face - HALF + 2 * HALF * j / (RAYS - 1), r = hit(BASE, sx, sy, a); if (r !== null) stored.push([sx + r * Math.cos(a), sy + r * Math.sin(a)]); }
+  ctx.fillStyle = css('--bg'); ctx.fillRect(0, 0, W, H);
+  const vis = visibleCorners(sx, sy, face);
+  panes.forEach((p, k) => {
+    ctx.save(); ctx.beginPath(); ctx.rect(p.x, p.y, p.w, p.h); ctx.clip();
+    ctx.strokeStyle = css('--line'); ctx.setLineDash([3, 5]); ctx.beginPath(); ctx.arc(p.ox, p.oy, R * p.S, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle = css('--shape'); ctx.lineWidth = 2; ctx.beginPath(); BASE.forEach((q, i) => { const [a, b] = P(p, q[0], q[1]); i ? ctx.lineTo(a, b) : ctx.moveTo(a, b); }); ctx.closePath(); ctx.stroke();
+    const [rx, ry] = P(p, sx, sy);
+    if (k === 0) { let stale = 0; for (const q of stored) { const ok = !changed || onOutline(q); if (!ok) stale++; ctx.fillStyle = ok ? css('--stored') : css('--stale'); const [a, b] = P(p, q[0], q[1]); ctx.fillRect(a - 1, b - 1, 2, 2); }
+      ctx.fillStyle = css('--fg'); ctx.font = '13px system-ui'; ctx.fillText(`the view from nowhere: ${stored.length.toLocaleString()} payloads kept` + (stale ? ` · ${stale.toLocaleString()} stale` : ''), p.x + 14, p.y + 22); }
+    else { vis.forEach(i => { const c = BASE[i], [a, b] = P(p, c[0], c[1]); ctx.strokeStyle = css('--addr'); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(a, b); ctx.stroke(); ctx.fillStyle = css('--addr'); ctx.beginPath(); ctx.arc(a, b, 4, 0, TAU); ctx.fill(); });
+      ctx.fillStyle = css('--fg'); ctx.font = '13px system-ui'; ctx.fillText(`addresses only: ${vis.length} bearings held · 0 payloads`, p.x + 14, p.y + 22); }
+    ctx.fillStyle = css('--reader'); ctx.beginPath(); ctx.arc(rx, ry, 7, 0, TAU); ctx.fill();
+    ctx.restore(); });
+  if (panes[0].x !== panes[1].x) { ctx.strokeStyle = css('--line'); ctx.beginPath(); ctx.moveTo(W / 2, 0); ctx.lineTo(W / 2, panes[0].h); ctx.stroke(); }
+  else { ctx.strokeStyle = css('--line'); ctx.beginPath(); ctx.moveTo(0, panes[1].y); ctx.lineTo(W, panes[1].y); ctx.stroke(); }
+  requestAnimationFrame(frame);
+}
+const $ = id => document.getElementById(id);
+$('play').onclick = () => { playing = !playing; $('play').classList.toggle('on', playing); $('play').textContent = playing ? 'circling' : 'paused'; };
+$('change').onclick = () => { changed = true; BASE = BASE.map(([x, y], i) => i === 4 ? [x - 0.55, y - 0.1] : i === 5 ? [x + 0.15, y - 0.4] : [x, y]); };
+$('clear').onclick = () => { stored = []; changed = false; BASE = ORIG.map(p => p.slice()); };
+addEventListener('resize', resize); resize(); requestAnimationFrame(frame);
+</script>
+</body>
+</html>

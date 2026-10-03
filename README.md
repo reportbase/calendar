@@ -33,6 +33,12 @@ Standalone pages, one idea each, pulled out of the draw project's labs. See [dem
 | [three-rulers.html](https://reportbase.github.io/calendar/demos/three-rulers.html) | One reading on the folded dial, the unfolded strip (y = g) and the octave-counting drum. |
 | [register.html](https://reportbase.github.io/calendar/demos/register.html) | Odd registers can say "unchanged", even ones cannot; the checksum walk, rails and lag. |
 | [convexity.html](https://reportbase.github.io/calendar/demos/convexity.html) | Two bits of tangent quadrant: four entries for a convex loop, and the dent two bits cannot see. |
+| [unicode.html](https://reportbase.github.io/calendar/demos/unicode.html) | A Unicode browser on the fisheye: a strip of blocks over a grid of code points, with search and a character panel. |
+| [tns.html](https://reportbase.github.io/calendar/demos/tns.html) | Continuous curves on the arc: one standard number line over 37 bottom views, from the atom and the bridge theorem to the pointing sphere, the bouquets, the sky under boost, radar, three gaps and ?(x). |
+| [replace-the-rings.html](https://reportbase.github.io/calendar/demos/replace-the-rings.html) | The sweep lays addresses and never looks at what sits at them: swap the payloads and the addresses and their Cauchy stay put. |
+| [ladder.html](https://reportbase.github.io/calendar/demos/ladder.html) | A bar of 1 sweeps through home, corner and horizon; the rungs show what the view from nowhere adds, and what each one needs. |
+| [blind-spots.html](https://reportbase.github.io/calendar/demos/blind-spots.html) | A still reader holds only addresses (jumps and edges); tap a place and it answers whether it can see it. |
+| [two-readers.html](https://reportbase.github.io/calendar/demos/two-readers.html) | One reader circles a shape: kept payloads go stale when the shape changes; bearings held now do not. |
 
 ## Sweeps — [dials/](dials/)
 
@@ -41,6 +47,7 @@ Standalone pages, one idea each, pulled out of the draw project's labs. See [dem
 | [fisheye-sweep.html](https://reportbase.github.io/calendar/dials/fisheye-sweep.html) | The situated reader's sweep: proportion from home to the corner, then one step per doubling. |
 | [breadth-sweep.html](https://reportbase.github.io/calendar/dials/breadth-sweep.html) | Known breadths with one, two, four or eight facings: quarter circle, semicircle, circle, sphere. |
 | [grow-or-slide.html](https://reportbase.github.io/calendar/dials/grow-or-slide.html) | Two things alike in outline; follow the address back to see which grows and which slides. |
+| [pivot-and-sweep.html](https://reportbase.github.io/calendar/dials/pivot-and-sweep.html) | The reader as the pivot: a bar of 1 turned from home to the horizon, with g, the flip, and carrying out one octave at a time. |
 
 ## Vocabulary
 
