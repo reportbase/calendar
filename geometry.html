@@ -22,9 +22,11 @@
      the apex, all h and no v, no breadth expressed; g = ½ is the corner, v = h, the 45° unit; g = 1 is the
      horizon, the breadth fully expressed. The reading is s = v/h = tan θ, which T marks. The flip s ↦ 1/s
      is g ↦ 1 − g, the mirror in the 45° line (P′). The octaves run both ways from the corner, doublings
-     past it and halvings before it, and both are marked. The SHAPE, an ellipse whose v breadth is b
-     times its h breadth, is drawn only over the swept directions; the rest is still the unit circle, the
-     addressing laid before any breadth is met. On this dial h runs up the axis and v runs sideways; the
+     past it and halvings before it, and both are marked. g = 0 IS THE UNIT CIRCLE AND g = 1 THE SHAPE
+     FULLY EXPRESSED: at turn t the circle's point P = (cos t, sin t) carries the shape's point
+     Q = (cos t, b·sin t), v's breadth expressed by sin t, nothing at g = 0 and all of it at g = 1
+     (Kepler's auxiliary circle). The ray to Q reads b·tan t, the circle's reading slid log₂ b octaves,
+     which on the dial is a move of the radius. On this dial h runs up the axis and v runs sideways; the
      paper draws h across and v up.
 
      VOCABULARY (GEOMETRY.md): geometry names first, other fields' names in brackets. θ is the circular
@@ -190,15 +192,18 @@ function drawFigure(){
   ctx.strokeStyle = GOLD; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(ox, oy, s, -PI, 0); ctx.stroke();   // the circle: addresses, no breadth expressed
   ctx.setLineDash([2, 6]); ctx.strokeStyle = 'rgba(232,200,106,.45)'; ctx.lineWidth = 1;   // the corner, v = h, both sides
   ctx.beginPath(); ctx.moveTo(...fp(2.2, -2.2)); ctx.lineTo(ox, oy); ctx.lineTo(...fp(2.2, 2.2)); ctx.stroke(); ctx.setLineDash([]);
-  // THE SHAPE, EXPRESSED AS FAR AS THE SWEEP HAS GONE: over the swept directions its breadth has been
-  // met (an ellipse, h breadth 1, v breadth b); over the rest only the circle stands.
+  // g = 0 IS THE UNIT CIRCLE, g = 1 THE SHAPE FULLY EXPRESSED. The sweep carries the circle into the
+  // shape: at turn t the circle's point is P = (cos t, sin t) and the shape's is Q = (cos t, b·sin t),
+  // P with v's breadth expressed. At g = 0 they coincide at A; at g = 1, Q = (0, b). The gap between
+  // them is (b − 1)·sin t, the bar's own vertical part, so the sweep alone sets how much is expressed.
+  // (Kepler's auxiliary circle, t the eccentric anomaly.) The path Q has traced is the shape so far.
   if (th) {
-    const sg = th < 0 ? -1 : 1, a = Math.abs(th), rad = p => 1 / Math.sqrt(Math.cos(p) ** 2 + (Math.sin(p) / b) ** 2);
+    const sg = th < 0 ? -1 : 1, a = Math.abs(th), Q = t => fp(Math.cos(t), sg * b * Math.sin(t));
     ctx.beginPath(); ctx.moveTo(ox, oy);
-    for (let i = 0; i <= 90; i++) { const p = a * i / 90, r = rad(p); ctx.lineTo(...fp(r * Math.cos(p), sg * r * Math.sin(p))); }
+    for (let i = 0; i <= 90; i++) ctx.lineTo(...Q(a * i / 90));
     ctx.closePath(); ctx.fillStyle = 'rgba(224,135,106,.10)'; ctx.fill();
     ctx.beginPath();
-    for (let i = 0; i <= 90; i++) { const p = a * i / 90, r = rad(p), [x, y] = fp(r * Math.cos(p), sg * r * Math.sin(p)); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+    for (let i = 0; i <= 90; i++) { const [x, y] = Q(a * i / 90); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
     ctx.strokeStyle = SHAPE; ctx.lineWidth = 2.5; ctx.stroke();
   }
   const tMax = Math.asinh((f.w / 2) / s + 1);                                   // the hyperbola, as far as the figure shows
@@ -225,6 +230,17 @@ function drawFigure(){
   const dot = ([x, y], c, r, label, dx, dy) => { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * PI); ctx.fill();
     if (label) { ctx.font = '600 15px ' + mono; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, x + dx, y + dy); } };
   const side = zeta < 0 ? -1 : 1;
+  if (th) {                                                     // Q, the expression P → Q, and the reading through the shape, b · tan t
+    const q = fp(Math.cos(th), b * Math.sin(th)), tb = fp(1, b * Math.tan(th));
+    ctx.strokeStyle = 'rgba(224,135,106,.85)'; ctx.lineWidth = 2; ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(...h.P); ctx.lineTo(...q); ctx.stroke();
+    ctx.strokeStyle = 'rgba(224,135,106,.45)'; ctx.lineWidth = 1; ctx.setLineDash([2, 5]);
+    ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(...tb); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = SHAPE; ctx.beginPath(); ctx.arc(...q, 6, 0, 2 * PI); ctx.fill();
+    ctx.strokeStyle = SHAPE; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(...tb, 5, 0, 2 * PI); ctx.stroke();
+    ctx.font = '600 15px ' + mono; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('Q', q[0] + 16 * side, q[1] - 10);
+  }
   if (th) {                                                     // the flip: s ↦ 1/s, g ↦ 1 − g, the mirror in the corner line
     const tf = side * (PI / 2 - Math.abs(th)), Pf = fp(Math.cos(tf), Math.sin(tf)), Tf = fp(1, Math.tan(tf));
     ctx.strokeStyle = 'rgba(106,168,232,.5)'; ctx.lineWidth = 1; ctx.setLineDash([2, 4]);
@@ -261,7 +277,9 @@ function gRows(sAbs){                                          // the paper's re
     row('share', share.toFixed(4), 'min(v,h) / max(v,h) · 1 at the corner') +
     row('octave, t', oct ? oct[0] + ', ' + oct[1].toFixed(3) : '—', 'octaves out from the corner · share within one') +
     row('flip', (1 - g).toFixed(4), 's ↦ 1/s is g ↦ 1 − g · P′, T′') +
-    row('b', b.toFixed(2), 'the shape: v breadth over h · drawn over the swept g');
+    row('b', b.toFixed(2), 'the shape: v breadth over h · [ ] to change') +
+    row('expressed', Math.abs(Math.sin(theta())).toFixed(4), 'sin t: 0 the unit circle (g 0) · 1 the shape (g 1) · Q = (cos t, b sin t)') +
+    row('b · s', (b * sAbs).toPrecision(4), 'the reading through the shape = the radius slid ' + Math.log2(b).toFixed(2) + ' octaves');
 }
 function updateNums(){
   if (nums.hidden) return;

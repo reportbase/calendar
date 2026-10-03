@@ -46,11 +46,24 @@ The needle's angle from the apex is the paper's **sweep**. **g** is that angle a
 | ½ | **the corner**, v = h: the near horizon | 1 | 45°, one unit |
 | 1 | **the horizon**: pure vertical, the breadth fully expressed | ∞ | 90°, never reached |
 
-At g = 0 nothing has been met but the addresses: the unit circle, laid before anything is there.
-As g sweeps toward 1, each direction's breadth is met, and the shape is expressed over the swept part.
-`geometry.html` draws a shape of breadth ratio b (`[` `]`) only over the swept directions.
-Over the rest of the quarter turn, only the circle stands.
-(The paper keeps a separate number for a weight between the circle and a whole shape: the mix **m**, §2.1. g is a place on the sweep, not a weight.)
+**g = 0 is the unit circle; g = 1 (π/2) is the shape fully expressed.** The sweep carries the circle
+into the shape. For a shape with h breadth 1 and v breadth b, at turn t = g·π/2:
+
+    P = (cos t, sin t)        the unit circle
+    Q = (cos t, b · sin t)    the shape: P with v's breadth expressed
+
+- At g = 0, Q = P = (1, 0): circle and shape coincide, so nothing is expressed.
+- At g = 1, Q = (0, b): v's breadth is fully expressed.
+- In between, the gap P → Q is (b − 1) · sin t, the bar's own vertical part. Nothing is chosen: the sweep alone sets how much is expressed.
+
+This is Kepler's auxiliary circle construction, with t the eccentric anomaly. Classical mechanics treats that circle as a drawing aid. Reading it as the shape with nothing yet expressed is this work's.
+It differs from the mix **m** (§2.1), which weights the whole shape the same in every direction. Here the expression grows with the sweep.
+
+Two consequences, both checked numerically:
+- `dial.html`'s lens, `atan(tan a / K)` with K = 4, is the angle of the ray to Q for b = ¼.
+- The ray to Q meets the tangent line at b · tan t, which is b times the circle's reading. That is §2.3's Cauchy of scale b, an offset of log₂ b octaves, and on the dial a move of the radius by log₂ b octaves.
+
+`geometry.html` draws P, Q, the gap between them and the arc Q has traced (`[` `]` change b).
 
 | The dial | The paper |
 |---|---|
