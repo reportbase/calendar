@@ -35,6 +35,10 @@ Standalone pages, one idea each, pulled out of the draw project's labs. See [dem
 | [convexity.html](https://reportbase.github.io/calendar/demos/convexity.html) | Two bits of tangent quadrant: four entries for a convex loop, and the dent two bits cannot see. |
 | [unicode.html](https://reportbase.github.io/calendar/demos/unicode.html) | A Unicode browser on the fisheye: a strip of blocks over a grid of code points, with search and a character panel. |
 | [tns.html](https://reportbase.github.io/calendar/demos/tns.html) | Continuous curves on the arc: one standard number line over 37 bottom views, from the atom and the bridge theorem to the pointing sphere, the bouquets, the sky under boost, radar, three gaps and ?(x). |
+| [replace-the-rings.html](https://reportbase.github.io/calendar/demos/replace-the-rings.html) | The sweep lays addresses and never looks at what sits at them: swap the payloads and the addresses and their Cauchy stay put. |
+| [ladder.html](https://reportbase.github.io/calendar/demos/ladder.html) | A bar of 1 sweeps through home, corner and horizon; the rungs show what the view from nowhere adds, and what each one needs. |
+| [blind-spots.html](https://reportbase.github.io/calendar/demos/blind-spots.html) | A still reader holds only addresses (jumps and edges); tap a place and it answers whether it can see it. |
+| [two-readers.html](https://reportbase.github.io/calendar/demos/two-readers.html) | One reader circles a shape: kept payloads go stale when the shape changes; bearings held now do not. |
 
 ## Sweeps — [dials/](dials/)
 

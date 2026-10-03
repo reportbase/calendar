@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Replace the Rings</title>
+<style>
+  :root { --bg:#0e0f12; --panel:#16181d; --fg:#e8e6e1; --muted:#8b8f98; --line:#2a2d35;
+          --addr:#7fb2ff; --bar:#e8e6e1; --up:#e0a64a; --down:#6fcf8e; --diff:#ff6b8a; --hist:#3a4150; --curve:#7fb2ff; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--fg); font:14px/1.4 system-ui, -apple-system, sans-serif; overflow:hidden; }
+  canvas { display:block; width:100vw; height:100vh; touch-action:none; }
+  .bar { position:fixed; left:50%; bottom:14px; transform:translateX(-50%); display:flex; gap:6px; align-items:center; flex-wrap:wrap; justify-content:center;
+         background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:8px 10px; max-width:calc(100vw - 24px); }
+  button { background:#20232a; color:var(--fg); border:1px solid var(--line); border-radius:8px; padding:8px 11px; font:inherit; cursor:pointer; min-height:36px; }
+  button.on { border-color:var(--addr); color:var(--addr); }
+  .check { position:fixed; left:14px; top:12px; color:var(--muted); font-size:13px; }
+  .check b { color:var(--down); font-weight:600; }
+  @media (max-width:600px) { .bar { gap:5px; padding:6px; } button { padding:6px 8px; font-size:13px; } }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="check" id="check"></div>
+<div class="bar" id="kinds"></div>
+<script>
+// The sweep lays addresses and never looks at what sits at them. Replace the rings (the payloads) while it keeps turning:
+// the addresses, the landmarks and the readings' Cauchy do not move; only the payload row does. The serial row shows what
+// dividing can do with each kind: a ratio for a magnitude; only "same" or "different" for anything else.
+const TAU = Math.PI * 2, N = 48, NH = 2000;
+// addresses: laid evenly in the turn across the reader's two facings; each one's reading is v/h
+const TH = Array.from({ length: N }, (_, j) => -Math.PI / 2 + Math.PI * (j + 0.5) / N);
+const READ = TH.map(t => Math.tan(t));
+const THH = Array.from({ length: NH }, (_, j) => -Math.PI / 2 + Math.PI * (j + 0.5) / NH), READH = THH.map(t => Math.tan(t));
+// payload kinds: each a function of the address and the time; magnitudes and categories
+const WORDS = 'THE SWEEP ONLY LAYS ADDRESSES WHAT SITS AT THEM IS ITS OWN ';
+const NOTES = ['C', 'D', 'E', 'F', 'G', 'A', 'B'], COLS = [['red', '#e05a5a'], ['amber', '#e0a64a'], ['green', '#6fcf8e'], ['teal', '#4fc1c1'], ['blue', '#7fb2ff'], ['violet', '#b48cff']];
+function rng(s) { return () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const NOISE = (() => { const r = rng(5); return Array.from({ length: N }, () => 0.15 + r()); })();
+const PARETO = (() => { const r = rng(9); return Array.from({ length: N }, () => 1 / Math.pow(1 - r() * 0.999, 2)); })();   // Pareto ½: no mean
+function shapeDist(th, t) { // distance from the reader to a slowly turning shape's border along the address
+  const cx = 1.5, w = 0.004 * t; let best = null; const pts = []; for (let k = 0; k < 9; k++) { const a = k / 9 * TAU + w, r = k % 2 ? 0.6 : 1.1; pts.push([cx + r * Math.cos(a), r * Math.sin(a)]); }
+  const ux = Math.cos(th), uy = Math.sin(th);
+  for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length], sa = a[0] * uy - a[1] * ux, sb = b[0] * uy - b[1] * ux; if ((sa > 0) === (sb > 0)) continue;
+    const f = sa / (sa - sb), px = a[0] + (b[0] - a[0]) * f, py = a[1] + (b[1] - a[1]) * f, r = px * ux + py * uy; if (r > 0 && (best === null || r < best)) best = r; }
+  return best; }
+const KINDS = [
+  { name: 'distance', mag: true, at: (j, t) => shapeDist(TH[j], t) },
+  { name: 'colour', mag: false, at: (j, t) => COLS[Math.floor((j / N * 3 + t * 0.004) % 1 * COLS.length + COLS.length) % COLS.length] },
+  { name: 'letters', mag: false, at: (j, t) => WORDS[(j + Math.floor(t / 40)) % WORDS.length] },
+  { name: 'notes', mag: false, at: (j, t) => NOTES[Math.floor(3 + 3 * Math.sin(j * 0.45 + t * 0.01) + 0.5) % 7] },
+  { name: 'noise', mag: true, at: j => NOISE[j] },
+  { name: 'no mean', mag: true, at: j => PARETO[j] },
+];
+let kind = 0, t = 0, prevPay = null, sweep = 0, lastAddr = READ.slice(), same = true;
+const kindsEl = document.getElementById('kinds');
+kindsEl.innerHTML = KINDS.map((k, i) => `<button data-i="${i}" class="${i === 0 ? 'on' : ''}">${k.name}</button>`).join('');
+kindsEl.querySelectorAll('button').forEach(b => b.onclick = () => { const snapshot = READ.slice(); kind = Number(b.dataset.i); prevPay = null;
+  same = snapshot.every((v, i) => v === lastAddr[i]); lastAddr = snapshot; kindsEl.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); });
+const cv = document.getElementById('c'), ctx = cv.getContext('2d'); let W, H, L;
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+let lay;
+function resize() { const dpr = window.devicePixelRatio || 1; W = innerWidth; H = innerHeight; cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const narrow = W < 800, barH = narrow ? 150 : 76;
+  if (narrow) { const fanH = (H - barH) * 0.36; lay = { fx: 28, fy: 40 + fanH / 2, fr: Math.min(W - 80, fanH / 2 - 14), rows: { x: 16, w: W - 32, y: 40 + fanH + 6, h: (H - barH - fanH - 60) } }; }
+  else { const fanW = W * 0.42; lay = { fx: 40, fy: (H - barH) / 2 + 10, fr: Math.min(fanW - 90, (H - barH) / 2 - 40), rows: { x: fanW + 20, w: W - fanW - 40, y: 50, h: H - barH - 70 } }; } }
+function glyph(x, y, p, K, big) {
+  if (p === null) { ctx.strokeStyle = css('--line'); ctx.beginPath(); ctx.arc(x, y, big ? 6 : 4, 0, TAU); ctx.stroke(); return; }
+  if (K.mag) { const r = Math.max(2, Math.min(big ? 14 : 10, 3 + 3 * Math.log1p(p))); ctx.strokeStyle = css('--bar'); ctx.lineWidth = big ? 2.5 : 1.6; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.stroke(); return; }
+  if (Array.isArray(p)) { ctx.fillStyle = p[1]; ctx.beginPath(); ctx.arc(x, y, big ? 9 : 6, 0, TAU); ctx.fill(); return; }
+  ctx.fillStyle = css('--fg'); ctx.font = `${big ? 16 : 12}px system-ui`; ctx.fillText(p, x - ctx.measureText(p).width / 2, y + 5); }
+function frame() {
+  t++; sweep = (sweep + 0.25) % (N * 2);
+  const K = KINDS[kind], pay = Array.from({ length: N }, (_, j) => K.at(j, t)), cur = Math.floor(sweep < N ? sweep : 2 * N - 1 - sweep);
+  ctx.fillStyle = css('--bg'); ctx.fillRect(0, 0, W, H);
+  // the fan: the reader's addresses, a ring at each
+  const { fx, fy, fr } = lay;
+  for (let j = 0; j < N; j++) { const a = TH[j], x = fx + Math.cos(a) * fr, y = fy - Math.sin(a) * fr;
+    ctx.strokeStyle = css('--line'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(x, y); ctx.stroke(); glyph(x, y, pay[j], K, j === cur); }
+  const ca = TH[cur]; ctx.strokeStyle = css('--bar'); ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(fx + Math.cos(ca) * fr * 0.9, fy - Math.sin(ca) * fr * 0.9); ctx.stroke();
+  ctx.fillStyle = css('--addr'); ctx.beginPath(); ctx.arc(fx, fy, 7, 0, TAU); ctx.fill();
+  // the rows
+  const R = lay.rows, rowH = Math.max(34, R.h / 5), lab = (s, y) => { ctx.fillStyle = css('--muted'); ctx.font = '12px system-ui'; ctx.fillText(s, R.x, y - 6); };
+  const toX = r => R.x + (Math.max(-4, Math.min(4, r)) + 4) / 8 * R.w, colX = j => R.x + (j + 0.5) / N * R.w;
+  // 1. the addresses, placed by their readings, with home, corner, horizon
+  let y = R.y + 14; lab('the addresses (placed by their reading v/h) · the sweep\'s own', y);
+  ctx.strokeStyle = css('--line'); ctx.beginPath(); ctx.moveTo(R.x, y + 10); ctx.lineTo(R.x + R.w, y + 10); ctx.stroke();
+  READ.forEach((r, j) => { ctx.strokeStyle = j === cur ? css('--bar') : css('--addr'); ctx.lineWidth = j === cur ? 2.5 : 1.2; ctx.beginPath(); ctx.moveTo(toX(r), y + 3); ctx.lineTo(toX(r), y + 17); ctx.stroke(); });
+  ctx.fillStyle = css('--muted'); ctx.font = '11px system-ui'; [[0, 'home'], [1, 'corner'], [-1, '−1']].forEach(([r, s]) => ctx.fillText(s, toX(r) - ctx.measureText(s).width / 2, y + 30));
+  ctx.fillText('horizon', R.x, y + 30); ctx.fillText('horizon', R.x + R.w - ctx.measureText('horizon').width, y + 30);
+  // 2. the readings' Cauchy (histogram of v/h over a finer run of the same sweep)
+  y += rowH + 16; lab('the readings: the Cauchy · the sweep\'s own', y);
+  const bins = 40, hist = new Array(bins).fill(0); READH.forEach(r => { if (r >= -4 && r < 4) hist[Math.floor((r + 4) / 8 * bins)]++; });
+  const hmax = Math.max(...hist), hh = rowH - 8;
+  hist.forEach((c, i) => { ctx.fillStyle = css('--hist'); const bh = c / hmax * hh; ctx.fillRect(R.x + i / bins * R.w + 1, y + hh - bh, R.w / bins - 2, bh); });
+  ctx.strokeStyle = css('--curve'); ctx.lineWidth = 1.5; ctx.beginPath(); for (let i = 0; i <= 200; i++) { const r = -4 + 8 * i / 200, d = 1 / (1 + r * r); const X = R.x + (r + 4) / 8 * R.w, Y = y + hh - d * hh; i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); } ctx.stroke();
+  // 3. the payloads, in address order
+  y += rowH + 14; lab(`the rings: ${K.name} · replaceable`, y);
+  const mags = K.mag ? pay.filter(p => p !== null).map(p => Math.log1p(p)) : [], mmax = mags.length ? Math.max(...mags) : 1;
+  pay.forEach((p, j) => { const x = colX(j);
+    if (K.mag) { if (p === null) { ctx.fillStyle = css('--line'); ctx.fillRect(x - R.w / N / 2 + 1, y + rowH - 12, R.w / N - 2, 2); } else { const bh = Math.log1p(p) / mmax * (rowH - 14); ctx.fillStyle = j === cur ? css('--bar') : '#5a6070'; ctx.fillRect(x - R.w / N / 2 + 1, y + rowH - 12 - bh, R.w / N - 2, bh); } }
+    else glyph(x, y + rowH / 2 - 4, p, K, j === cur); });
+  // 4. the serial reading at each address: now over before
+  y += rowH + 14; lab(K.mag ? 'the serial reading: now ÷ before (a ratio)' : 'the serial reading: same or different (no ratio exists)', y);
+  if (prevPay) pay.forEach((p, j) => { const q = prevPay[j], x = colX(j), w = R.w / N - 2;
+    if (K.mag) { if (p === null && q === null) return; if (p === null || q === null) { ctx.fillStyle = css('--diff'); ctx.fillRect(x - w / 2, y + 4, w, rowH - 18); return; }
+      const s = Math.log(p / q), mag = Math.min(1, Math.abs(s) * 60); ctx.fillStyle = s > 0 ? css('--up') : css('--down'); ctx.globalAlpha = Math.max(0.08, mag); ctx.fillRect(x - w / 2, y + 4, w, rowH - 18); ctx.globalAlpha = 1; }
+    else { const eq = JSON.stringify(p) === JSON.stringify(q); ctx.fillStyle = eq ? '#1d2027' : css('--diff'); ctx.fillRect(x - w / 2, y + 4, w, rowH - 18); } });
+  prevPay = pay;
+  document.getElementById('check').innerHTML = `addresses after the last swap: <b>${same ? 'identical' : 'changed'}</b>`;
+  requestAnimationFrame(frame);
+}
+addEventListener('resize', resize); resize(); requestAnimationFrame(frame);
+</script>
+</body>
+</html>

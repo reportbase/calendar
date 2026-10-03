@@ -14,6 +14,10 @@ Each opens straight in a browser with no dependencies.
 | `convexity.html` | Keep only the tangent's quadrant: a convex loop enters each quarter once. More than four entries proves a dent; four does not prove convexity, and a shallow dent shows why. | the bearing-quadrant leaf paint |
 | `unicode.html` | A Unicode browser on the fisheye: blocks on one strip, the code points of the focused block on a two-axis fisheye grid, search by block name or hex, and a panel for the chosen character. | added as is |
 | `tns.html` | *Continuous curves on the arc*: the standard number line over 37 bottom views, chosen from the menu: slope charts and waves, the bridge theorem's K_N reconstruction, one to four atoms, v₁ v₂ h, the pointing sphere, the fold, torus vs sphere, the bouquets, the aperture atom, the beam, the sky under boost, radar, the trit, the Wigner turn, three gaps and ?(x). | added as is |
+| `replace-the-rings.html` | *Replace the rings*: The sweep lays addresses and never looks at what sits at them: swap the payloads and the addresses and their Cauchy stay put. | added as is |
+| `ladder.html` | *From somewhere to nowhere*: A bar of 1 sweeps through home, corner and horizon; the rungs show what the view from nowhere adds, and what each one needs. | added as is |
+| `blind-spots.html` | *Where it cannot see*: A still reader holds only addresses (jumps and edges); tap a place and it answers whether it can see it. | added as is |
+| `two-readers.html` | *Two models of observation*: One reader circles a shape: kept payloads go stale when the shape changes; bearings held now do not. | added as is |
 
 Notes carried into the pages:
 
