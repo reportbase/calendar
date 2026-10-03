@@ -34,6 +34,39 @@ Each angle is twice the area of its sector: O–A–P on the circle, O–A–H o
 | the radius r, window = N^r | the scale | — | — | exponent; log-polar |
 | central projection, x = r·tan θ | the lens | — | gnomonic projection | perspective divide; polar sundial |
 
+## g is the sweep (*Serial, Parallel and Nowhere* §3.5, R170)
+
+The needle's angle from the apex is the paper's **sweep**. **g** is that angle as a share of the quarter turn:
+
+    g = θ ÷ 90° = (2/π)·gd(ζ)        s = v/h = tan(90° · g)
+
+| g | on the sweep | s = v/h | on the dial |
+|---|---|---|---|
+| 0 | **home**: pure horizontal, all h, no breadth expressed | 0 | the apex, the needle at rest |
+| ½ | **the corner**, v = h: the near horizon | 1 | 45°, one unit |
+| 1 | **the horizon**: pure vertical, the breadth fully expressed | ∞ | 90°, never reached |
+
+At g = 0 nothing has been met but the addresses: the unit circle, laid before anything is there.
+As g sweeps toward 1, each direction's breadth is met, and the shape is expressed over the swept part.
+`geometry.html` draws a shape of breadth ratio b (`[` `]`) only over the swept directions.
+Over the rest of the quarter turn, only the circle stands.
+(The paper keeps a separate number for a weight between the circle and a whole shape: the mix **m**, §2.1. g is a place on the sweep, not a weight.)
+
+| The dial | The paper |
+|---|---|
+| the hub | the reader, the pivot: v/h = 0/0, no reading of its own |
+| the needle's angle θ | the sweep; g = θ ÷ 90° |
+| tan θ, the value ÷ unit (T) | the reading s = v/h |
+| teal digits, within one unit | the front side: v in terms of h, plain proportion |
+| blue digits, corners at 2ᵏ | the back side: h in terms of v, a count of octaves and a share in each |
+| corners at 2⁻ᵏ (now marked) | the octave edges before the corner: halvings toward home |
+| the mirror in the 45° line (P′, T′) | the flip s ↦ 1/s, which is g ↦ 1 − g |
+| the window, N^r | the range of addresses, laid first |
+
+- **g treats the two facings alike:** g(1/s) = 1 − g(s). ζ does not: ζ is the coordinate in which the gold's pushes add, and g is the coordinate in which the flip is a mirror.
+- **The share** is min(v, h)/max(v, h). It is 1 at the corner and 0 at both ends. Octave k holds shares from 2⁻⁽ᵏ⁺¹⁾ to 2⁻ᵏ, with t = 2ᵏ⁺¹·share − 1 within it.
+- **Orientation:** the dial draws h up the axis and v sideways; the paper draws h across and v up.
+
 ## Which way the lens is read
 
 - **Calendar strips:** the list is on the circle and the screen is the line, so `x = s·tan(d)`. Neighbours spread apart toward the edges, as in a rectilinear lens.

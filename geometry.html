@@ -17,6 +17,16 @@
      so sin θ = tanh ζ and tan θ = sinh ζ: θ = gd(ζ), the gudermannian. The shaded sectors are the two
      angles as areas — an angle is twice its sector's area, on the circle (θ) and the hyperbola (ζ) alike.
 
+     g IS THE SWEEP (Serial, Parallel and Nowhere §3.5, R170). The needle's angle from the apex is the
+     sweep, and g is that angle as a share of the quarter turn: g = θ ÷ 90° = (2/π)·gd(ζ). g = 0 is home,
+     the apex, all h and no v, no breadth expressed; g = ½ is the corner, v = h, the 45° unit; g = 1 is the
+     horizon, the breadth fully expressed. The reading is s = v/h = tan θ, which T marks. The flip s ↦ 1/s
+     is g ↦ 1 − g, the mirror in the 45° line (P′). The octaves run both ways from the corner, doublings
+     past it and halvings before it, and both are marked. The SHAPE, an ellipse whose v breadth is b
+     times its h breadth, is drawn only over the swept directions; the rest is still the unit circle, the
+     addressing laid before any breadth is met. On this dial h runs up the axis and v runs sideways; the
+     paper draws h across and v up.
+
      VOCABULARY (GEOMETRY.md): geometry names first, other fields' names in brackets. θ is the circular
      angle [latitude; the angle whose sine is v/c]. ζ is the hyperbolic angle [rapidity; Mercator height].
      tan θ = sinh ζ is the tangent [proper velocity; gnomonic distance]. The horizon is θ = 90°
@@ -26,7 +36,7 @@
      second; letting go springs the gold home and rests the window on the record reached. Wheel or
      pinch: the radius. On the figure: drag P, T, H or S and everything follows; the blue stays where
      the figure leaves it. Wheel over the figure zooms the figure only.
-     Keys: ← → push the gold at 45° · ↑ ↓ radius · h blue home · t today · n numbers. -->
+     Keys: ← → push the gold at 45° · ↑ ↓ radius · h blue home · t today · n numbers · [ ] the shape's b. -->
 <style>
   :root{--bg:#0b0d12;--panel:#12151c;--gold:#e8c86a;--teal:#1D9E75;--blue:#6aa8e8;--ink:#c9c7be;--dim:#7f8590;
         --mono:"SF Mono",Menlo,Consolas,monospace}
@@ -49,12 +59,20 @@
 const PI = Math.PI, K = 5, CAP = Math.atan(2 ** K), ZMAX = Math.asinh(2 ** K);   // the window's end: the K-th corner, tan θ = 2^K
 const THRUST = 0.4, SPRING_MS = 150, TAP_PX = 6;
 const T0 = Date.UTC(2000, 0, 1), N = 3155760000000;                              // the list: a century of milliseconds
-const BG = '#0b0d12', GOLD = '#e8c86a', TEAL = '#1D9E75', BLUE = '#6aa8e8', INK = '#c9c7be', DIM = '#7f8590';
+const BG = '#0b0d12', GOLD = '#e8c86a', TEAL = '#1D9E75', BLUE = '#6aa8e8', INK = '#c9c7be', DIM = '#7f8590', SHAPE = '#e0876a';
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
 // ── THE STATE: a record, a window round it, and the hyperbolic angle ζ between them ──────────────
 let index = clamp(Date.now() - T0, 0, N - 1), centre = index, reach = 0.45, zeta = 0;
 let gold = 0, held = false, thrusting = false, springAt = -1, last = 0, figZoom = 1;
+let b = 2;                                                     // the shape's breadth ratio: v breadth over h breadth
+const sweepG = () => Math.abs(theta()) / (PI / 2);             // g: the sweep as a share of the quarter turn, the side carried in it
+const shareOf = s => s <= 1 ? s : 1 / s;                       // the smaller part over the larger: v/h before the corner, h/v past it
+function octaveOf(share){                                      // the share as (count of octaves from the corner, share t within one)
+  if (share <= 0) return null;
+  const x = -Math.log2(share), k = x <= 0 ? 0 : Math.ceil(x) - 1;
+  return [k, 2 ** (k + 1) * share - 1];
+}
 const span = () => Math.max(1, Math.pow(N, reach));            // the radius is a logarithm: window = N^r
 const unit = s => s / 2 / 2 ** K;                              // one unit = the 45° corner; the window's half is 2^K units
 const theta = () => Math.atan(Math.sinh(zeta));                // the circular angle of ζ: θ = gd(ζ)
@@ -90,7 +108,7 @@ function layout(){
   dial.cx = dial.x + dial.w / 2; dial.cy = dial.y + dial.h - 86;
   dial.R = Math.max(40, Math.min(dial.w * 0.44, dial.cy - dial.y - top));
   fig.ox = fig.x + fig.w / 2; fig.oy = fig.y + fig.h - 46;
-  fig.L = Math.max(10, Math.min(fig.w / 5, (fig.h - 90) / 3.2)) * figZoom;
+  fig.L = Math.max(10, Math.min(fig.w / 3.4, (fig.h - 90) / 3.2)) * figZoom;
   Lay = { dial, fig };
 }
 const inBox = (b, x, y) => x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h;
@@ -127,9 +145,11 @@ function drawDial(g){
   const rr = Math.max(8, R * reach);                                           // the rung: where the radius is
   ctx.strokeStyle = GOLD; ctx.globalAlpha = 0.55; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.arc(cx, cy, rr, -PI, 0); ctx.stroke(); ctx.globalAlpha = 1;
-  for (let k = 0; k <= K; k++) for (const sg of [-1, 1]) {                     // the corners: tan θ = 1, 2, 4 … 2^K
+  // THE OCTAVE EDGES, BOTH WAYS FROM THE CORNER: doublings past it (tan θ = 2, 4 … 2^K, gold) and
+  // halvings before it (tan θ = ½, ¼ … 2^−K, teal). The flip carries each onto its mirror.
+  for (let k = -K; k <= K; k++) for (const sg of [-1, 1]) {
     const a = sg * Math.atan(2 ** k), sx = Math.sin(a), cy_ = Math.cos(a);
-    ctx.strokeStyle = k === 0 ? GOLD : 'rgba(232,200,106,.6)'; ctx.lineWidth = k === 0 ? 2 : 1.2;
+    ctx.strokeStyle = k === 0 ? GOLD : k > 0 ? 'rgba(232,200,106,.6)' : 'rgba(29,158,117,.75)'; ctx.lineWidth = k === 0 ? 2 : 1.2;
     ctx.beginPath(); ctx.moveTo(cx + (rr - 7) * sx, cy - (rr - 7) * cy_); ctx.lineTo(cx + (rr + 7) * sx, cy - (rr + 7) * cy_); ctx.stroke();
   }
   needle(cx, cy, g, R, GOLD, 2.5);                                             // the gold: a rate
@@ -146,7 +166,7 @@ function drawDial(g){
   ctx.font = '19px ' + getComputedStyle(document.body).getPropertyValue('--mono'); line(date, cx, cy + 30);
   ctx.font = '15px ' + getComputedStyle(document.body).getPropertyValue('--mono'); line(time, cx, cy + 52);
   ctx.font = '12px ' + getComputedStyle(document.body).getPropertyValue('--mono'); ctx.fillStyle = DIM; ctx.textAlign = 'center';
-  ctx.fillText('window ' + fmtDur(s) + ' · unit ' + fmtDur(unit(s)) + ' · r ' + reach.toFixed(3), cx, cy + 74);
+  ctx.fillText('g ' + sweepG().toFixed(3) + ' · window ' + fmtDur(s) + ' · unit ' + fmtDur(unit(s)) + ' · r ' + reach.toFixed(3), cx, cy + 74);
 }
 
 // ── THE FIGURE: centre, circle, tangent, hyperbola — the dial's own geometry ──────────────────────
@@ -167,17 +187,34 @@ function drawFigure(){
   ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox, f.y); ctx.stroke(); ctx.setLineDash([]);
   ctx.strokeStyle = 'rgba(232,200,106,.55)'; ctx.lineWidth = 1.5;               // the tangent line at the apex
   ctx.beginPath(); ctx.moveTo(f.x, oy - s); ctx.lineTo(f.x + f.w, oy - s); ctx.stroke();
-  ctx.strokeStyle = GOLD; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(ox, oy, s, -PI, 0); ctx.stroke();   // the circle
+  ctx.strokeStyle = GOLD; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(ox, oy, s, -PI, 0); ctx.stroke();   // the circle: addresses, no breadth expressed
+  ctx.setLineDash([2, 6]); ctx.strokeStyle = 'rgba(232,200,106,.45)'; ctx.lineWidth = 1;   // the corner, v = h, both sides
+  ctx.beginPath(); ctx.moveTo(...fp(2.2, -2.2)); ctx.lineTo(ox, oy); ctx.lineTo(...fp(2.2, 2.2)); ctx.stroke(); ctx.setLineDash([]);
+  // THE SHAPE, EXPRESSED AS FAR AS THE SWEEP HAS GONE: over the swept directions its breadth has been
+  // met (an ellipse, h breadth 1, v breadth b); over the rest only the circle stands.
+  if (th) {
+    const sg = th < 0 ? -1 : 1, a = Math.abs(th), rad = p => 1 / Math.sqrt(Math.cos(p) ** 2 + (Math.sin(p) / b) ** 2);
+    ctx.beginPath(); ctx.moveTo(ox, oy);
+    for (let i = 0; i <= 90; i++) { const p = a * i / 90, r = rad(p); ctx.lineTo(...fp(r * Math.cos(p), sg * r * Math.sin(p))); }
+    ctx.closePath(); ctx.fillStyle = 'rgba(224,135,106,.10)'; ctx.fill();
+    ctx.beginPath();
+    for (let i = 0; i <= 90; i++) { const p = a * i / 90, r = rad(p), [x, y] = fp(r * Math.cos(p), sg * r * Math.sin(p)); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+    ctx.strokeStyle = SHAPE; ctx.lineWidth = 2.5; ctx.stroke();
+  }
   const tMax = Math.asinh((f.w / 2) / s + 1);                                   // the hyperbola, as far as the figure shows
   ctx.strokeStyle = TEAL; ctx.lineWidth = 2.5; ctx.beginPath();
   for (let i = 0; i <= 160; i++) { const t = -tMax + 2 * tMax * i / 160; const [x, y] = fp(Math.cosh(t), Math.sinh(t)); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
   ctx.stroke();
   ctx.font = '11px ' + mono; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-  for (let k = 0; k <= K; k++) for (const sg of [-1, 1]) {                     // the corners on the tangent: tan θ = 2^k
-    const [x, y] = fp(1, sg * 2 ** k);
-    ctx.strokeStyle = 'rgba(232,200,106,.7)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, y - 6); ctx.lineTo(x, y + 6); ctx.stroke();
-    ctx.fillStyle = 'rgba(232,200,106,.7)'; ctx.fillText((sg < 0 ? '−' : '') + (2 ** k), x, y + 9);
+  const FR = ['', '½', '¼', '⅛'];
+  for (let k = -K; k <= K; k++) for (const sg of [-1, 1]) {                    // the octave edges on the tangent: s = 2^k, both ways
+    const [x, y] = fp(1, sg * 2 ** k), c = k >= 0 ? 'rgba(232,200,106,.7)' : 'rgba(29,158,117,.85)';
+    ctx.strokeStyle = c; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, y - 6); ctx.lineTo(x, y + 6); ctx.stroke();
+    const lab = k >= 0 ? String(2 ** k) : FR[-k];
+    if (lab && (k >= 0 || s * 2 ** k > 22)) { ctx.fillStyle = c; ctx.fillText((sg < 0 ? '−' : '') + lab, x, y + 9); }
   }
+  ctx.font = 'italic 14px ' + mono; ctx.fillStyle = DIM; ctx.textBaseline = 'middle';   // which way h and v run here
+  ctx.textAlign = 'left'; ctx.fillText('h', ox + 8, f.y + 18); ctx.fillText('v →', f.x + f.w - 44, oy - s - 14);
   const h = handles();
   ctx.strokeStyle = BLUE; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(...h.T); ctx.stroke();   // the needle's line, O–P–T
   ctx.setLineDash([7, 6]); ctx.strokeStyle = TEAL; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(...h.H); ctx.stroke();
@@ -188,6 +225,19 @@ function drawFigure(){
   const dot = ([x, y], c, r, label, dx, dy) => { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * PI); ctx.fill();
     if (label) { ctx.font = '600 15px ' + mono; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, x + dx, y + dy); } };
   const side = zeta < 0 ? -1 : 1;
+  if (th) {                                                     // the flip: s ↦ 1/s, g ↦ 1 − g, the mirror in the corner line
+    const tf = side * (PI / 2 - Math.abs(th)), Pf = fp(Math.cos(tf), Math.sin(tf)), Tf = fp(1, Math.tan(tf));
+    ctx.strokeStyle = 'rgba(106,168,232,.5)'; ctx.lineWidth = 1; ctx.setLineDash([2, 4]);
+    ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(...Tf); ctx.stroke(); ctx.setLineDash([]);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = BLUE; ctx.beginPath(); ctx.arc(...Pf, 5.5, 0, 2 * PI); ctx.stroke();
+    ctx.strokeStyle = GOLD; ctx.beginPath(); ctx.arc(...Tf, 5.5, 0, 2 * PI); ctx.stroke();
+    ctx.font = '600 13px ' + mono; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = BLUE; ctx.fillText('P′', Pf[0] + 16 * side, Pf[1] + 4);
+    ctx.fillStyle = GOLD; ctx.fillText('T′', Tf[0] + 2 * side, Tf[1] - 16);
+  }
+  ctx.font = '13px ' + mono; ctx.fillStyle = BLUE; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';   // g beside θ's arc
+  if (th) ctx.fillText('g ' + sweepG().toFixed(3), ox + side * s * 0.36, oy - s * 0.3);
   dot(fp(1, 0), GOLD, 3.5, 'A', -14 * side, -12);
   dot([ox, oy], '#f1efe6', 4, 'O', -14, 10);
   dot(h.S, TEAL, 5, 'S', -14 * side, -14);
@@ -195,11 +245,24 @@ function drawFigure(){
   dot(h.T, GOLD, 6, 'T', 16 * side, 14);
   dot(h.H, TEAL, 6, 'H', 16 * side, -6);
   ctx.font = '12px ' + mono; ctx.fillStyle = DIM; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-  ctx.fillText('drag P, T, H or S · wheel zooms the figure', ox, f.y + f.h - 12);
+  ctx.fillText('drag P, T, H or S · wheel zooms the figure · [ ] the shape’s breadth b = ' + b.toFixed(2), ox, f.y + f.h - 12);
   ctx.restore();
 }
 
 // ── THE NUMBERS: geometry names first, other fields' names after ─────────────────────────────────
+function gRows(sAbs){                                          // the paper's reading of the same state (Serial, Parallel and Nowhere §3)
+  const row = (k, v, o) => '<span class="k">' + k + '</span><span class="v">' + v + '</span><span class="o">' + o + '</span>';
+  const g = sweepG(), share = shareOf(sAbs), oct = octaveOf(share);
+  const side = sAbs === 0 ? 'home' : Math.abs(sAbs - 1) < 1e-9 ? 'corner' : sAbs < 1 ? 'front' : 'back';
+  return '<span class="hd">the sweep · [Serial, Parallel and Nowhere]</span>' +
+    row('g = θ ÷ 90°', g.toFixed(4), '0 home, no breadth · ½ the corner · 1 the horizon, fully expressed') +
+    row('s = v/h', sAbs.toPrecision(4), 'the reading = tan θ = T') +
+    row('side', side, sAbs < 1 ? 'v in terms of h: plain proportion' : 'h in terms of v: octaves, a share in each') +
+    row('share', share.toFixed(4), 'min(v,h) / max(v,h) · 1 at the corner') +
+    row('octave, t', oct ? oct[0] + ', ' + oct[1].toFixed(3) : '—', 'octaves out from the corner · share within one') +
+    row('flip', (1 - g).toFixed(4), 's ↦ 1/s is g ↦ 1 − g · P′, T′') +
+    row('b', b.toFixed(2), 'the shape: v breadth over h · drawn over the swept g');
+}
 function updateNums(){
   if (nums.hidden) return;
   const th = theta(), z = zeta, t = Math.sinh(z), s = span(), f = (x, d) => (Math.abs(x) < 5e-13 ? 0 : x).toFixed(d);
@@ -213,6 +276,7 @@ function updateNums(){
     row('sin θ = tanh ζ', f(Math.tanh(z), 4), 'S · [v/c; Klein-disc radius]') +
     row('sec θ = cosh ζ', f(Math.cosh(z), 4), 'H · [Lorentz γ; Mercator stretch]') +
     row('log₂ |tan θ|', t ? f(Math.log2(Math.abs(t)), 2) : '—', 'corners passed · [octaves]') +
+    gRows(Math.abs(t)) +
     '<span class="hd">the radius, a logarithm</span>' +
     row('r', f(reach, 3), 'window = N^r = ' + fmtDur(s) + ' · [exponent]') +
     row('unit', fmtDur(unit(s)), 'the 45° corner · window half = 2^' + K + ' units');
@@ -226,7 +290,7 @@ function draw(now){
     W = w; H = h; D = d; cv.width = back.width = W * D; cv.height = back.height = H * D; force = true;
   }
   const g = liveGold(now);
-  const key = [Math.round(index), zeta.toFixed(7), g.toFixed(5), reach.toFixed(5), figZoom.toFixed(4), W, H, nums.hidden].join();
+  const key = [Math.round(index), zeta.toFixed(7), g.toFixed(5), reach.toFixed(5), figZoom.toFixed(4), b.toFixed(4), W, H, nums.hidden].join();
   if (key === lastKey && !force) return;
   lastKey = key;
   updateNums(); if (force) layout(); force = false;
@@ -292,6 +356,7 @@ addEventListener('keydown', e => {
   if (e.key === 'h') recentre();
   if (e.key === 't') { index = clamp(Date.now() - T0, 0, N - 1); recentre(); }
   if (e.key === 'n') { nums.hidden = !nums.hidden; updateNums(); force = true; }
+  if (e.key === '[' || e.key === ']') b = clamp(b * 2 ** (e.key === ']' ? 0.25 : -0.25), 1 / 8, 8);
   if (e.key.startsWith('Arrow')) e.preventDefault();
 });
 addEventListener('keyup', e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { letGo(); mode = null; } });
