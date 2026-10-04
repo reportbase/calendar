@@ -65,33 +65,18 @@
     </div>
   </div>
 </div>
+<script src="dial-core.js"></script>
 <script>
-const PI = Math.PI, K = 5, CAP = Math.atan(2 ** K), ZMAX = Math.asinh(2 ** K);
-const THRUST = 0.4, SPRING_MS = 150, TAP_PX = 6;
+const PI = Math.PI, K = 5;
 const T0 = Date.UTC(2000, 0, 1), N = 3155760000000;
-const GOLD = '#e8c86a', TEAL = '#1D9E75', BLUE = '#6aa8e8', NOTE = '#e0876a', INK = '#c9c7be', HI = '#f1efe6', DIM = '#8a909b', BG = '#0b0d12';
+const { GOLD, TEAL, BLUE, BG } = Dial.COLORS, NOTE = '#e0876a', DIM = '#8a909b', clamp = Dial.clamp;
 const MONO = getComputedStyle(document.documentElement).getPropertyValue('--mono');
-const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 // ── THE UNITS, AND THE RADIUS AT WHICH EACH IS THE CORNER ────────────────────────────────────────
 const UNITS = { second: 1e3, minute: 6e4, hour: 36e5, day: 864e5, week: 6048e5, month: 26298e5, year: 315576e5 };
 const reachFor = u => u === 'century' ? 1 : Math.min(1, Math.log(UNITS[u] * 2 * 2 ** K) / Math.log(N));   // window = 2·2^K units
 const DETENTS = Object.keys(UNITS).concat('century').map(u => [u, reachFor(u)]);
-// ── THE DIAL'S STATE ─────────────────────────────────────────────────────────────────────────────
-let index = clamp(Date.now() - T0, 0, N - 1), centre = index, reach = reachFor('day'), zeta = 0;
-let gold = 0, held = false, thrusting = false, springAt = -1, last = 0, settle = null, settleTimer = 0;
-const span = () => Math.max(1, Math.pow(N, reach));
-const unit = s => s / 2 / 2 ** K;
-const theta = () => Math.atan(Math.sinh(zeta));
-function read(){ index = clamp(centre + unit(span()) * Math.sinh(zeta), 0, N - 1); }
-function recentre(){ const s = span(); centre = clamp(index, s / 2, N - s / 2); zeta = clamp(Math.asinh((index - centre) / unit(s)), -ZMAX, ZMAX); }
-function rezoom(){ const s = span(), c = clamp(centre, s / 2, N - s / 2);
-  if (Math.abs(index - c) <= s / 2) { centre = c; zeta = clamp(Math.asinh((index - c) / unit(s)), -ZMAX, ZMAX); } else recentre(); }
-function liveGold(now){ if (held) return thrusting ? gold : 0;
-  if (springAt >= 0) { const t = (now - springAt) / SPRING_MS; if (t >= 1) { springAt = -1; return 0; } return gold * Math.pow(1 - t, 3); } return 0; }
-const nearestDetent = r => DETENTS.reduce((b, d) => Math.abs(d[1] - r) < Math.abs(b[1] - r) ? d : b);
-function settleSoon(){ clearTimeout(settleTimer); settleTimer = setTimeout(() => { settle = { from: reach, to: nearestDetent(reach)[1], t0: performance.now() }; }, 220); }
-function goToDetent(dir){ const i = DETENTS.findIndex(d => d[0] === nearestDetent(reach)[0]); const j = clamp(i + dir, 0, DETENTS.length - 1);
-  settle = { from: reach, to: DETENTS[j][1], t0: performance.now() }; }
+// ── THE DIAL (dial-core.js): the radius settles on the detents ───────────────────────────────────
+const dial = Dial.create({ N, K, index: Date.now() - T0, reach: reachFor('day'), detents: DETENTS, onSettle: () => dock() });
 // ── NOTES, BY HALF HOUR, AS calendar.html KEEPS THEM ─────────────────────────────────────────────
 const store = { load(){ try { return JSON.parse(localStorage.getItem('calendar-notes') || '{}'); } catch { return {}; } },
                 save(n){ try { localStorage.setItem('calendar-notes', JSON.stringify(n)); } catch {} } };
@@ -106,42 +91,28 @@ const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','
 function fields(i){ const d = new Date(T0 + Math.round(i));
   return [[[WD[d.getDay()] + ' ', 864e5], [p2(d.getDate()) + ' ', 864e5], [MON[d.getMonth()] + ' ', 26298e5], [String(d.getFullYear()), 315576e5]],
           [[p2(d.getHours()) + ':', 36e5], [p2(d.getMinutes()) + ':', 6e4], [p2(d.getSeconds()), 1e3]]]; }
-const band = mag => { const s = span(); return mag <= unit(s) ? TEAL : mag <= s / 2 ? BLUE : GOLD; };
+const band = mag => { const s = dial.span(); return mag <= dial.unit(s) ? TEAL : mag <= s / 2 ? BLUE : GOLD; };
 function fmtUnits(ms){
   const names = [[315576e5, 'year'], [26298e5, 'month'], [6048e5, 'week'], [864e5, 'day'], [36e5, 'hour'], [6e4, 'minute'], [1e3, 'second'], [1, 'ms']];
   for (const [u, n] of names) if (ms >= u * 0.999) { const v = ms / u, t = Math.abs(v - Math.round(v)) < 0.01 ? String(Math.round(v)) : v < 10 ? v.toFixed(1) : String(Math.round(v)); return t + ' ' + n + (t === '1' ? '' : 's'); }
   return ms.toPrecision(2) + ' ms';
 }
-// ── DRAWING: only when something moved, on a back canvas copied across once ──────────────────────
-const cv = document.getElementById('cv'), vis = cv.getContext('2d'), back = document.createElement('canvas'), ctx = back.getContext('2d');
-let W = 0, H = 0, D = 0, lastKey = '', force = true, cx = 0, cy = 0, R = 1, markHits = [];
-function draw(now){
-  const w = Math.round(cv.clientWidth), h = Math.round(cv.clientHeight), d = Math.min(2, devicePixelRatio || 1);
-  if (!w || !h) return;
-  if (Math.abs(w - W) > 1 || Math.abs(h - H) > 1 || d !== D) { W = w; H = h; D = d; cv.width = back.width = W * D; cv.height = back.height = H * D; force = true; }
-  const g = liveGold(now), key = [Math.round(index / 1000), zeta.toFixed(6), g.toFixed(4), reach.toFixed(5), W, H, noteTimes.length].join();
-  if (key === lastKey && !force) return; lastKey = key; force = false;
+// ── DRAWING: only when something moved (dial-core.js's surface) ──────────────────────────────────
+const cv = document.getElementById('cv'), surf = Dial.surface(cv, render);
+let cx = 0, cy = 0, R = 1, markHits = [];
+function render(ctx, W, H){
   // the dial as large as the width allows; on a tall narrow screen it sits in the middle, not at the foot
   R = Math.max(60, Math.min(W * 0.46, H - 108)); cx = W / 2; cy = Math.min(H - 84, (H + R) / 2 + 10);
-  ctx.setTransform(D, 0, 0, D, 0, 0); ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H); ctx.lineCap = 'round';
-  const s = span(), u = unit(s), at = (a, r) => [cx + r * Math.sin(a), cy - r * Math.cos(a)];
-  ctx.strokeStyle = 'rgba(201,199,190,.18)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(cx - R - 14, cy); ctx.lineTo(cx + R + 14, cy); ctx.stroke();
-  ctx.strokeStyle = 'rgba(232,200,106,.25)'; ctx.beginPath(); ctx.arc(cx, cy, R, -PI, 0); ctx.stroke();
+  ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
+  const s = dial.span(), u = dial.unit(s), at = (a, r) => Dial.at(cx, cy, a, r);
   // the corners, labelled in the unit this radius rests on: ½, ¼ … before the corner, 1, 2 … 2^K past it
-  const rr = R * 0.78;
   ctx.font = '11px ' + MONO; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  for (let k = -3; k <= K; k++) for (const sg of [-1, 1]) {
-    const a = sg * Math.atan(2 ** k), [x1, y1] = at(a, rr - 7), [x2, y2] = at(a, rr + 7);
-    ctx.strokeStyle = k === 0 ? GOLD : k > 0 ? 'rgba(232,200,106,.55)' : 'rgba(29,158,117,.7)'; ctx.lineWidth = k === 0 ? 2 : 1.2;
-    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
-    if (sg > 0 && (k === 0 || k === 2 || k === -1)) { const [lx, ly] = at(a, rr - 24);
-      ctx.fillStyle = k === 0 ? GOLD : DIM; ctx.fillText((k === -1 ? '½ ' : '') + (k === -1 ? fmtUnits(u).replace(/^1 /, '') : fmtUnits(u * 2 ** k)), lx, ly); }
-  }
-  ctx.strokeStyle = 'rgba(232,200,106,.45)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, rr, -PI, 0); ctx.stroke();
+  Dial.drawRim(ctx, dial, { cx, cy, R, ring: R * 0.78, kmin: -3, label: (k, a, lx, ly) => { if (k !== 0 && k !== 2 && k !== -1) return;
+    ctx.fillStyle = k === 0 ? GOLD : DIM; ctx.fillText((k === -1 ? '½ ' + fmtUnits(u).replace(/^1 /, '') : fmtUnits(u * 2 ** k)), lx, ly); } });
   // the notes, as marks on the rim at the angle that reaches them; beyond the window, counted at the horizons
   markHits = []; let beyondL = 0, beyondR = 0;
   for (const t of noteTimes) {
-    const dlt = t - centre; if (Math.abs(dlt) > s / 2) { if (dlt < 0) beyondL++; else beyondR++; continue; }
+    const dlt = t - dial.centre; if (Math.abs(dlt) > s / 2) { if (dlt < 0) beyondL++; else beyondR++; continue; }
     const a = Math.atan(dlt / u), [x1, y1] = at(a, R - 10), [x2, y2] = at(a, R + 10);
     ctx.strokeStyle = NOTE; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
     markHits.push({ t, x: (x1 + x2) / 2, y: (y1 + y2) / 2 });
@@ -149,95 +120,59 @@ function draw(now){
   ctx.fillStyle = NOTE; ctx.font = '12px ' + MONO;
   if (beyondL) { ctx.textAlign = 'left'; ctx.fillText('◀ ' + beyondL, cx - R - 10, cy - 14); }
   if (beyondR) { ctx.textAlign = 'right'; ctx.fillText(beyondR + ' ▶', cx + R + 10, cy - 14); }
-  // the needles
-  const needle = (a, col, wdt) => { const [x, y] = at(a, R); ctx.strokeStyle = col; ctx.lineWidth = wdt; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(x, y); ctx.stroke(); };
-  needle(g, GOLD, 2.5);
-  if (Math.abs(zeta) > 1e-9) { needle(theta(), BLUE, 2.5); const [x, y] = at(theta(), R); ctx.fillStyle = BLUE; ctx.beginPath(); ctx.arc(x, y, 4, 0, 2 * PI); ctx.fill(); }
-  ctx.fillStyle = GOLD; ctx.beginPath(); ctx.arc(cx, cy, 4, 0, 2 * PI); ctx.fill();
+  Dial.drawNeedles(ctx, dial, { cx, cy, R, gold: dial.liveGold(performance.now()) });
   // the record
-  const [date, time] = fields(index), line = (parts, y) => { const w = parts.reduce((t, [p]) => t + ctx.measureText(p).width, 0); let x = cx - w / 2;
+  const [date, time] = fields(dial.index), line = (parts, y) => { const w = parts.reduce((t, [p]) => t + ctx.measureText(p).width, 0); let x = cx - w / 2;
     ctx.textAlign = 'left'; for (const [p, mag] of parts) { ctx.fillStyle = band(mag); ctx.fillText(p, x, y); x += ctx.measureText(p).width; } };
   ctx.textBaseline = 'alphabetic';
   ctx.font = '20px ' + MONO; line(date, cy + 30); ctx.font = '15px ' + MONO; line(time, cy + 52);
   ctx.font = '12px ' + MONO; ctx.fillStyle = DIM; ctx.textAlign = 'center';
   ctx.fillText('the corner is ' + fmtUnits(u) + ' · the window ' + fmtUnits(s), cx, cy + 74);
-  vis.globalCompositeOperation = 'copy'; vis.drawImage(back, 0, 0);
-}
-function step(now){
-  const dt = Math.min(0.05, (now - (last || now)) / 1000); last = now;
-  if (held && thrusting) { zeta = clamp(zeta + Math.tan(gold) * THRUST * dt, -ZMAX, ZMAX); read(); }
-  if (settle) { const t = Math.min(1, (now - settle.t0) / 260), e = 1 - Math.pow(1 - t, 3);
-    reach = settle.from + (settle.to - settle.from) * e; rezoom(); read(); if (t >= 1) { settle = null; dock(); } }
-  draw(now); dockLive(); requestAnimationFrame(step);
 }
 // ── THE DOCK ─────────────────────────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id), noteEl = $('note');
 let shownSlot = '';
 function dockLive(){                                                    // the note field follows the half hour under the needle
-  const k = keyOf(slotOf(index));
-  if (k !== shownSlot && document.activeElement !== noteEl) { shownSlot = k; const d = slotOf(index);
+  const k = keyOf(slotOf(dial.index));
+  if (k !== shownSlot && document.activeElement !== noteEl) { shownSlot = k; const d = slotOf(dial.index);
     $('slot').textContent = WD[d.getDay()] + ' ' + p2(d.getDate()) + ' ' + MON[d.getMonth()] + ' ' + d.getFullYear() + ', ' + p2(d.getHours()) + ':' + p2(d.getMinutes());
     noteEl.value = notes[k] || ''; }
 }
 function dock(){
-  const cur = nearestDetent(reach)[0];
-  document.querySelectorAll('.u').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.u === cur && Math.abs(reach - reachFor(cur)) < 1e-6)));
+  const cur = dial.nearestDetent()[0];
+  document.querySelectorAll('.u').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.u === cur && Math.abs(dial.reach - reachFor(cur)) < 1e-6)));
   $('count').textContent = noteTimes.length + (noteTimes.length === 1 ? ' note' : ' notes');
 }
 noteEl.addEventListener('input', () => { const k = shownSlot; if (noteEl.value.trim()) notes[k] = noteEl.value; else delete notes[k];
   store.save(notes); indexNotes(); dock(); });
 noteEl.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === 'Escape') noteEl.blur(); e.stopPropagation(); });
 noteEl.addEventListener('blur', () => { shownSlot = ''; });
-document.querySelectorAll('.u').forEach(b => b.onclick = () => { settle = { from: reach, to: reachFor(b.dataset.u), t0: performance.now() }; });
-function goTo(t){ index = clamp(t, 0, N - 1); recentre(); force = true; }
-function stepNote(dir){ const here = index; const t = dir > 0 ? noteTimes.find(x => x > here + 1) : [...noteTimes].reverse().find(x => x < here - 1); if (t !== undefined) goTo(t); }
+document.querySelectorAll('.u').forEach(b => b.onclick = () => dial.settleTo(reachFor(b.dataset.u)));
+function goTo(t){ dial.goTo(t); surf.invalidate(); }
+function stepNote(dir){ const here = dial.index; const t = dir > 0 ? noteTimes.find(x => x > here + 1) : [...noteTimes].reverse().find(x => x < here - 1); if (t !== undefined) goTo(t); }
 $('prev').onclick = () => stepNote(-1); $('next').onclick = () => stepNote(1);
 $('today').onclick = () => goTo(Date.now() - T0);
 $('imp').onclick = () => $('file').click();
 $('file').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return;
-  try { const got = JSON.parse(await f.text()); notes = { ...notes, ...got }; store.save(notes); indexNotes(); dock(); force = true; } catch {}
+  try { const got = JSON.parse(await f.text()); notes = { ...notes, ...got }; store.save(notes); indexNotes(); dock(); surf.invalidate(); } catch {}
   e.target.value = ''; });
-// ── HANDS ────────────────────────────────────────────────────────────────────────────────────────
-const local = e => { const b = cv.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
-const touching = new Map(); let pinch = null, x0 = 0, y0 = 0;
-const fingers = () => { const [a, b] = [...touching.values()]; return Math.max(8, Math.hypot(a.x - b.x, a.y - b.y)); };
-function letGo(){ if (held) { held = false; if (thrusting) springAt = performance.now(); thrusting = false; recentre(); } }
-cv.addEventListener('pointerdown', e => {
-  cv.setPointerCapture(e.pointerId); touching.set(e.pointerId, { x: e.clientX, y: e.clientY }); settle = null; clearTimeout(settleTimer);
-  if (touching.size === 2) { letGo(); pinch = { d0: fingers(), r0: reach }; return; }
-  [x0, y0] = local(e); held = true; thrusting = false; springAt = -1;
-});
-cv.addEventListener('pointermove', e => {
-  if (!touching.has(e.pointerId)) return; touching.set(e.pointerId, { x: e.clientX, y: e.clientY });
-  if (pinch && touching.size === 2) { reach = clamp(pinch.r0 + Math.log2(fingers() / pinch.d0) * 0.25, 0, 1); rezoom(); read(); return; }
-  if (!held) return; const [x, y] = local(e);
-  if (!thrusting && Math.hypot(x - x0, y - y0) > TAP_PX) thrusting = true;
-  if (thrusting) gold = clamp(Math.atan2(x - cx, Math.max(0, cy - y)), -CAP, CAP);
-});
-const up = e => { touching.delete(e.pointerId);
-  if (pinch) { if (touching.size < 2) { pinch = null; settleSoon(); } return; }
-  if (held && !thrusting) {                                             // a tap: on a note mark it goes there, anywhere else nothing
-    const [x, y] = local(e); let best = null, bd = 18;
+// ── HANDS: the dial's (dial-core.js), plus a tap on a note mark and the calendar's keys ───────────
+Dial.hands(cv, dial, {
+  hub: () => ({ cx, cy }),
+  onTap: (x, y) => { let best = null, bd = 18;                           // a tap: on a note mark it goes there, anywhere else nothing
     for (const m of markHits) { const dd = Math.hypot(m.x - x, m.y - y); if (dd < bd) { bd = dd; best = m; } }
-    held = false; if (best) goTo(best.t); return; }
-  letGo(); };
-cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
-cv.addEventListener('wheel', e => { const f = e.deltaMode === 1 ? 16 : 1; settle = null;
-  if (e.deltaX) { zeta = clamp(zeta + e.deltaX * f / 2000, -ZMAX, ZMAX); read(); }
+    if (best) goTo(best.t); },
   // gentler than city-dial's: here a wheel notch should be about one calendar unit, not three
-  if (e.deltaY) { reach = clamp(reach + (e.ctrlKey ? -e.deltaY / 700 : e.deltaY / 1700) * f, 0, 1); rezoom(); read(); settleSoon(); }
-  e.preventDefault(); }, { passive: false });
+  wheel: { x: 1 / 2000, y: 1 / 1700, pinch: 1 / 700 },
+  keysOff: () => document.activeElement === noteEl,
+});
 addEventListener('keydown', e => {
   if (document.activeElement === noteEl) return;
-  if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.repeat) { held = true; thrusting = true; springAt = -1; gold = (e.key === 'ArrowLeft' ? -1 : 1) * PI / 4; }
-  if (e.key === 'ArrowUp') goToDetent(1); if (e.key === 'ArrowDown') goToDetent(-1);
   if (e.key === '[') stepNote(-1); if (e.key === ']') stepNote(1); if (e.key === 't') $('today').onclick();
   if (e.key === 'n') { noteEl.focus(); e.preventDefault(); }
-  if (e.key.startsWith('Arrow')) e.preventDefault();
 });
-addEventListener('keyup', e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') letGo(); });
-addEventListener('resize', () => { force = true; });
-indexNotes(); rezoom(); dock(); requestAnimationFrame(step);
+indexNotes(); dock();
+Dial.run(dial, now => { surf.draw([Math.round(dial.index / 1000), dial.zeta.toFixed(6), dial.liveGold(now).toFixed(4), dial.reach.toFixed(5), noteTimes.length].join()); dockLive(); });
 </script>
 </body>
 </html>

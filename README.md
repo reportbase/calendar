@@ -7,8 +7,11 @@ a calendar built on it, and standalone demos of ideas from the wider project.
 
 **Live site: https://reportbase.github.io/calendar/** (the index links every page)
 
-Every page is a single self-contained HTML file with no build step and no dependencies. Open any of them straight
-in a browser, locally or on the site.
+Every page is plain HTML with no build step and no outside dependencies. Open any of them straight in a browser,
+locally or on the site. `geometry.html` and `dial-calendar.html` share the dial itself through
+[`dial-core.js`](dial-core.js), which sits beside them: the model (record, window, ζ, the gold and the blue), the
+hands (pan, tap, pinch, wheel, keys), the redraw-only-on-change surface, and the rim and needles. Every other page
+is a single self-contained file.
 
 ## The dial
 
