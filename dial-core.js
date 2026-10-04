@@ -28,7 +28,9 @@
 
   // ── THE MODEL ──────────────────────────────────────────────────────────────────────────────────
   // options: N (the list's length), K (corners to the window's end, 5), index, reach, thrust (0.4),
-  // springMs (150), detents ([[name, reach], …] the radius settles on), onSettle (after a settle ends)
+  // springMs (150), detents ([[name, reach], …] the radius settles on), onSettle (after a settle ends),
+  // free (the dial reads ζ itself: letting go keeps the blue where it is, and the radius is a separate
+  // setting that leaves ζ alone; for pages where the needle's place is the setting, not a way to a record)
   function create(o) {
     const N = o.N, K = o.K ?? 5, CAP = Math.atan(2 ** K), ZMAX = Math.asinh(2 ** K);
     const THRUST = o.thrust ?? 0.4, SPRING_MS = o.springMs ?? 150;
@@ -63,12 +65,12 @@
         else d.recentre();
       },
       setZeta(z) { d.zeta = clamp(z, -ZMAX, ZMAX); d.read(); },
-      setReach(r) { d.reach = clamp(r, 0, 1); d.rezoom(); d.read(); },
+      setReach(r) { d.reach = clamp(r, 0, 1); if (!o.free) { d.rezoom(); d.read(); } },
       goTo(i) { d.index = clamp(i, 0, N - 1); d.recentre(); },
       // the gold: held, aimed, let go
       hold() { d.held = true; d.thrusting = false; d.springAt = -1; },
       aim(a) { d.gold = clamp(a, -CAP, CAP); },
-      letGo() { if (d.held) { d.held = false; if (d.thrusting) d.springAt = performance.now(); d.thrusting = false; d.recentre(); } },
+      letGo() { if (d.held) { d.held = false; if (d.thrusting) d.springAt = performance.now(); d.thrusting = false; if (!o.free) d.recentre(); } },
       liveGold(now) {                                                 // the gold as drawn: the hand, or the spring back to the apex
         if (d.held) return d.thrusting ? d.gold : 0;
         if (d.springAt >= 0) { const t = (now - d.springAt) / SPRING_MS; if (t >= 1) { d.springAt = -1; return 0; } return d.gold * Math.pow(1 - t, 3); }

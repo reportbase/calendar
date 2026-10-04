@@ -29,6 +29,7 @@ Standalone pages, one idea each, pulled out of the draw project's labs. See [dem
 
 | Page | |
 |---|---|
+| [level-of-detail.html](https://reportbase.github.io/calendar/demos/level-of-detail.html) | The dial (dial-core.js) as a level-of-detail sweep: the rung span R = swing ÷ step is a v/h reading, so the shape emerges from the unit curve (g = 0) through the corner R* = 1/(1+|u|) to the figure (g → 1); the radius is the register's cells, trading reach against resolution. From draw.html's labs *rung by rung*, *where the detail turns* and *where the geometry goes*. |
 | [breadth-and-density.html](https://reportbase.github.io/calendar/demos/breadth-and-density.html) | Every octave a 0 to π/2 sweep of its own, by the one Möbius map that sends ½c, c, 2c to home, corner, horizon: additive outside (place = n + g, infinite breadth), recursive inside (each octave's sweep has octaves of its own, infinite density), with the share and g laid side by side. |
 | [octave-browser.html](https://reportbase.github.io/calendar/demos/octave-browser.html) | Every octal is one octave with two facings, ½c to 2c, split by its own corner c into a front and a back; the home octal is plain proportion, the octals beyond a ladder (corners 4× apart); leave the home octal and the view carries one octal (Serial, Parallel and Nowhere §3.3, R167, Prop. 3.8). |
 | [two-fisheyes.html](https://reportbase.github.io/calendar/demos/two-fisheyes.html) | Two views of one array disagree about positions and agree about cross ratios: one number sends an element across. |

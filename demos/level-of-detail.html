@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Level of Detail</title>
+<!-- LEVEL OF DETAIL IS A SWEEP. The dial of dial-core.js, its sweep driving the register's step, and the
+     shape as a reader holds it at that step (draw.html's labs "the figure, rung by rung", "where the
+     detail turns" and "where the geometry goes", read through Serial, Parallel and Nowhere).
+
+     THE READING. A reader at the shape's centre reads its reach in every direction, and holds each as a
+     ratio to the nearest rung of a register whose step is σ (in log reach). The figure's SWING S is the log
+     of its largest reach over its smallest. The rung span R = S ÷ σ is a situation-3 reading, v over h:
+     v the swing, the shape's; h the step, the reader's own. So the level of detail is a sweep:
+       g = 0, R = 0    one rung: every reading rounds to home, the unit curve, a statement about the reader
+       front side      silent: the held figure is the reader's own laid unit, in terms of the observer
+       g = ½, R = R*   the corner: the figure's largest departure from home equals half a step
+       back side       speaking: departures, the shape's, counted in the observer's steps
+       g → 1, R → ∞    the figure, its breadth fully expressed, approached and never reached (R170)
+     The corner is at R* = 1/(1+|u|), u where home sits in the swing: 1 when home is mid-swing, ½ at an
+     extreme, an octave apart (draw.html, lod_corner.py). Each halving of the step is one octave of this
+     reading: one level of the nesting.
+
+     REACH AGAINST RESOLUTION. The register has a fixed number of cells C, centred on home, so its reach
+     is C·σ/2: a finer step reaches less far, and departures beyond it rail. Resolution (the octaves
+     within) and reach (the octaves outward) share one budget, Proposition 3.8's slide; laying more
+     cells buys both. The dial's radius is the budget: pinch or wheel.
+
+     A caution kept from draw.html: this is the corner of a derived relation (step against swing), a
+     reading about readings, not the corner of the shape's own v over h.
+
+     Hands: pan on the dial (the gold pushes the sweep; it stays where you leave it) · pinch or wheel: the
+     cells · tap the figure: lay home in that direction · the buttons: the shape · ← → ↑ ↓ as on every dial. -->
+<style>
+  :root{--bg:#0b0d12;--panel:#12151c;--line:#2b2e36;--gold:#e8c86a;--teal:#1D9E75;--blue:#6aa8e8;--ink:#c9c7be;--hi:#f1efe6;--dim:#8a909b;
+        --mono:"SF Mono",Menlo,Consolas,monospace;color-scheme:dark}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);overflow:hidden;overscroll-behavior:none;font:12px var(--mono)}
+  #app{height:100%;display:flex;flex-direction:column}
+  .bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:center;padding:8px 10px;background:var(--panel);border-bottom:1px solid var(--line)}
+  button{font:12px var(--mono);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:5px 9px;cursor:pointer}
+  button[aria-pressed="true"]{border-color:var(--gold);color:var(--gold)}
+  button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  canvas{display:block;flex:1;min-height:0;width:100%;touch-action:none;cursor:crosshair}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="bar" id="shapes" role="group" aria-label="The shape"></div>
+  <canvas id="cv" aria-label="Left, the dial: its sweep sets the level of detail. Right, the shape as the reader holds it, and a strip of the octaves."></canvas>
+</div>
+<script src="../dial-core.js"></script>
+<script>
+const PI = Math.PI, { BG, GOLD, TEAL, BLUE, INK, HI, DIM } = Dial.COLORS, RED = '#e0605a', clamp = Dial.clamp;
+const MONO = getComputedStyle(document.documentElement).getPropertyValue('--mono');
+const ND = 360;                                                           // directions the reader looks in
+
+// ── THE SHAPES: reaches from the reader at the centre, r(θ) ──────────────────────────────────────────
+const tri = x => 2 * Math.abs(x / (2 * PI) - Math.floor(x / (2 * PI) + 0.5));   // a triangle wave, 0…1
+const SHAPES = [
+  ['clover',   a => 1 + 0.4 * Math.cos(3 * a)],
+  ['ellipse',  a => 1 / Math.sqrt(Math.cos(a) ** 2 + (Math.sin(a) / 0.55) ** 2)],
+  ['square',   a => 1 / Math.max(Math.abs(Math.cos(a)), Math.abs(Math.sin(a)))],
+  ['star',     a => 0.55 + 0.6 * (1 - tri(5 * a))],
+  ['limaçon',  a => 1 + 0.6 * Math.cos(a)],
+  ['bean',     a => 1 + 0.3 * Math.cos(2 * a) + 0.22 * Math.cos(3 * a) + 0.1 * Math.sin(a)],
+  ['ripple on a lobe', a => (1 + 0.35 * Math.cos(3 * a)) * (1 + 0.035 * Math.cos(27 * a))],
+];
+let shape = 0, home = 0;                                                  // home: the direction the unit is laid in
+const shapesEl = document.getElementById('shapes');
+shapesEl.innerHTML = SHAPES.map((s, i) => `<button type="button" data-i="${i}">${s[0]}</button>`).join('');
+function midHome(i){                                                     // the direction whose reach sits mid-swing: u ≈ 0, the corner at R ≈ 1
+  const f = SHAPES[i][1], lr = []; for (let k = 0; k < ND; k++) lr.push(Math.log(f(2 * PI * k / ND)));
+  const mid = (Math.max(...lr) + Math.min(...lr)) / 2; let best = 0;
+  for (let k = 0; k < ND; k++) if (Math.abs(lr[k] - mid) < Math.abs(lr[best] - mid)) best = k;
+  return best;
+}
+const pickShape = i => { shape = i; home = midHome(i); cache = null; if (typeof surf !== 'undefined') surf.invalidate(); shapesEl.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.i === i))); };
+shapesEl.querySelectorAll('button').forEach(b => b.onclick = () => pickShape(+b.dataset.i));
+
+// ── THE FIGURE AS READ: log reach per direction, its swing, where home sits in it ─────────────────────
+let cache = null;
+function figure(){
+  if (cache && cache.shape === shape && cache.home === home) return cache;
+  const f = SHAPES[shape][1], lr = [];
+  for (let k = 0; k < ND; k++) lr.push(Math.log(f(2 * PI * k / ND)));
+  let lo = Infinity, hi = -Infinity; for (const v of lr) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+  const S = hi - lo, a = lr[home], u = (a - (hi + lo) / 2) / (S / 2);
+  let far = 0; for (const v of lr) far = Math.max(far, Math.abs(v - a));   // the largest departure from home
+  return (cache = { shape, home, lr, S, a, u, far, Rstar: 1 / (1 + Math.abs(u)) });
+}
+// the register: step σ = S / R, C cells centred on home; each reading held to its nearest rung, railed past reach
+function hold(F, R, C){
+  if (R <= 0) return { held: F.lr.map(() => F.a), rungs: 1, railed: 0, silent: true, carried: 0 };
+  const sig = F.S / R, reach = (C / 2) * sig;
+  let railed = 0; const ks = new Set();
+  const held = F.lr.map(v => { let k = Math.round((v - F.a) / sig), x = k * sig;
+    if (Math.abs(x) > reach) { x = Math.sign(x) * Math.floor(C / 2) * sig; k = Math.round(x / sig); railed++; }
+    ks.add(k); return F.a + x; });
+  // share of the shape carried: 1 − error variance ÷ figure variance, offsets removed (draw.html's wdtCarried)
+  let ma = 0, mb = 0; for (let i = 0; i < ND; i++) { ma += F.lr[i]; mb += held[i]; } ma /= ND; mb /= ND;
+  let ve = 0, vf = 0; for (let i = 0; i < ND; i++) { const fv = F.lr[i] - ma, e = fv - (held[i] - mb); ve += e * e; vf += fv * fv; }
+  return { held, rungs: ks.size, railed, silent: ks.size === 1 && !railed, carried: vf > 0 ? 1 - ve / vf : 0 };
+}
+const cellsOf = r => Math.round(2 ** (1 + 7 * r));                      // the budget: 2 … 256 cells, from the dial's radius
+
+// ── THE DIAL: the sweep is the level of detail; free, so it stays where it is left ────────────────────
+const dial = Dial.create({ N: 2 ** 53, K: 5, index: 2 ** 52, reach: 4 / 7, free: true });
+dial.setZeta(Math.asinh(0.5));
+const R_OF = () => Math.abs(Math.sinh(dial.zeta));
+
+// ── DRAWING ──────────────────────────────────────────────────────────────────────────────────────────
+const cv = document.getElementById('cv'), surf = Dial.surface(cv, render);
+let L = null;
+function layout(W, H){
+  const land = W >= H * 1.05;
+  if (land) { const dw = W * 0.42;
+    return { land, dial: { cx: dw / 2, cy: H - 96, R: Math.max(50, Math.min(dw * 0.44, H - 200)) },
+             fig: { x: dw, y: 0, w: W - dw, h: H - 120 }, strip: { x: dw, y: H - 118, w: W - dw, h: 110 } }; }
+  const fh = H * 0.36, sh = 86, dh = H - fh - sh;
+  return { land, fig: { x: 0, y: 0, w: W, h: fh }, strip: { x: 0, y: fh, w: W, h: sh },
+           dial: { cx: W / 2, cy: fh + sh + dh - 92, R: Math.max(46, Math.min(W * 0.44, dh - 150)) } };
+}
+function outline(ctx, cx, cy, scale, vals, close = true){            // vals: log reach per direction
+  ctx.beginPath();
+  for (let k = 0; k <= ND; k++) { const i = k % ND, a = 2 * PI * i / ND, r = Math.exp(vals[i]) * scale;
+    const x = cx + r * Math.cos(a), y = cy - r * Math.sin(a); k ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+  if (close) ctx.closePath();
+}
+function drawFigure(ctx, box, F, Hd, big){
+  const cx = box.x + box.w / 2, cy = box.y + box.h / 2 + (big ? 6 : 0);
+  const maxr = Math.exp(F.a + Math.max(F.far, ...F.lr.map(v => v - F.a))) || 1;
+  const scale = Math.min(box.w, box.h) * (big ? 0.40 : 0.42) / Math.exp(Math.max(...F.lr));
+  ctx.save(); ctx.beginPath(); ctx.rect(box.x, box.y, box.w, box.h); ctx.clip();
+  ctx.setLineDash([3, 4]); ctx.strokeStyle = 'rgba(232,200,106,.4)'; ctx.lineWidth = 1;   // the unit laid at home
+  ctx.beginPath(); ctx.arc(cx, cy, Math.exp(F.a) * scale, 0, 2 * PI); ctx.stroke(); ctx.setLineDash([]);
+  outline(ctx, cx, cy, scale, F.lr); ctx.strokeStyle = 'rgba(201,199,190,.28)'; ctx.lineWidth = 1; ctx.stroke();   // the figure
+  outline(ctx, cx, cy, scale, Hd.held);
+  ctx.strokeStyle = Hd.silent ? GOLD : Hd.railed ? RED : BLUE; ctx.lineWidth = big ? 2.2 : 1.4; ctx.stroke();    // as held
+  if (big) {                                                              // home: the direction the unit was laid in
+    const ha = 2 * PI * home / ND, hr = Math.exp(F.lr[home]) * scale;
+    ctx.strokeStyle = 'rgba(232,200,106,.6)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + hr * Math.cos(ha), cy - hr * Math.sin(ha)); ctx.stroke();
+    ctx.fillStyle = GOLD; ctx.beginPath(); ctx.arc(cx + hr * Math.cos(ha), cy - hr * Math.sin(ha), 4, 0, 2 * PI); ctx.fill();
+    ctx.fillStyle = HI; ctx.beginPath(); ctx.arc(cx, cy, 2.5, 0, 2 * PI); ctx.fill();
+  }
+  ctx.restore();
+  return { cx, cy, scale };
+}
+let figGeom = null;
+function render(ctx, W, H, resized){
+  if (resized || !L) L = layout(W, H);
+  ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
+  const F = figure(), R = R_OF(), C = cellsOf(dial.reach), Hd = hold(F, R, C), now = performance.now();
+  // ── the figure, at this level of detail ──
+  figGeom = drawFigure(ctx, L.fig, F, Hd, true);
+  ctx.textAlign = 'left'; ctx.font = '12px ' + MONO;
+  const fx = L.fig.x + 12; let fy = L.fig.y + 20;
+  const say = (t, c) => { ctx.fillStyle = c; ctx.fillText(t, fx, fy); fy += 16; };
+  say(SHAPES[shape][0] + ' · as the reader holds it', HI);
+  say('R = swing ÷ step = ' + (R < 10 ? R.toFixed(2) : R.toFixed(1)) + '  ·  ' + Hd.rungs + (Hd.rungs === 1 ? ' rung' : ' rungs'), INK);
+  say(Hd.silent ? 'silent: the reader’s own unit, all the way round' : 'speaking: carries ' + Math.round(100 * Hd.carried) + '% of the shape', Hd.silent ? GOLD : BLUE);
+  if (Hd.railed) say(Hd.railed + ' of ' + ND + ' looks railed: beyond the register’s reach', RED);
+  ctx.fillStyle = DIM; ctx.fillText((W < 700 ? 'corner R* = ' : 'corner here at R* = 1/(1+|u|) = ') + F.Rstar.toFixed(2) + ' (home at u = ' + F.u.toFixed(2) + ')' + (W < 700 ? '' : ' · tap the figure to lay home elsewhere'), fx, L.fig.y + L.fig.h - 10);
+  // ── the strip: the octaves of R, the figure emerging one octave at a time ──
+  const oct = [-2, -1, 0, 1, 2, 3, 4], n = oct.length + 1, cw = L.strip.w / n;
+  const cur = R > 0 ? Math.log2(R) : -Infinity;
+  ctx.font = '11px ' + MONO; ctx.textAlign = 'center';
+  oct.concat([Infinity]).forEach((k, i) => {
+    const box = { x: L.strip.x + i * cw + 2, y: L.strip.y + 4, w: cw - 4, h: L.strip.h - 22 };
+    const Rk = isFinite(k) ? 2 ** k : 1e9, Hk = isFinite(k) ? hold(F, Rk, C) : { held: F.lr, silent: false, railed: 0 };
+    const on = isFinite(k) && Math.abs(cur - k) <= 0.5;
+    ctx.fillStyle = on ? 'rgba(106,168,232,.12)' : 'rgba(255,255,255,.02)'; ctx.fillRect(box.x, box.y, box.w, box.h);
+    drawFigure(ctx, box, F, Hk, false);
+    ctx.fillStyle = on ? BLUE : Rk < F.Rstar ? GOLD : DIM;
+    ctx.fillText(isFinite(k) ? 'R ' + (k < 0 ? (k === -1 ? '½' : '¼') : 2 ** k) : (cw < 90 ? '∞' : 'the figure'), box.x + box.w / 2, L.strip.y + L.strip.h - 4);
+  });
+  // ── the dial: the sweep is the level of detail; the radius is the budget ──
+  const { cx, cy, R: DR } = L.dial;
+  Dial.drawRim(ctx, dial, { cx, cy, R: DR, ring: DR * (0.3 + 0.62 * dial.reach), kmin: -3,
+    label: (k, a, lx, ly) => { if (k === 0 || k === 2 || k === -2) { ctx.font = '11px ' + MONO; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = k === 0 ? GOLD : DIM; ctx.fillText('R ' + (k < 0 ? '¼' : 2 ** k), lx, ly); ctx.textBaseline = 'alphabetic'; } } });
+  const tick = (Rv, col, w) => { if (!(Rv > 0) || !isFinite(Rv)) return; for (const sg of [-1, 1]) { const a = sg * Math.atan(Rv);
+    const [x1, y1] = Dial.at(cx, cy, a, DR - 12), [x2, y2] = Dial.at(cx, cy, a, DR + 12);
+    ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); } };
+  tick(F.Rstar, HI, 2.5);                                                // this figure's corner, from this home
+  tick(C * F.S / (2 * F.far), RED, 2);                                   // where the register's reach runs out
+  Dial.drawNeedles(ctx, dial, { cx, cy, R: DR, gold: dial.liveGold(now) });
+  Dial.drawReading(ctx, dial, { cx, y: cy + 26, font: MONO });
+  ctx.textAlign = 'center'; ctx.font = '12px ' + MONO; ctx.fillStyle = DIM;
+  const narrow = W < 700, reachTxt = R > 0 ? (C / 2 * F.S / R).toFixed(2) : '∞';
+  ctx.fillText(narrow ? C + ' cells · reach ' + reachTxt + ' · pinch: cells' : C + ' cells · reach ' + reachTxt + ' in log reach · pinch or wheel: the cells', cx, cy + 44);
+  ctx.font = '11px ' + MONO; ctx.fillStyle = HI; ctx.fillText(narrow ? 'white: corner · red: reach runs out' : 'white: this figure’s corner · red: the reach runs out', cx, cy + 60);
+}
+Dial.run(dial, now => surf.draw([dial.zeta.toFixed(6), dial.liveGold(now).toFixed(4), dial.reach.toFixed(4), shape, home].join()));
+
+// ── HANDS ────────────────────────────────────────────────────────────────────────────────────────────
+const inBox = (b, x, y) => b && x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h;
+Dial.hands(cv, dial, {
+  hub: () => L.dial,
+  claim: (x, y) => !!L && (inBox(L.fig, x, y) || inBox(L.strip, x, y)),
+  press: (x, y) => {
+    if (inBox(L.strip, x, y)) { const i = Math.floor((x - L.strip.x) / (L.strip.w / 8)); if (i < 7) dial.setZeta(Math.asinh(2 ** (i - 2))); return; }
+    if (!figGeom) return; const a = Math.atan2(figGeom.cy - y, x - figGeom.cx);   // lay home in that direction
+    home = ((Math.round(a / (2 * PI) * ND) % ND) + ND) % ND; cache = null; surf.invalidate();
+  },
+  move: (x, y) => { if (inBox(L.fig, x, y) && figGeom) { const a = Math.atan2(figGeom.cy - y, x - figGeom.cx);
+    home = ((Math.round(a / (2 * PI) * ND) % ND) + ND) % ND; cache = null; } },
+  wheel: { x: 1 / 2000, y: 1 / 600, pinch: 1 / 300 },
+  reachStep: 1 / 7,
+});
+pickShape(0);
+</script>
+</body>
+</html>
