@@ -58,4 +58,7 @@ const Fc = figure(SH[0][1], 'mid'); out.railAt16 = [8, 32, 256].map(C => ({ C, r
     let sxy = 0, sxx = 0, syy = 0; for (let k = 0; k < ND; k++) { const x = res[k] - mr, y = rip[k] - mq; sxy += x * y; sxx += x * x; syy += y * y; }
     return sxy / Math.sqrt(sxx * syy || 1); };
   out.ripple = { S: +F.S.toFixed(3), Sripple: +Sr.toFixed(4), naive: +(F.S / Sr).toFixed(1), corrByR: [1, 2, 4, 8, 11, 16, 32, 64, 128].map(R => [R, +corr(R).toFixed(2)]) }; }
+// ── 5. how the remainder falls: 1 − carried against the rounding law S²/(12·R²·Var f) ──
+out.remainder = SH.map(([name, f]) => { const F = figure(f, 'mid'), m = F.lr.reduce((x, y) => x + y) / ND, V = F.lr.reduce((x, y) => x + (y - m) ** 2, 0) / ND;
+  return { name, byR: [2, 4, 8, 16, 32, 64].map(R => { const left = 1 - hold(F, R).carried, law = F.S ** 2 / (12 * R * R * V); return [R, +(100 * left).toPrecision(2), +(left / law).toFixed(2)]; }) }; });
 console.log(JSON.stringify(out, null, 1));

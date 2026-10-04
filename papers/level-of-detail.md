@@ -7,6 +7,12 @@ version of 3 October), in situation 3 only. Every number below is produced by on
 [`lod-figures.js`](lod-figures.js) (`node papers/lod-figures.js`), and every idea has a page in this repository that
 can be swept by hand (Appendix).*
 
+*Revised 4 October after a review from the SPN session, which checked the paper against SPN as it stood that morning
+and against that session's pre-registered level-of-detail tests (`spn/lod-preregistration.md`, run once). The review's
+changes are taken in full. Each one is noted where it lands, and the list is at the end (§12). Citations to SPN rulings
+after 3 October (R172–R174, Proposition 3.10 as corrected 4 October) are taken from the review; they are newer than the
+copy of SPN this session holds.*
+
 *Marks used throughout, as in SPN:* **Proved** *— follows from the definitions and the stated premises;* **Measured**
 *— computed by the script, with what was held fixed;* **Proposal** *— offered, not ruled, and open to Tom's ruling.*
 
@@ -18,26 +24,29 @@ The sweep is a reading turned from home to the horizon: g from 0 to 1, or the an
 the corner at g = ½, θ = π/4, where v = h. This paper reports two things that turn out to be one.
 
 The first is that **every octave is itself a sweep**. Take one octave with two facings, ½c to 2c around a corner c
-(SPN R167). There is exactly one projective map that sends its edge ½c to home, its corner c to the corner and its edge 2c to the
+(SPN R172). There is exactly one projective map that sends its edge ½c to home, its corner c to the corner and its edge 2c to the
 horizon. Under that map the octave reads as a whole sweep from 0 to π/2 of its own, with a front, a corner and a back.
 That inner sweep has octaves of its own, and so on without end. Between octaves the readings add: the place of a
 reading is n + g, a whole count of octaves plus a sweep within one. Within an octave they recurse: an address is
 (n; j₁, j₂, …). The sweep therefore holds infinite **breadth**, in the outer octaves, and infinite **nesting**, in
-the inner sweeps (Tom's word was density; the name is pending, §11). One rule is used at every level. The map
+the inner sweeps (SPN's word; Tom's, in his quotations, is density, §11). One rule is used at every level. The map
 respects the flip at every level, and inside any octave the sweep and the plain proportional share never differ by
 more than 0.011 of the octave.
 
 The second is that **level of detail is a sweep**. Hold a figure on a ladder of rungs of step σ about a home look. The
-rung span R = swing/step is a v/h reading like any other, so it has a g. At g = 0 every look is held at home, and every
-figure is the circle of its home. The square starts out as a circle. As g rises the held figure stays silent until
-R* = 1/(1+|u|), where u is home's place in the swing. That is the corner exactly when home is at mid-swing. Past R*
-it speaks, and as g → 1 it becomes the figure. This was measured on seven shapes: the prediction holds for all seven,
-both at mid-swing and at the extreme. A register of C cells adds a second edge. Railing begins exactly at
-R_rail = (C+1)·S/(2·far). This is the budget of SPN's Proposition 3.8 seen in one figure: reach traded against
-resolution.
+rung span R = swing/step is a v/h reading like any other, so it has a g. At g = 0 every look is held at home: the held
+figure is home's reach in every direction, which in the circle's chart draws as the circle of radius r(home). That is
+why the square starts out as a circle here; in the square's chart it would start as a square (SPN Proposition 3.10).
+As g rises the held figure stays silent until R* = 1/(1+|u|), where u is home's place in the swing (proved). That is
+the corner exactly when home is at mid-swing. Past R* it speaks, and as g → 1 it becomes the figure; this was checked
+on seven shapes. **What is left falls by the ordinary law of rounding error,** S²/(12·R²·Var f): about a quarter per
+doubling of R, a sixteenth per octave. This is the paper's one tested result on how detail arrives. The SPN session's
+pre-registered test found it within 30% on six of seven new shapes from R = 4 to 64, and it holds within 25% on the
+seven here. A register of C cells adds a second edge. Railing begins exactly at R_rail = (C+1)·S/(2·far). This is the
+budget of SPN's Proposition 3.8 seen in one figure: reach traded against resolution.
 
-Read together, level of detail is the nesting seen from inside one octave. Turning up the detail is going one sweep
-deeper.
+Read together: turning up the detail is moving out one octave in the breadth of R. Only seen from the figure is each of
+those octaves a finer register nested in the one before (§5.4).
 
 ---
 
@@ -51,6 +60,10 @@ s = v/h ∈ [0, ∞]. The sweep is
 
     g = (2/π)·atan(s) ∈ [0, 1],        θ = (π/2)·g = atan(s) ∈ [0, π/2].
 
+*The arc tangent is the shortcut* (SPN R148). A sweep is swept, step by step from home; atan hands over where the
+sweeping has got to without sweeping. Every atan in this paper (§2.1, §2.3, §5.1, §5.3) is this shortcut, used to
+compute g, not a claim about what g is.
+
 g and θ are one quantity in two units. [0, 1] is the sweep laid flat, and [0, π/2] is the same sweep with the
 turning kept. Home is g = 0, the corner is g = ½ (s = 1, θ = π/4), and the horizon is g = 1. The **flip** s ↦ 1/s
 sends g ↦ 1 − g. It swaps the front side (s < 1, v as a share of h) with the back side (s > 1, h as a share of v),
@@ -62,7 +75,8 @@ them is a proportion. Both are unit curves, and both run from home to the horizo
 square's corner (1, 1), and that point is the corner of the reading. This is the first sign of a pattern that runs through the paper.
 The share is proportional, the sweep turns, and the two agree at the corners.
 
-Situations 1 and 2 have no home, no corner and no sweep (SPN §2.1, R140). Nothing below applies to them.
+Situations 1 and 2 have no home, no corner and no sweep (SPN §2.1, R131, R139); there v and h may be signed, and in
+situation 3 never (R173). Nothing below applies to them.
 
 ---
 
@@ -74,7 +88,8 @@ outside the octave."*
 
 ### 2.1 The octave map
 
-SPN R167 gives one octave with two facings: from ½c to 2c, with its corner c in the middle. The front facing
+SPN R172 gives one octave with two facings: from ½c to 2c, with its corner c in the middle and corners at 4ⁿ (it
+supersedes R167's corners at ½h and 2h). The front facing
 ½c → c reads v in terms of c, and the back facing c → 2c reads c in terms of v. In units of the corner, with
 s = v/c, the octave is s ∈ [½, 2].
 
@@ -90,7 +105,7 @@ inverse follows by solving r(2 − s) = 2s − 1. ∎
 r is again a v/h reading: 0 at the octave's home edge, 1 at its corner, ∞ at its horizon edge. So the octave has a
 sweep of its own,
 
-    g_inner = (2/π)·atan(r(s)),
+    g_inner = (2/π)·atan(r(s))      (the shortcut, R148),
 
 which runs from 0 to 1 across the octave, with ½ at c.
 
@@ -122,11 +137,13 @@ percent. The nested sweep is what lets the address name **which** octave, and wh
 breadth assumed. Our earlier figure of 0.1 for this gap, given in conversation, was wrong: it compared r with t. The
 other session caught the mistake, and 0.0108 is the corrected value.
 
-### 2.3 How much of the sweep each octave gets
+### 2.3 How much of the sweep each doubling gets
 
-In an evenly spread world the share of readings in octave k on one facing is the g-width of that octave:
+*Units: these are SPN §3.3's doublings (×2, one facing), not the ×4 octaves with two facings used elsewhere here.* In an
+evenly spread world the share of readings in doubling k on one facing is its g-width,
 (2/π)(atan 2⁻ᵏ − atan 2⁻⁽ᵏ⁺¹⁾). **Measured:** 0.2048, 0.1392, 0.0768, 0.0394 for k = 0 to 3, as in SPN §3.3. The
-reader's own octave takes the most. Each octave further out takes about half as much as the one before.
+reader's own doubling takes the most, and each doubling further out takes about half as much as the one before. A ×4
+octave with two facings, k = 0, holds both facings' doubling 0: 2 × 0.2048 = 0.41 of the readings.
 
 ---
 
@@ -170,7 +187,11 @@ Three things follow, and they are the content of Tom's insight.
    as wide as the outer one. Nesting is breadth inside breadth.
 3. **The edges are horizons.** Seen from inside an octave its edges are at r = 0 and r = ∞. They are the inner
    sweep's home and horizon, which can be approached and never reached at that level (SPN §3.7, the corner a horizon).
-   Leaving an octave is not crossing a wall. It is a change of level.
+   Leaving an octave is not crossing a wall. It is a change of level. Tom said the same on 4 October: the far
+   horizon, where the grain runs out, is where the reader falls into the recursion and carries into the next octave
+   (pending as SPN R174, with the horizons named: the mathematical horizon h = 0, never reached; the far horizon,
+   where the grain runs out; the near horizon, the corner, which is the working horizon; and each octave's own
+   horizons, by the recursion).
 
 ### 3.3 How fast the marks fill in
 
@@ -189,12 +210,13 @@ continuing recursivvely."*
 
 That framing is right, and SPN supports it with two refinements.
 
-- **The front side is proportional by right** (SPN R158). Before the corner v is a share of the known h, so plain
+- **The front side is proportional by right** (SPN R149). Before the corner v is a share of the known h, so plain
   proportion is defined there and any reader may use it. Past the corner it is undefined, because v's breadth is
-  unknown. What remains defined is which octave a reading is in, and a share within that octave.
+  unknown. What remains defined is which octave a reading is in, and a share within that octave: the back side's
+  count of doublings (R158).
 - **So octaves are forced on the back and optional on the front.** On the back side the octave count is the only
   defined reading. On the front side the reader may also read by octaves, halvings toward home. That reading is fair to
-  both facings (R162, R167) and finer near home, where plain proportion with n addresses loses everything finer than
+  both facings (R162, R172) and finer near home, where plain proportion with n addresses loses everything finer than
   h/n (SPN §3.3).
 - **Inside every octave, proportion again** (R163). §2.2 makes this exact: in the share, each octave is proportional.
   In the address, it is a sweep, and the two lays differ by at most 0.011.
@@ -226,19 +248,25 @@ A **register** with rung step σ holds each look at the nearest rung counted fro
     held(a) = ℓ₀ + σ·round((ℓ(a) − ℓ₀)/σ).
 
 The **rung span** R = S/σ is the number of steps that fit across the swing. It is a ratio of two magnitudes, so it is
-a v/h reading with a sweep g = (2/π)·atan R. Turning R from 0 to ∞ turns g from 0 to 1. **Carried** is
+a v/h reading with a sweep g = (2/π)·atan R (the shortcut, R148). Turning R from 0 to ∞ turns g from 0 to 1. **Carried** is
 1 − (residual variance)/(figure variance), with both variances taken about their means. It is 0 for a held figure
 that is flat. It is 1 for a held figure that is exact. It is negative when the held figure is a worse picture than a
 flat one.
 
-### 5.2 Every figure starts as the circle of its home
+### 5.2 At g = 0, home's reach in every direction
 
-**Proposition 5.1 (g = 0 is the unit curve).** **Proved.** As R → 0, σ → ∞, so every round(·) is 0 and every look is
-held at ℓ₀. The held figure is the circle of radius r(home). ∎
+**Proposition 5.1 (g = 0 is the chart's unit curve).** **Proved.** As R → 0, σ → ∞, so every round(·) is 0 and every
+look is held at ℓ₀. The held figure is home's reach in every direction: in this chart, the circle of radius
+r(home). ∎
 
-This is the content of Tom's remark that "a square starts out as a circle". No shape is special here: every figure
-starts as the circle. SPN already says it in the sweep's own terms: "g = 0 is the unit circle" (Tom, R168). Level of
-detail is the breadth of the figure being expressed, starting from nothing expressed.
+This is the content of Tom's remark that "a square starts out as a circle", with one qualification the review supplied.
+The circle here belongs to the chart, not to the reader. Reach is measured as ln r along rays, which is the circle's
+chart, and home's reach held in every direction draws there as a circle. In the square's chart, max(h, v) = 1, the
+same silence draws as a square (SPN Proposition 3.10, corrected 4 October). The reader is not the unit circle (R127),
+and the weight that takes the circle to a whole shape is R140's mix, m, a different thing. The first version of this
+paper quoted R168's "g = 0 is the unit circle"; R170 superseded that wording with "g = 0, no breadth expressed". A
+claim of the same form, "at g = 0 every shape is the unit circle", was withdrawn once before, on 22 September (B110,
+L0a). Level of detail is the breadth of the figure being expressed, starting from nothing expressed.
 
 ### 5.3 Where the figure starts to speak
 
@@ -264,10 +292,10 @@ own, and that the detail begins at that sweep's corner. This is what §2 predict
 Put §2 and §5 side by side. The rung span R is a v/h reading. Its octaves are R ∈ [½, 2], [2, 8], [8, 32], …, each a
 ×4 octave with two facings around a corner 4ⁿ. In those terms:
 
-- **R below R*** (every octave n < 0, and the front facing of octave 0 when home is at mid-swing): silence. Every figure is the circle.
+- **R below R*** (every octave n < 0, and the front facing of octave 0 when home is at mid-swing): silence. Every figure is home's reach, all the way round.
 - **R* in octave 0:** the first rung appears at its corner when home is at mid-swing, and in its front facing when home is at an extreme.
-- **each octave after that:** the step is a quarter of what it was, and the held figure carries most of what was
-  left. The table below shows this.
+- **each octave after that:** the step is a quarter of what it was, and what is left falls to about a sixteenth
+  (§6.1).
 
 Turning up the detail is moving out one octave in the breadth of R. Seen from the figure, each of those octaves is a
 finer register nested in the one before. **Proposal:** level of detail is the nesting of §3 read from inside one
@@ -304,20 +332,51 @@ What the table shows:
 
 - **The shape arrives by the octave after the corner.** At R = 2, the corner's own horizon edge, every shape carries
   62 to 87%. By R = 8 every shape carries 98 to 99%. Most of the figure is expressed within one octave of R past the
-  corner. The rest is a long tail, the back side, and it halves with each octave.
+  corner. *The first version said the rest "halves with each octave". That is wrong by this table: for the clover what
+  is left goes 13% (R = 2), 0.9% (R = 8), 0.06% (R = 32), about a sixteenth per octave.* §6.2 gives the law.
 - **The first word can be wrong.** Just past R* the held figure can be a worse picture than the circle. The square
   carries −34%. Negative values at R = 1 mean the same thing.
 - **The square has the smallest swing,** half an octave, ln √2. It is the closest of the seven shapes to its own
   circle, which is why it "starts out as a circle" so visibly.
 
-### 6.2 A hypothesis that failed
+### 6.2 How the remainder falls: the law of rounding error
+
+Rounding to a step σ leaves an error spread evenly over a step, with variance σ²/12. With σ = S/R, the share of the
+figure's variance left over is
+
+    1 − carried ≈ S² / (12 · R² · Var f),
+
+where Var f is the variance of ℓ around the figure. This is the ordinary law of quantisation error: a quarter per
+doubling of R, a sixteenth per ×4 octave. It needs enough distinct reaches for the error to spread evenly across a step.
+
+**Tested** (pre-registered, by the SPN session, test 4, run once on seven new shapes): within 30% of the law from
+R = 4 to 64 for six of the seven. The hexagon failed: its symmetry leaves too few distinct reaches for the error to
+spread.
+
+**Measured** (here, after the fact, on this paper's seven shapes): the ratio of what is left to the law, by R.
+
+| shape | R = 2 | 4 | 8 | 16 | 32 | 64 |
+|---|---|---|---|---|---|---|
+| clover | 0.76 | 0.83 | 0.88 | 0.91 | 0.91 | 1.08 |
+| ellipse | 0.77 | 0.84 | 0.89 | 0.94 | 0.97 | 1.18 |
+| square | 0.79 | 0.83 | 0.89 | 0.93 | 0.84 | 0.96 |
+| star | 0.99 | 1.00 | 1.01 | 1.06 | 0.79 | 1.00 |
+| limaçon | 0.76 | 0.83 | 0.89 | 0.92 | 0.97 | 1.02 |
+| bean | 1.25 | 0.75 | 1.09 | 0.99 | 0.99 | 0.86 |
+| ripple on a lobe | 0.88 | 0.95 | 0.86 | 0.97 | 0.98 | 1.21 |
+
+From R = 4 to 64 every ratio is between 0.75 and 1.21. This agrees with the pre-registered result but is not a test
+of it: these shapes were chosen before the law was in view, and the law was checked on them afterwards.
+
+### 6.3 A hypothesis that failed
 
 We expected sharp shapes (square, star) to overshoot more than smooth ones just past the corner. **Measured: not
 supported.** The square goes most negative (−34), but the star is +3. The smooth limaçon and bean are both slightly
 negative, and the smooth ellipse is the most positive (+10). Sharpness does not order these values. They depend on
-where the first rung boundary happens to cut the outline. The hypothesis is dropped.
+where the first rung boundary happens to cut the outline. The hypothesis is dropped. The SPN session's pre-registered
+test killed it again on new shapes: kinked shapes came out positive and a smooth egg negative.
 
-### 6.3 A detail inside a detail
+### 6.4 A detail inside a detail
 
 The ripple on a lobe is a nested figure: a fine ripple of swing about 0.07 riding on a lobe of total swing 0.80. A
 naive estimate puts the ripple's own speaking point at S/S_ripple ≈ 11.4. **Measured:** the correlation between the
@@ -329,8 +388,12 @@ held ripple (held figure minus held lobe) and the true ripple, by R:
 
 The ripple does not appear at a corner. It rises gradually over about five octaves of R. This is because the lobe
 moves the ripple across rung boundaries, so some of the ripple is caught long before its own swing equals a step. The
-nested feature has its own sweep, but its edge is blurred by the outer one. A claim of "one corner per feature" cannot
-be read off this curve after the fact. It needs a threshold fixed in advance (§10).
+nested feature has its own sweep, but its edge is blurred by the outer one: the outer figure dithers the inner one.
+
+**Tested** (pre-registered, by the SPN session, test 1, on new composite shapes, threshold fixed beforehand: a feature
+counts as carried when its Fourier component's share reaches 0.5). In all five cases every smaller feature was carried
+at 0.06 to 0.34 of S/S_f, far earlier than its own swing would predict. The cause is the dither named above. So "one
+corner per feature", read as a feature arriving at R ≈ S/S_f, is refuted at that threshold.
 
 ---
 
@@ -357,21 +420,27 @@ geometry. A larger register moves the rail outward.
 
 ---
 
-## 8. Every shape starts as the circle
+## 8. Every shape starts as the chart's unit curve
 
 *Tom: "its interesting that a square starts out as a circle."*
 
-Proposition 5.1 says why. At g = 0 nothing of the figure's breadth is expressed, and the only shape with no breadth
-expressed is the circle of home. In the sweep's terms the circle is not one shape among many. It is the g = 0 member
-of every family of shapes.
+Proposition 5.1 says why. At g = 0 nothing of the figure's breadth is expressed, and what is held is home's reach in
+every direction. How that draws depends on the chart.
 
-§1 opens a question this paper does not answer. **There are two unit curves.** The sweep's is the arc
-h² + v² = 1, and the share's is the square max(h, v) = 1. They meet only at the corner. Level of detail as defined in
-§5 rounds in ln r and starts every figure from a **circle**. If the figure were instead held in the share, as a
-proportion of home with each facing laid flat, it is plausible that every figure would start from the **square**, and
-that a circle would "start out as a square". **Open**, not measured: would a share-held register start every figure
-from the square, and would its speaking corner sit where Proposition 5.2 puts it? §2.2 gives a reason to expect the
-two to stay close, since inside one octave the share and the sweep differ by at most 0.011. It is not a proof.
+**There are two unit curves.** The sweep's is the arc h² + v² = 1, and the share's is the square max(h, v) = 1. They
+meet only at the corner. The first version of this paper left open whether a register held in the square's chart
+would start every figure from the square. The review pointed out that SPN Proposition 3.10(b) answers this by
+construction:
+
+- Measure reach in the square's chart and silence draws as a square, just as it draws as a circle in the circle's
+  chart.
+- The unit square read in the circle's chart and the unit circle read in the square's chart are each other's flip,
+  f ↦ −f, direction by direction.
+- Rounding treats f and −f alike about a home at mid-swing, so the speaking corner sits where Proposition 5.2 puts it,
+  with the same formula.
+
+So a circle "starts out as a square" in the square's chart, exactly as the square starts out as a circle in the
+circle's. Nothing here needs measuring; a measurement would only check the definitions.
 
 ---
 
@@ -388,7 +457,7 @@ The dial in this repository is built for this geometry ([`dial-core.js`](../dial
   fully out or fully back. The first quarter dial used the semicircle's rule, which locked once the gold reached π/2.
   It was corrected on Tom's report.
 
-In the level-of-detail page the dial's sweep is g of R, from 0 to 1024. The radius (the pinch) sets the register's
+In the level-of-detail page's one-sweep view the dial's sweep is g of R, from 0 to 1024. The radius (the pinch) sets the register's
 cells, C = 2^(1 + 11·r). The rim carries a white tick at R* and a red tick at R_rail. So one hand turns the detail and the
 other spends reach, and both edges of §7 can be seen moving on the rim.
 
@@ -400,14 +469,14 @@ other spends reach, and both edges of §7 can be seen moving on the rim.
   projective premise and test it, not assume it.
 - **Hold tests to one octave first.** The other session's caution: compare the share and the sweep on ½ ≤ s ≤ 2,
   where both are defined and §2.2's bound applies, before claiming anything across octaves.
-- **"One corner per feature" needs pre-registration.** §6.3 shows a gradual rise. Before a nested feature's onset is
-  claimed, fix the threshold (for example, correlation 0.5 or 0.9) and the predicted R, and then measure.
-  **Candidate:** a feature of swing S_f on a figure of swing S reaches correlation 0.9 within one octave of
-  R = S/S_f. On the ripple that predicts R ∈ [5.7, 22.8]. The measured correlation crosses 0.7 inside that range, at R ≈ 8, but
-  crosses 0.9 only between R = 16 and 32, near the range's upper edge or past it. The verdict depends on the
-  threshold, which is why the threshold must be fixed before measuring.
+- **"One corner per feature" was pre-registered and refuted** at a Fourier-share threshold of 0.5 (§6.4): features
+  arrive far earlier than S/S_f. A different candidate, correlation 0.9 within one octave of R = S/S_f, is a different
+  threshold and is untested. The ripple numbers in §6.4 were read after the fact and are not a test of it. Any rerun
+  should be pre-registered on shapes not yet run.
+- **The remainder law is the one tested result on how detail arrives** (§6.2). It fails where symmetry leaves too few
+  distinct reaches (the hexagon).
 - **The railing formula is proved** (§7). It is a check on an implementation, not a finding about shapes.
-- **The overshoot hypothesis is dropped** (§6.2).
+- **The overshoot hypothesis is dropped** (§6.3).
 - **Seven shapes, one sampling.** Every LOD figure uses 360 evenly spaced looks and outlines that are star-shaped
   about their centre. Other samplings, such as along the outline (see *shapes-come-home*), were not tried.
 - The labs named in the other session's review (CRY, grain, RNG) are hooks for that session's work. They are not
@@ -419,11 +488,29 @@ other spends reach, and both edges of §7 can be seen moving on the rim.
 
 Two names are used provisionally. Neither is ruled.
 
-1. **Nesting or density.** Tom's word is *density*: "the infinite density is the inner recursive octaves". The
-   proposal is *nesting*, because SPN already uses density-like language for how readings spread over the sweep (an
-   evenly spread world, §2.3), and the inner octaves are levels rather than a spread. Tom decides.
-2. **The ×4 unit.** "One octave with two facings" (SPN R167) is exact but long. The browser page calls it an *octal*.
-   The proposal is to keep *octave with two facings* in prose and use *octal* in the dial. Tom decides.
+1. **Nesting or density.** Tom's word is *density*: "the infinite density is the inner recursive octaves". SPN uses
+   *nesting* by default and keeps *density* only inside Tom's quotations, under his rule of 30 September. This paper
+   now does the same.
+2. **The ×4 unit.** "One octave with two facings" (SPN R172) is exact but long. The browser page calls it an *octal*,
+   but that word collides with base 8, just where *The Radix*'s digit bases come in. Tom decides.
+
+---
+
+## 12. What the 4 October review changed
+
+1. The g = 0 figure is home's reach in every direction, a circle only in the circle's chart (abstract, §5.2, §8;
+   R127, R140, R170, SPN Proposition 3.10; the earlier withdrawal B110, L0a).
+2. §8's open question is answered by SPN Proposition 3.10(b), by construction.
+3. "Halves with each octave" was wrong. The remainder follows the rounding law, a sixteenth per octave (§6.1, §6.2), now
+   in the abstract.
+4. "One corner per feature" was pre-registered and refuted (§6.4, §10).
+5. The abstract now agrees with §5.4, and says "checked", not "predicted", of Proposition 5.2.
+6. atan is marked as the shortcut throughout (R148, §1).
+7. §2.3 is in doublings.
+8. Citations: R172 for the octave with two facings; R131 and R139 for situations 1 and 2; R149 for the front side's
+   proportion, R158 for the back side's count.
+9. Names follow SPN (§11).
+10. Added from 4 October: R173 (§1) and the horizons pending as R174 (§3.2).
 
 ---
 
@@ -434,6 +521,6 @@ Two names are used provisionally. Neither is ruled.
 | Every figure in this paper | [`papers/lod-figures.js`](lod-figures.js); run `node papers/lod-figures.js`, which prints JSON |
 | Breadth (n + g) and nesting, with the share and g laid side by side | [`demos/breadth-and-density.html`](../demos/breadth-and-density.html) |
 | Octals with front, corner and back, carried one at a time | [`demos/octave-browser.html`](../demos/octave-browser.html) |
-| Level of detail on the quarter dial: R*, the rail, seven shapes | [`demos/level-of-detail.html`](../demos/level-of-detail.html) |
+| Level of detail on the quarter dial: R*, the rail, seven shapes; a recursive view where each level's end is the next level's start | [`demos/level-of-detail.html`](../demos/level-of-detail.html) |
 | The dial itself, with the rung and the (side, octave, t) reading | [`geometry.html`](../geometry.html), [`dial-core.js`](../dial-core.js) |
 | Source of the LOD rules (wdtHold, wdtCarried) | draw.html, labs *rung by rung*, *where the detail turns*, *where the geometry goes* |
