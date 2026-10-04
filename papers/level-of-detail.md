@@ -10,8 +10,9 @@ can be swept by hand (Appendix).*
 *Revised 4 October after a review from the SPN session, which checked the paper against SPN as it stood that morning
 and against that session's pre-registered level-of-detail tests (`spn/lod-preregistration.md`, run once). The review's
 changes are taken in full. Each one is noted where it lands, and the list is at the end (§12). Citations to SPN rulings
-after 3 October (R172–R174, Proposition 3.10 as corrected 4 October) are taken from the review; they are newer than the
-copy of SPN this session holds.*
+after 3 October (R172–R175, Proposition 3.10 as corrected 4 October) are taken from the review and checked against
+*v and h* §8k (items 364–371); they are newer than the copy of SPN this session holds. A second pass the same morning
+brought in R174 as ruled, R175, and R149 as ongoing research (§12).*
 
 *Marks used throughout, as in SPN:* **Proved** *— follows from the definitions and the stated premises;* **Measured**
 *— computed by the script, with what was held fixed;* **Proposal** *— offered, not ruled, and open to Tom's ruling.*
@@ -20,12 +21,12 @@ copy of SPN this session holds.*
 
 ## Abstract
 
-The sweep is a reading turned from home to the horizon: g from 0 to 1, or the angle θ = (π/2)·g from 0 to π/2, with
+The sweep is a reading turned from home toward the mathematical horizon, h = 0, which is never reached: g from 0 to 1, or the angle θ = (π/2)·g from 0 to π/2, with
 the corner at g = ½, θ = π/4, where v = h. This paper reports two things that turn out to be one.
 
 The first is that **every octave is itself a sweep**. Take one octave with two facings, ½c to 2c around a corner c
-(SPN R172). There is exactly one projective map that sends its edge ½c to home, its corner c to the corner and its edge 2c to the
-horizon. Under that map the octave reads as a whole sweep from 0 to π/2 of its own, with a front, a corner and a back.
+(SPN R172). There is exactly one projective map that sends its edge ½c to home, its corner c to the corner and its edge 2c to where its own
+reading runs without end. Under that map the octave reads as a whole sweep from 0 to π/2 of its own, with a front, a corner and a back.
 That inner sweep has octaves of its own, and so on without end. Between octaves the readings add: the place of a
 reading is n + g, a whole count of octaves plus a sweep within one. Within an octave they recurse: an address is
 (n; j₁, j₂, …). The sweep therefore holds infinite **breadth**, in the outer octaves, and infinite **nesting**, in
@@ -55,7 +56,7 @@ those octaves a finer register nested in the one before (§5.4).
 *Tom: "g=0, no breadth expressed, g=1 breadth is fully expressed. but [0,1] could be expressed as [0,PI/2] if you
 include the periodicity." (SPN §3.5, R170.)*
 
-Situation 3 is a reader with a home, a known unit h, and a horizon. A reading is the pair (h, v), or the ratio
+Situation 3 is a reader with a home, a known unit h, and the mathematical horizon, h = 0, which it never reaches. A reading is the pair (h, v), or the ratio
 s = v/h ∈ [0, ∞]. The sweep is
 
     g = (2/π)·atan(s) ∈ [0, 1],        θ = (π/2)·g = atan(s) ∈ [0, π/2].
@@ -65,13 +66,13 @@ sweeping has got to without sweeping. Every atan in this paper (§2.1, §2.3, §
 compute g, not a claim about what g is.
 
 g and θ are one quantity in two units. [0, 1] is the sweep laid flat, and [0, π/2] is the same sweep with the
-turning kept. Home is g = 0, the corner is g = ½ (s = 1, θ = π/4), and the horizon is g = 1. The **flip** s ↦ 1/s
+turning kept. Home is g = 0, the corner is g = ½ (s = 1, θ = π/4), and the mathematical horizon is g = 1. The **flip** s ↦ 1/s
 sends g ↦ 1 − g. It swaps the front side (s < 1, v as a share of h) with the back side (s > 1, h as a share of v),
 and it leaves only the corner in place.
 
 **Two curves meet at the corner.** In the (h, v) square the arc h² + v² = 1 carries g: a point on it is a turning. The
 square's two outer edges, max(h, v) = 1, carry the **share** min(v, h)/max(v, h) of SPN Corollary 3.5(b): a point on
-them is a proportion. Both are unit curves, and both run from home to the horizon. They touch at exactly one point, the
+them is a proportion. Both are unit curves, and both run from home to the mathematical horizon. They touch at exactly one point, the
 square's corner (1, 1), and that point is the corner of the reading. This is the first sign of a pattern that runs through the paper.
 The share is proportional, the sweep turns, and the two agree at the corners.
 
@@ -89,7 +90,7 @@ outside the octave."*
 ### 2.1 The octave map
 
 SPN R172 gives one octave with two facings: from ½c to 2c, with its corner c in the middle and corners at 4ⁿ (it
-supersedes R167's corners at ½h and 2h). The front facing
+supersedes R167's corners at ½h and 2h, a question R175 settles in R172's favour). The front facing
 ½c → c reads v in terms of c, and the back facing c → 2c reads c in terms of v. In units of the corner, with
 s = v/c, the octave is s ∈ [½, 2].
 
@@ -102,7 +103,7 @@ function of s, of the same kind as v/h itself. Then there is exactly one such ma
 property of the Möbius group, or equivalently the preservation of the cross ratio. Checking: r(½) = 0, r(1) = 2·½/1 = 1, and r → ∞ as s → 2. The
 inverse follows by solving r(2 − s) = 2s − 1. ∎
 
-r is again a v/h reading: 0 at the octave's home edge, 1 at its corner, ∞ at its horizon edge. So the octave has a
+r is again a v/h reading: 0 at the octave's inner edge, 1 at its corner, and without end at its outer edge. So the octave has a
 sweep of its own,
 
     g_inner = (2/π)·atan(r(s))      (the shortcut, R148),
@@ -165,7 +166,7 @@ g_inner → 1. The place from above is (n + 1) + 0, because r = 0. ∎
 
 **Measured:** the round trip P(s(P)) differs from P by at most 2.8 × 10⁻¹⁶ over P ∈ [−19, 19], and s(P) is monotone.
 
-Breadth is the integer part. It is unbounded both ways, toward home (n → −∞) and toward the horizon (n → +∞). These
+Breadth is the integer part. It is unbounded both ways, toward home (n → −∞) and toward the mathematical horizon (n → +∞). These
 are SPN R77's two infinities, matched.
 
 ### 3.2 Nesting: octaves recurse
@@ -176,22 +177,26 @@ whole j, and the same map applies inside each of them:
     s  →  n, r₁ = r(s/4ⁿ)  →  j₁, r₂ = r(r₁/4^{j₁})  →  j₂, r₃ = …
 
 The **address** of a reading is (n; j₁, j₂, j₃, …). **Measured:** s = 1.37 has address (0; 1, −1, 0, 1). It lies in
-the reader's own octave. Inside that it lies one octave toward that octave's horizon, then one toward home, then in
-the home octave, then one toward the horizon again.
+the reader's own octave. Inside that it lies one octave outward, then one inward, then in its own inner octave, then one
+outward again.
 
 Three things follow, and they are the content of Tom's insight.
 
 1. **One rule at every level.** No level differs from any other. The same map, the same flip, the same front, corner
-   and back apply. A level is defined only by which octave was entered to reach it.
+   and back apply. A level is defined only by which octave was entered to reach it. Tom's statement of it (R175,
+   4 October, 05:01): "recursion is the same thing all the way down, so each sweep would have its own corner by
+   definition." Past the corner there is a corner at every 4ⁿh, and the facing turns at each one.
 2. **Every level has breadth too.** Each jᵢ ranges over all of ℤ, not over a finite set of children. An inner sweep is
    as wide as the outer one. Nesting is breadth inside breadth.
-3. **The edges are horizons.** Seen from inside an octave its edges are at r = 0 and r = ∞. They are the inner
-   sweep's home and horizon, which can be approached and never reached at that level (SPN §3.7, the corner a horizon).
-   Leaving an octave is not crossing a wall. It is a change of level. Tom said the same on 4 October: the far
-   horizon, where the grain runs out, is where the reader falls into the recursion and carries into the next octave
-   (pending as SPN R174, with the horizons named: the mathematical horizon h = 0, never reached; the far horizon,
-   where the grain runs out; the near horizon, the corner, which is the working horizon; and each octave's own
-   horizons, by the recursion).
+3. **At the edges the inner reading starts and runs without end.** Seen from inside an octave its edges are at r = 0
+   and r = ∞: there the octave's own reading starts at 0 and runs without end, and they can be approached and never
+   reached at that level. Leaving an octave is not crossing a wall. It is a change of level. SPN R174 (ruled
+   4 October) names the horizons this sits among: the **mathematical horizon**, h = 0, never reached; the **near
+   horizon**, the corner, which is the working horizon; and the **far horizon**, which is reached, and where the
+   reader carries into the next octave. Tom: "maybe the far 'grain' horizon is the recursion, so you fall into this
+   recursive situation." *Where* the far horizon lies is not settled. Its wording has rested on "grain", and what
+   grain is (the step, the ratio between rungs, or the count of addresses) is SPN §14's priority open item. A
+   candidate, not ruled: the far horizon is where a reader's step becomes as large as the reading itself.
 
 ### 3.3 How fast the marks fill in
 
@@ -210,8 +215,9 @@ continuing recursivvely."*
 
 That framing is right, and SPN supports it with two refinements.
 
-- **The front side is proportional by right** (SPN R149). Before the corner v is a share of the known h, so plain
-  proportion is defined there and any reader may use it. Past the corner it is undefined, because v's breadth is
+- **The front side is proportional** (SPN R149, which is **ongoing research**, not a settled ruling). Tom, 4 October,
+  04:52: "r149 is ongoing research, seem to me the near horizon is propertional and far horizon is recursive octave."
+  Before the corner v is a share of the known h, so plain proportion is defined there and any reader may use it. Past the corner it is undefined, because v's breadth is
   unknown. What remains defined is which octave a reading is in, and a share within that octave: the back side's
   count of doublings (R158).
 - **So octaves are forced on the back and optional on the front.** On the back side the octave count is the only
@@ -330,7 +336,7 @@ mid-swing, not mid-swing exactly, so |u| is small but not zero.
 
 What the table shows:
 
-- **The shape arrives by the octave after the corner.** At R = 2, the corner's own horizon edge, every shape carries
+- **The shape arrives by the octave after the corner.** At R = 2, the outer edge of the corner's octave, every shape carries
   62 to 87%. By R = 8 every shape carries 98 to 99%. Most of the figure is expressed within one octave of R past the
   corner. *The first version said the rest "halves with each octave". That is wrong by this table: for the clover what
   is left goes 13% (R = 2), 0.9% (R = 8), 0.06% (R = 32), about a sixteenth per octave.* §6.2 gives the law.
@@ -508,9 +514,18 @@ Two names are used provisionally. Neither is ruled.
 6. atan is marked as the shortcut throughout (R148, §1).
 7. §2.3 is in doublings.
 8. Citations: R172 for the octave with two facings; R131 and R139 for situations 1 and 2; R149 for the front side's
-   proportion, R158 for the back side's count.
+   proportion (since marked ongoing research), R158 for the back side's count.
 9. Names follow SPN (§11).
-10. Added from 4 October: R173 (§1) and the horizons pending as R174 (§3.2).
+10. Added from 4 October: R173 (§1) and the horizons of R174 (§3.2).
+
+The second pass, the same morning, on the revised paper:
+
+11. R174 is ruled. Each horizon is named where it matters: the end of the sweep, g = 1, is the mathematical horizon
+    (abstract, §1, §3.1); octave edges are described without the word, as where the octave's own reading runs
+    without end (§2.1, §3.2, §6.1).
+12. The far horizon's wording is provisional: "grain" is SPN §14's priority open item, so §3.2 no longer leans on it.
+13. R175 is cited for §3.2's "one rule at every level", and as settling R167 against R172 (§2.1).
+14. R149 is ongoing research, with Tom's view quoted (§4).
 
 ---
 

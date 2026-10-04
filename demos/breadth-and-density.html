@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Breadth and Density</title>
-<!-- BREADTH AND DENSITY: EVERY OCTAVE IS A SWEEP. Tom, 4 October: each octave has a front and a back, split
+<title>Breadth and Nesting</title>
+<!-- BREADTH AND NESTING: EVERY OCTAVE IS A SWEEP. ("Density" is kept only in Tom's words, as in SPN.) Tom, 4 October: each octave has a front and a back, split
      by its corner, so each octave is itself a 0 to π/2 sweep; "recursive within an octave and additive
      outside"; "the recursion is the density … the infinite breadth is outer octaves and the infinite
      density is the inner recursive octaves."
@@ -20,7 +20,7 @@
      continuous (the top of octave n is the bottom of octave n + 1), every octave the same width, without
      end both ways. Across octaves a count, related by difference: Proposition 3.4(a), the logarithm.
 
-     DENSITY, RECURSIVE. r is itself a reading on [0, ∞), so it has a corner and octaves of its own, which
+     NESTING, RECURSIVE. r is itself a reading on [0, ∞), so it has a corner and octaves of its own, which
      crowd toward the octave's edges; each of those is a sweep again, and so on. A value's address is then
      (n; j₁, j₂, …): which octave, then which octave within it, at each depth. The edges of an octave are
      horizons of the sweep inside it (R165).
@@ -132,9 +132,9 @@ function draw(){
   }
   ctx.strokeStyle = BLUE; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(W / 2, L.yLine - 26); ctx.lineTo(W / 2, L.yLine + 12); ctx.stroke();
   ctx.fillStyle = DIM; ctx.textAlign = 'left'; ctx.fillText(L.narrow ? 'BREADTH · octaves add: place = n + g' : 'BREADTH · the octaves, additive: place = n + g, every octave the same width, without end both ways', 12, 18);
-  // ── DENSITY: the reader's octave as one sweep, the recursion opened to `depth` ──
+  // ── NESTING: the reader's octave as one sweep, the recursion opened to `depth` ──
   const { R, ax, ay } = L, gAt = g => -PI / 2 + g * PI / 2, at = (g, rr) => [ax + rr * Math.cos(gAt(g)), ay + rr * Math.sin(gAt(g))];
-  ctx.fillStyle = DIM; ctx.fillText(L.narrow ? 'DENSITY · octave ' + a.n + ' as one sweep · depth ' + depth : 'DENSITY · octave n = ' + a.n + ' as one sweep: home ½c at the top, corner c at 45°, horizon 2c along · depth ' + depth, 12, L.topH + 18);
+  ctx.fillStyle = DIM; ctx.fillText(L.narrow ? 'NESTING · octave ' + a.n + ' as one sweep · depth ' + depth : 'NESTING · octave n = ' + a.n + ' as one sweep: home ½c at the top, corner c at 45°, horizon 2c along · depth ' + depth, 12, L.topH + 18);
   ctx.strokeStyle = 'rgba(201,199,190,.18)'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(ax, ay - R - 8); ctx.lineTo(ax, ay); ctx.lineTo(ax + R + 8, ay); ctx.stroke();
   ctx.strokeStyle = 'rgba(232,200,106,.35)'; ctx.beginPath(); ctx.arc(ax, ay, R, -PI / 2, 0); ctx.stroke();
