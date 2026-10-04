@@ -26,6 +26,15 @@
      within) and reach (the octaves outward) share one budget, Proposition 3.8's slide; laying more
      cells buys both. The dial's radius is the budget: pinch or wheel.
 
+     RECURSIVE: THE END OF ONE SWEEP IS THE START OF THE NEXT. One sweep runs from the circle of home to
+     the figure. Recursively, level 0 sweeps one octave with two facings of R around its own corner c (½c to
+     2c, the projective map of the octave), and what it holds at the end becomes level 1's unit curve: its
+     'circle'. Level 1 sweeps the remainder, the figure less that curve, around the remainder's own corner;
+     and so on down. Levels add (place = level + g); inside each the sweep is the same. At a level's end the
+     step equals the farthest remainder (R = 2c = S/far), so every look moves −1, 0 or +1 step per level:
+     three cells are enough at every depth, and the reach comes from the levels, not the cells. The front
+     facing of each level holds what the levels above it found; the corner is where this level begins to speak.
+
      A caution kept from draw.html: this is the corner of a derived relation (step against swing), a
      reading about readings, not the corner of the shape's own v over h.
 
@@ -41,6 +50,7 @@
         --mono:"SF Mono",Menlo,Consolas,monospace;color-scheme:dark}
   html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);overflow:hidden;overscroll-behavior:none;font:12px var(--mono)}
   #app{height:100%;display:flex;flex-direction:column}
+  #modes{display:contents}
   .bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:center;padding:8px 10px;background:var(--panel);border-bottom:1px solid var(--line)}
   button{font:12px var(--mono);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:5px 9px;cursor:pointer}
   button[aria-pressed="true"]{border-color:var(--gold);color:var(--gold)}
@@ -50,7 +60,7 @@
 </head>
 <body>
 <div id="app">
-  <div class="bar" id="shapes" role="group" aria-label="The shape"></div>
+  <div class="bar"><span id="modes" role="group" aria-label="The sweep"><button type="button" data-m="rec">recursive</button> <button type="button" data-m="one">one sweep</button></span><span style="color:var(--line)">│</span><span id="shapes" role="group" aria-label="The shape" style="display:contents"></span></div>
   <canvas id="cv" aria-label="Left, the dial: its sweep sets the level of detail. Right, the shape as the reader holds it, and a strip of the octaves."></canvas>
 </div>
 <script src="../dial-core.js"></script>
@@ -108,6 +118,47 @@ function hold(F, R, C){
 }
 const cellsOf = r => Math.round(2 ** (1 + 11 * r));                     // the budget: 2 … 4096 cells, from the dial's radius
 
+// ── RECURSIVE: every level a sweep of what the levels above left over ──────────────────────────────
+// level k: parent curve P (level 0: the circle of home), remainder e = figure − P, its swing S, its farthest
+// departure far, its corner c = S/(2·far). The level's sweep is the octave ½c … 2c read by the octave map
+// R = c·(2r+1)/(r+2), r = tan(g·π/2); the next level's parent is what this level holds at its end, g = G_END.
+let mode = 'rec', level = 0;
+const G_END = 0.98, R_END = Math.tan(G_END * PI / 2), R_START = Math.tan((1 - G_END) * PI / 2), R_BACK = Math.tan(0.975 * PI / 2), R_LOW = 0.012, LMAX = 48;
+const octR = (c, r) => c * (2 * r + 1) / (r + 2);
+const stepHold = (P, e, sig) => P.map((p, i) => p + sig * Math.round(e[i] / sig));
+function levels(F){
+  if (F.lv) return F.lv;
+  const lv = []; let P = F.lr.map(() => F.a);
+  for (let k = 0; k < LMAX; k++) {
+    const e = F.lr.map((v, i) => v - P[i]); let lo = Infinity, hi = -Infinity, far = 0;
+    for (const x of e) { lo = Math.min(lo, x); hi = Math.max(hi, x); far = Math.max(far, Math.abs(x)); }
+    if (far < 1e-12 * F.S) { lv.push({ P, done: true, S: 0, far: 0, c: 1 }); break; }
+    const S = hi - lo, c = S / (2 * far);
+    lv.push({ P, e, S, far, c, u: -(hi + lo) / 2 / (S / 2) });
+    P = stepHold(P, e, S / octR(c, R_END));
+  }
+  return (F.lv = lv);
+}
+function holdLevel(F, Lk, R){                                             // level Lk held at rung span R
+  if (Lk.done) return { held: Lk.P, rungs: 1, railed: 0, silent: true, carried: 1, counts: [0, ND, 0] };
+  const sig = Lk.S / R, held = stepHold(Lk.P, Lk.e, sig), counts = [0, 0, 0];
+  for (const x of Lk.e) { const k = Math.round(x / sig); counts[clamp(k, -1, 1) + 1]++; }
+  let ma = 0, mb = 0; for (let i = 0; i < ND; i++) { ma += F.lr[i]; mb += held[i]; } ma /= ND; mb /= ND;
+  let ve = 0, vf = 0; for (let i = 0; i < ND; i++) { const fv = F.lr[i] - ma, er = fv - (held[i] - mb); ve += er * er; vf += fv * fv; }
+  return { held, rungs: (counts[0] > 0) + (counts[1] > 0) + (counts[2] > 0), railed: 0, silent: !counts[0] && !counts[2], carried: vf > 0 ? 1 - ve / vf : 1, counts, sig };
+}
+// carry between levels as the blue runs off either end of a level's sweep
+function carry(){
+  if (mode !== 'rec') return;
+  const lv = levels(figure()), r = R_OF();
+  level = Math.min(level, lv.length - 1);
+  if (r >= R_END && level < lv.length - 1) { level++; dial.setZeta(Math.asinh(R_START)); }
+  else if (r <= R_LOW && level > 0 && dial.held && dial.thrusting && dial.push() < 0) { level--; dial.setZeta(Math.asinh(R_BACK)); }
+}
+const modesEl = document.getElementById('modes');
+const pickMode = m => { mode = m; level = 0; dial.setZeta(Math.asinh(m === 'rec' ? 1 : 0.5)); modesEl.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === m))); if (typeof surf !== 'undefined') surf.invalidate(); };
+modesEl.querySelectorAll('button').forEach(b => b.onclick = () => pickMode(b.dataset.m));
+
 // ── THE DIAL: the sweep is the level of detail; free, so it stays where it is left ────────────────────
 // K = 10: the sweep runs to R = 2^10 = 1024, g = 0.9994, where a rung is under 0.1% of the reach and the figure
 // is smooth; 2048 cells by default, enough to follow it there (pinch them down to see the extremes rail)
@@ -134,13 +185,17 @@ function outline(ctx, cx, cy, scale, vals, close = true){            // vals: lo
     const x = cx + r * Math.cos(a), y = cy - r * Math.sin(a); k ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
   if (close) ctx.closePath();
 }
-function drawFigure(ctx, box, F, Hd, big){
+function drawFigure(ctx, box, F, Hd, big, parent, sig){
   const cx = box.x + box.w / 2, cy = box.y + box.h / 2 + (big ? 6 : 0);
   const maxr = Math.exp(F.a + Math.max(F.far, ...F.lr.map(v => v - F.a))) || 1;
   const scale = Math.min(box.w, box.h) * (big ? 0.40 : 0.42) / Math.exp(Math.max(...F.lr));
   ctx.save(); ctx.beginPath(); ctx.rect(box.x, box.y, box.w, box.h); ctx.clip();
-  ctx.setLineDash([3, 4]); ctx.strokeStyle = 'rgba(232,200,106,.4)'; ctx.lineWidth = 1;   // the unit laid at home
-  ctx.beginPath(); ctx.arc(cx, cy, Math.exp(F.a) * scale, 0, 2 * PI); ctx.stroke(); ctx.setLineDash([]);
+  ctx.setLineDash([3, 4]); ctx.strokeStyle = 'rgba(232,200,106,.4)'; ctx.lineWidth = 1;   // the unit curve: the circle of home, or the levels above
+  if (parent) { outline(ctx, cx, cy, scale, parent); ctx.stroke(); } else { ctx.beginPath(); ctx.arc(cx, cy, Math.exp(F.a) * scale, 0, 2 * PI); ctx.stroke(); }
+  ctx.setLineDash([]);
+  if (big && sig > 0 && sig < 3) {                                       // the half-step band: a look leaves the unit curve once it crosses it
+    const P = parent || F.lr.map(() => F.a); ctx.strokeStyle = 'rgba(232,200,106,.16)';
+    for (const sg of [-1, 1]) { outline(ctx, cx, cy, scale, P.map(p => p + sg * sig / 2)); ctx.stroke(); } }
   outline(ctx, cx, cy, scale, F.lr); ctx.strokeStyle = 'rgba(201,199,190,.28)'; ctx.lineWidth = 1; ctx.stroke();   // the figure
   outline(ctx, cx, cy, scale, Hd.held);
   ctx.strokeStyle = Hd.silent ? GOLD : Hd.railed ? RED : BLUE; ctx.lineWidth = big ? 2.2 : 1.4; ctx.stroke();    // as held
@@ -157,22 +212,45 @@ let figGeom = null;
 function render(ctx, W, H, resized){
   if (resized || !L) L = layout(W, H);
   ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
-  const F = figure(), R = R_OF(), C = cellsOf(dial.reach), Hd = hold(F, R, C), now = performance.now();
+  const F = figure(), r = R_OF(), C = cellsOf(dial.reach), now = performance.now(), rec = mode === 'rec';
+  const lv = rec ? levels(F) : null, Lk = rec ? lv[Math.min(level, lv.length - 1)] : null;
+  const R = rec ? (Lk.done ? Infinity : octR(Lk.c, r)) : r, Hd = rec ? holdLevel(F, Lk, R) : hold(F, R, C);
   // ── the figure, at this level of detail ──
-  figGeom = drawFigure(ctx, L.fig, F, Hd, true);
+  figGeom = drawFigure(ctx, L.fig, F, Hd, true, rec ? Lk.P : null, rec ? Hd.sig : (R > 0 ? F.S / R : 0));
   ctx.textAlign = 'left'; ctx.font = '12px ' + MONO;
   const fx = L.fig.x + 12; let fy = L.fig.y + 20;
   const say = (t, c) => { ctx.fillStyle = c; ctx.fillText(t, fx, fy); fy += 16; };
+  const narrowF = W < 700, gIn = (2 / PI) * Math.atan(r);
+  if (rec) {
+    say(SHAPES[shape][0] + ' · level ' + level + ' · place ' + (level + gIn).toFixed(2), HI);
+    if (Lk.done) say('nothing left: the figure, fully expressed', BLUE);
+    else {
+      say('R = ' + (R / Lk.c).toFixed(2) + '·c' + (narrowF ? ' · c = ' + Lk.c.toFixed(2) : '  (c = ' + Lk.c.toFixed(2) + ', this level’s corner)'), INK);
+      say(Hd.silent ? (level ? 'silent: holds what levels 0–' + (level - 1) + ' found' : 'silent: the circle of home') : 'speaking: carries ' + (100 * Hd.carried).toFixed(Hd.carried > 0.999 ? 4 : 1) + '% of the shape', Hd.silent ? GOLD : BLUE);
+      const left = 100 * Lk.S / F.S; say('left to find: ' + (left >= 10 ? left.toFixed(0) : left.toPrecision(2)) + '% of the swing', DIM);
+      say((narrowF ? 'moves ' : 'looks moving −1 · 0 · +1 step: ') + Hd.counts.join(' · '), DIM);
+    }
+    ctx.fillStyle = DIM; ctx.fillText(narrowF ? 'sweep past g = 1: the next level' : 'past g = 1, the next level: its unit curve is what this one held · tap: home', fx, L.fig.y + L.fig.h - 10);
+  } else {
   say(SHAPES[shape][0] + ' · as the reader holds it', HI);
   say('R = swing ÷ step = ' + (R < 10 ? R.toFixed(2) : R.toFixed(1)) + '  ·  ' + Hd.rungs + (Hd.rungs === 1 ? ' rung' : ' rungs'), INK);
   say(Hd.silent ? 'silent: the reader’s own unit, all the way round' : 'speaking: carries ' + Math.round(100 * Hd.carried) + '% of the shape', Hd.silent ? GOLD : BLUE);
   if (Hd.railed) say(Hd.railed + ' of ' + ND + ' looks railed: beyond the register’s reach', RED);
   ctx.fillStyle = DIM; ctx.fillText((W < 700 ? 'corner R* = ' : 'corner here at R* = 1/(1+|u|) = ') + F.Rstar.toFixed(2) + ' (home at u = ' + F.u.toFixed(2) + ')' + (W < 700 ? '' : ' · tap the figure to lay home elsewhere'), fx, L.fig.y + L.fig.h - 10);
+  }
   // ── the strip: the octaves of R, the figure emerging one octave at a time ──
   const oct = [-2, -1, 0, 1, 2, 3, 4], n = oct.length + 1, cw = L.strip.w / n;
   const cur = R > 0 ? Math.log2(R) : -Infinity;
   ctx.font = '11px ' + MONO; ctx.textAlign = 'center';
-  oct.concat([Infinity]).forEach((k, i) => {
+  if (rec) [0, 1, 2, 3, 4, 5, 6, Infinity].forEach((k, i) => {            // the held figure at the end of each level
+    const box = { x: L.strip.x + i * cw + 2, y: L.strip.y + 4, w: cw - 4, h: L.strip.h - 22 };
+    const end = isFinite(k) ? lv[Math.min(k + 1, lv.length - 1)] : null, on = k === level;
+    ctx.fillStyle = on ? 'rgba(106,168,232,.12)' : 'rgba(255,255,255,.02)'; ctx.fillRect(box.x, box.y, box.w, box.h);
+    drawFigure(ctx, box, F, { held: end ? end.P : F.lr, silent: false, railed: 0 }, false, isFinite(k) ? lv[Math.min(k, lv.length - 1)].P : null);
+    ctx.fillStyle = on ? BLUE : DIM;
+    ctx.fillText(isFinite(k) ? 'level ' + k : (cw < 90 ? '∞' : 'the figure'), box.x + box.w / 2, L.strip.y + L.strip.h - 4);
+  });
+  else oct.concat([Infinity]).forEach((k, i) => {
     const box = { x: L.strip.x + i * cw + 2, y: L.strip.y + 4, w: cw - 4, h: L.strip.h - 22 };
     const Rk = isFinite(k) ? 2 ** k : 1e9, Hk = isFinite(k) ? hold(F, Rk, C) : { held: F.lr, silent: false, railed: 0 };
     const on = isFinite(k) && Math.abs(cur - k) <= 0.5;
@@ -184,22 +262,26 @@ function render(ctx, W, H, resized){
   // ── the dial: the sweep is the level of detail; the radius is the budget ──
   const { cx, cy, R: DR } = L.dial;
   Dial.drawRim(ctx, dial, { cx, cy, R: DR, ring: DR * (0.3 + 0.62 * dial.reach), kmin: -3,
-    label: (k, a, lx, ly) => { if (k === 0 || k === 2 || k === -2) { ctx.font = '11px ' + MONO; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    label: (k, a, lx, ly) => { if (rec) { if (k === 0) { ctx.font = '11px ' + MONO; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = GOLD; ctx.fillText('c', lx, ly); ctx.textBaseline = 'alphabetic'; } return; }
+      if (k === 0 || k === 2 || k === -2) { ctx.font = '11px ' + MONO; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillStyle = k === 0 ? GOLD : DIM; ctx.fillText('R ' + (k < 0 ? '¼' : 2 ** k), lx, ly); ctx.textBaseline = 'alphabetic'; } } });
   const tick = (Rv, col, w) => { if (!(Rv > 0) || !isFinite(Rv)) return; for (const sg of [1]) { const a = sg * Math.atan(Rv);
     const [x1, y1] = Dial.at(cx, cy, a, DR - 12), [x2, y2] = Dial.at(cx, cy, a, DR + 12);
     ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); } };
-  tick(F.Rstar, HI, 2.5);                                                // this figure's corner, from this home
-  tick(C * F.S / (2 * F.far), RED, 2);                                   // where the register's reach runs out
+  if (rec) tick(1, HI, 2.5);                                             // every level's corner sits at ½ of its own sweep
+  else { tick(F.Rstar, HI, 2.5);                                         // this figure's corner, from this home
+    tick((C + 1) * F.S / (2 * F.far), RED, 2); }                         // where the register's reach runs out (Prop. 7.1)
   Dial.drawNeedles(ctx, dial, { cx, cy, R: DR, gold: dial.liveGold(now) });
   const tx = cx + DR * 0.45;                                              // the quarter's middle, for the lines beneath it
   Dial.drawReading(ctx, dial, { cx: tx, y: cy + 26, font: MONO });
   ctx.textAlign = 'center'; ctx.font = '12px ' + MONO; ctx.fillStyle = DIM;
   const narrow = W < 700, reachTxt = R > 0 ? (C / 2 * F.S / R).toFixed(2) : '∞';
-  ctx.fillText(narrow ? C + ' cells · reach ' + reachTxt + ' · pinch: cells' : C + ' cells · reach ' + reachTxt + ' in log reach · pinch or wheel: the cells', tx, cy + 44);
-  ctx.font = '11px ' + MONO; ctx.fillStyle = HI; ctx.fillText(narrow ? 'white: corner · red: reach runs out' : 'white: this figure’s corner · red: the reach runs out', tx, cy + 60);
+  if (rec) { ctx.fillText(narrow ? '3 cells a level · reach from levels' : '3 cells a level are enough: the reach comes from the levels', tx, cy + 44);
+    ctx.font = '11px ' + MONO; ctx.fillStyle = HI; ctx.fillText(narrow ? 'white: this level’s corner' : 'white: this level’s corner · past the horizon, the next level', tx, cy + 60); }
+  else { ctx.fillText(narrow ? C + ' cells · reach ' + reachTxt + ' · pinch: cells' : C + ' cells · reach ' + reachTxt + ' in log reach · pinch or wheel: the cells', tx, cy + 44);
+  ctx.font = '11px ' + MONO; ctx.fillStyle = HI; ctx.fillText(narrow ? 'white: corner · red: reach runs out' : 'white: this figure’s corner · red: the reach runs out', tx, cy + 60); }
 }
-Dial.run(dial, now => surf.draw([dial.zeta.toFixed(6), dial.liveGold(now).toFixed(4), dial.reach.toFixed(4), shape, home].join()));
+Dial.run(dial, now => { carry(); surf.draw([dial.zeta.toFixed(6), dial.liveGold(now).toFixed(4), dial.reach.toFixed(4), shape, home, mode, level].join()); });
 
 // ── HANDS ────────────────────────────────────────────────────────────────────────────────────────────
 const inBox = (b, x, y) => b && x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h;
@@ -207,7 +289,7 @@ Dial.hands(cv, dial, {
   hub: () => L.dial,
   claim: (x, y) => !!L && (inBox(L.fig, x, y) || inBox(L.strip, x, y)),
   press: (x, y) => {
-    if (inBox(L.strip, x, y)) { const i = Math.floor((x - L.strip.x) / (L.strip.w / 8)); if (i < 7) dial.setZeta(Math.asinh(2 ** (i - 2))); return; }
+    if (inBox(L.strip, x, y)) { const i = Math.floor((x - L.strip.x) / (L.strip.w / 8)); if (i < 7) { if (mode === 'rec') { level = Math.min(i, levels(figure()).length - 1); dial.setZeta(Math.asinh(1)); } else dial.setZeta(Math.asinh(2 ** (i - 2))); } return; }
     if (!figGeom) return; const a = Math.atan2(figGeom.cy - y, x - figGeom.cx);   // lay home in that direction
     home = ((Math.round(a / (2 * PI) * ND) % ND) + ND) % ND; cache = null; surf.invalidate();
   },
@@ -216,7 +298,7 @@ Dial.hands(cv, dial, {
   wheel: { x: 1 / 2000, y: 1 / 600, pinch: 1 / 300 },
   reachStep: 1 / 11,
 });
-pickShape(0);
+pickShape(0); pickMode('rec');
 </script>
 </body>
 </html>
