@@ -30,13 +30,16 @@
   // options: N (the list's length), K (corners to the window's end, 5), index, reach, thrust (0.4),
   // springMs (150), detents ([[name, reach], …] the radius settles on), onSettle (after a settle ends),
   // free (the dial reads ζ itself: letting go keeps the blue where it is, and the radius is a separate
-  // setting that leaves ζ alone; for pages where the needle's place is the setting, not a way to a record)
+  // setting that leaves ζ alone; for pages where the needle's place is the setting, not a way to a record),
+  // quarter (one sweep, 0 to π/2, home at the apex and the horizon along the right: for a reading with no
+  // 'which way', a magnitude only. ζ is held at 0 or above; the gold may still lean left, pushing back home)
   function create(o) {
     const N = o.N, K = o.K ?? 5, CAP = Math.atan(2 ** K), ZMAX = Math.asinh(2 ** K);
     const THRUST = o.thrust ?? 0.4, SPRING_MS = o.springMs ?? 150;
     let last = 0, settleTimer = 0;
+    const zc = z => clamp(z, o.quarter ? 0 : -ZMAX, ZMAX);           // the quarter dial has no left side
     const d = {
-      N, K, CAP, ZMAX, detents: o.detents || null,
+      N, K, CAP, ZMAX, detents: o.detents || null, quarter: !!o.quarter,
       index: clamp(o.index ?? 0, 0, N - 1), centre: 0, reach: o.reach ?? 0.5, zeta: 0,
       gold: 0, held: false, thrusting: false, springAt: -1, settle: null,
       span: () => Math.max(1, Math.pow(N, d.reach)),                 // window = N^r
@@ -64,7 +67,7 @@
         if (Math.abs(d.index - c) <= s / 2) { d.centre = c; d.zeta = clamp(Math.asinh((d.index - c) / d.unit(s)), -ZMAX, ZMAX); }
         else d.recentre();
       },
-      setZeta(z) { d.zeta = clamp(z, -ZMAX, ZMAX); d.read(); },
+      setZeta(z) { d.zeta = zc(z); d.read(); },
       setReach(r) { d.reach = clamp(r, 0, 1); if (!o.free) { d.rezoom(); d.read(); } },
       goTo(i) { d.index = clamp(i, 0, N - 1); d.recentre(); },
       // the gold: held, aimed, let go
@@ -84,7 +87,7 @@
       stepDetent(dir) { const i = d.detents.indexOf(d.nearestDetent()); d.settleTo(d.detents[clamp(i + dir, 0, d.detents.length - 1)][1]); },
       tick(now) {                                                     // per frame: the gold turns the blue; a settle runs its course
         const dt = Math.min(0.05, (now - (last || now)) / 1000); last = now;
-        if (d.held && d.thrusting) { d.zeta = clamp(d.zeta + Math.tan(d.gold) * THRUST * dt, -ZMAX, ZMAX); d.read(); }
+        if (d.held && d.thrusting) { d.zeta = zc(d.zeta + Math.tan(d.gold) * THRUST * dt); d.read(); }
         if (d.settle) { const t = Math.min(1, (now - d.settle.t0) / 260), e = 1 - Math.pow(1 - t, 3);
           d.reach = d.settle.from + (d.settle.to - d.settle.from) * e; d.rezoom(); d.read();
           if (t >= 1) { d.settle = null; if (o.onSettle) o.onSettle(); } }
@@ -184,12 +187,14 @@
   function drawRim(ctx, d, o) {
     const { cx, cy, R } = o, rr = o.ring, C = COLORS;
     ctx.lineCap = 'round';
+    const q = d.quarter, a0 = q ? -PI / 2 : -PI;                                // a quarter dial: home up, horizon right
     ctx.strokeStyle = 'rgba(201,199,190,.18)'; ctx.lineWidth = 1;                 // the horizon: 90°, never reached
-    ctx.beginPath(); ctx.moveTo(cx - R - 14, cy); ctx.lineTo(cx + R + 14, cy); ctx.stroke();
-    ctx.strokeStyle = 'rgba(232,200,106,.22)'; ctx.beginPath(); ctx.arc(cx, cy, R, -PI, 0); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(q ? cx : cx - R - 14, cy); ctx.lineTo(cx + R + 14, cy); ctx.stroke();
+    if (q) { ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, cy - R - 14); ctx.stroke(); }   // home: 0°, where every sweep starts
+    ctx.strokeStyle = 'rgba(232,200,106,.22)'; ctx.beginPath(); ctx.arc(cx, cy, R, a0, 0); ctx.stroke();
     ctx.strokeStyle = C.GOLD; ctx.globalAlpha = 0.55; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(cx, cy, rr, -PI, 0); ctx.stroke(); ctx.globalAlpha = 1;
-    for (let k = o.kmin ?? -d.K; k <= d.K; k++) for (const sg of [-1, 1]) {
+    ctx.beginPath(); ctx.arc(cx, cy, rr, a0, 0); ctx.stroke(); ctx.globalAlpha = 1;
+    for (let k = o.kmin ?? -d.K; k <= d.K; k++) for (const sg of q ? [1] : [-1, 1]) {
       const a = sg * Math.atan(2 ** k), [x1, y1] = at(cx, cy, a, rr - 7), [x2, y2] = at(cx, cy, a, rr + 7);
       ctx.strokeStyle = k === 0 ? C.GOLD : k > 0 ? 'rgba(232,200,106,.6)' : 'rgba(29,158,117,.75)'; ctx.lineWidth = k === 0 ? 2 : 1.2;
       ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
@@ -199,9 +204,9 @@
   // the gold (a rate), the blue (a place) with a dot at its tip, optionally its drop to the horizon line, and the hub
   function drawNeedles(ctx, d, o) {
     const { cx, cy, R } = o, C = COLORS;
-    const needle = (a, col) => { const [x, y] = at(cx, cy, a, R); ctx.strokeStyle = col; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(x, y); ctx.stroke(); };
+    const needle = (a, col, len = R) => { const [x, y] = at(cx, cy, a, len); ctx.strokeStyle = col; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(x, y); ctx.stroke(); };
     ctx.lineCap = 'round';
-    needle(o.gold, C.GOLD);
+    needle(o.gold, C.GOLD, d.quarter && o.gold < 0 ? R * 0.35 : R);            // on a quarter dial, a gold leaning back is a short push home
     if (Math.abs(d.zeta) > 1e-9) {
       const th = d.theta(), [tx, ty] = at(cx, cy, th, R);
       needle(th, C.BLUE);

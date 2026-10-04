@@ -29,6 +29,9 @@
      A caution kept from draw.html: this is the corner of a derived relation (step against swing), a
      reading about readings, not the corner of the shape's own v over h.
 
+     ONE QUARTER, NOT A SEMICIRCLE. R is a magnitude with no 'which way', so the dial is one sweep, 0 to π/2:
+     home at the top, the corner at 45°, the horizon along the right. Lean the gold left of home to push back.
+
      Hands: pan on the dial (the gold pushes the sweep; it stays where you leave it) · pinch or wheel: the
      cells · tap the figure: lay home in that direction · the buttons: the shape · ← → ↑ ↓ as on every dial. -->
 <style>
@@ -104,9 +107,9 @@ function hold(F, R, C){
 const cellsOf = r => Math.round(2 ** (1 + 7 * r));                      // the budget: 2 … 256 cells, from the dial's radius
 
 // ── THE DIAL: the sweep is the level of detail; free, so it stays where it is left ────────────────────
-const dial = Dial.create({ N: 2 ** 53, K: 5, index: 2 ** 52, reach: 4 / 7, free: true });
+const dial = Dial.create({ N: 2 ** 53, K: 5, index: 2 ** 52, reach: 4 / 7, free: true, quarter: true });   // one sweep: R has no 'which way'
 dial.setZeta(Math.asinh(0.5));
-const R_OF = () => Math.abs(Math.sinh(dial.zeta));
+const R_OF = () => Math.sinh(dial.zeta);                                // ζ ≥ 0 on a quarter dial
 
 // ── DRAWING ──────────────────────────────────────────────────────────────────────────────────────────
 const cv = document.getElementById('cv'), surf = Dial.surface(cv, render);
@@ -114,11 +117,12 @@ let L = null;
 function layout(W, H){
   const land = W >= H * 1.05;
   if (land) { const dw = W * 0.42;
-    return { land, dial: { cx: dw / 2, cy: H - 96, R: Math.max(50, Math.min(dw * 0.44, H - 200)) },
+    const DR = Math.max(50, Math.min((dw - 64) / 1.38, H - 200));      // a quarter dial: hub at the left, the sweep to the right
+    return { land, dial: { cx: 24 + 0.38 * DR, cy: H - 96, R: DR },
              fig: { x: dw, y: 0, w: W - dw, h: H - 120 }, strip: { x: dw, y: H - 118, w: W - dw, h: 110 } }; }
   const fh = H * 0.36, sh = 86, dh = H - fh - sh;
   return { land, fig: { x: 0, y: 0, w: W, h: fh }, strip: { x: 0, y: fh, w: W, h: sh },
-           dial: { cx: W / 2, cy: fh + sh + dh - 92, R: Math.max(46, Math.min(W * 0.44, dh - 150)) } };
+           dial: (() => { const DR = Math.max(46, Math.min((W - 64) / 1.38, dh - 150)); return { cx: 24 + 0.38 * DR, cy: fh + sh + dh - 92, R: DR }; })() };
 }
 function outline(ctx, cx, cy, scale, vals, close = true){            // vals: log reach per direction
   ctx.beginPath();
@@ -178,17 +182,18 @@ function render(ctx, W, H, resized){
   Dial.drawRim(ctx, dial, { cx, cy, R: DR, ring: DR * (0.3 + 0.62 * dial.reach), kmin: -3,
     label: (k, a, lx, ly) => { if (k === 0 || k === 2 || k === -2) { ctx.font = '11px ' + MONO; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillStyle = k === 0 ? GOLD : DIM; ctx.fillText('R ' + (k < 0 ? '¼' : 2 ** k), lx, ly); ctx.textBaseline = 'alphabetic'; } } });
-  const tick = (Rv, col, w) => { if (!(Rv > 0) || !isFinite(Rv)) return; for (const sg of [-1, 1]) { const a = sg * Math.atan(Rv);
+  const tick = (Rv, col, w) => { if (!(Rv > 0) || !isFinite(Rv)) return; for (const sg of [1]) { const a = sg * Math.atan(Rv);
     const [x1, y1] = Dial.at(cx, cy, a, DR - 12), [x2, y2] = Dial.at(cx, cy, a, DR + 12);
     ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); } };
   tick(F.Rstar, HI, 2.5);                                                // this figure's corner, from this home
   tick(C * F.S / (2 * F.far), RED, 2);                                   // where the register's reach runs out
   Dial.drawNeedles(ctx, dial, { cx, cy, R: DR, gold: dial.liveGold(now) });
-  Dial.drawReading(ctx, dial, { cx, y: cy + 26, font: MONO });
+  const tx = cx + DR * 0.45;                                              // the quarter's middle, for the lines beneath it
+  Dial.drawReading(ctx, dial, { cx: tx, y: cy + 26, font: MONO });
   ctx.textAlign = 'center'; ctx.font = '12px ' + MONO; ctx.fillStyle = DIM;
   const narrow = W < 700, reachTxt = R > 0 ? (C / 2 * F.S / R).toFixed(2) : '∞';
-  ctx.fillText(narrow ? C + ' cells · reach ' + reachTxt + ' · pinch: cells' : C + ' cells · reach ' + reachTxt + ' in log reach · pinch or wheel: the cells', cx, cy + 44);
-  ctx.font = '11px ' + MONO; ctx.fillStyle = HI; ctx.fillText(narrow ? 'white: corner · red: reach runs out' : 'white: this figure’s corner · red: the reach runs out', cx, cy + 60);
+  ctx.fillText(narrow ? C + ' cells · reach ' + reachTxt + ' · pinch: cells' : C + ' cells · reach ' + reachTxt + ' in log reach · pinch or wheel: the cells', tx, cy + 44);
+  ctx.font = '11px ' + MONO; ctx.fillStyle = HI; ctx.fillText(narrow ? 'white: corner · red: reach runs out' : 'white: this figure’s corner · red: the reach runs out', tx, cy + 60);
 }
 Dial.run(dial, now => surf.draw([dial.zeta.toFixed(6), dial.liveGold(now).toFixed(4), dial.reach.toFixed(4), shape, home].join()));
 
