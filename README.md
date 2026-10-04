@@ -23,6 +23,12 @@ is a single self-contained file.
 | [dial.html](https://reportbase.github.io/calendar/dial.html) | The minimal dial: a century of milliseconds on one half-disc. |
 | [city-dial.html](https://reportbase.github.io/calendar/city-dial.html) | The dial over a road and a city generated from the address, on a list of 2⁵³ − 1 records. |
 
+## Papers — [papers/](papers/)
+
+| Paper | |
+|---|---|
+| [level-of-detail.md](papers/level-of-detail.md) | *The Sweep All the Way Down.* Every octave with two facings is a 0 to π/2 sweep of its own (one projective map; the flip holds at every level), so the sweep is additive outside an octave (place = n + g) and recursive inside it. Level of detail is that same sweep: the figure starts as the circle of home, speaks at R* = 1/(1+\|u\|) and rails at (C+1)·S/(2·far). Every figure comes from [lod-figures.js](papers/lod-figures.js). |
+
 ## Demos — [demos/](demos/)
 
 Standalone pages, one idea each, pulled out of the draw project's labs. See [demos/README.md](demos/README.md).
