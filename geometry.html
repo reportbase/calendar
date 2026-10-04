@@ -109,7 +109,7 @@ function layout(){
   nums.style.left = numsBtn.style.left = (disc.x + 14) + 'px'; numsBtn.style.top = (disc.y + 14) + 'px';
   nums.style.top = '14px'; nums.style.maxWidth = Math.max(200, (land ? disc.w : W) - 28) + 'px';
   const top = (land && !nums.hidden) ? nums.offsetHeight + 40 : 40;
-  disc.cx = disc.x + disc.w / 2; disc.cy = disc.y + disc.h - 86;
+  disc.cx = disc.x + disc.w / 2; disc.cy = disc.y + disc.h - 104;
   disc.R = Math.max(40, Math.min(disc.w * 0.44, disc.cy - disc.y - top));
   fig.ox = fig.x + fig.w / 2; fig.oy = fig.y + fig.h - 46;
   fig.L = Math.max(10, Math.min(fig.w / 3.4, (fig.h - 90) / 3.2)) * figZoom;
@@ -145,7 +145,10 @@ function drawDial(g){
   ctx.font = '19px ' + mono; line(date, cx, cy + 30);
   ctx.font = '15px ' + mono; line(time, cx, cy + 52);
   ctx.font = '12px ' + mono; ctx.fillStyle = DIM; ctx.textAlign = 'center';
-  ctx.fillText('g ' + sweepG().toFixed(3) + ' · window ' + fmtDur(s) + ' · unit ' + fmtDur(dial.unit(s)) + ' · r ' + dial.reach.toFixed(3), cx, cy + 74);
+  Dial.drawReading(ctx, dial, { cx, y: cy + 74, font: mono });                // the reading: side · octave · t · g
+  ctx.font = '12px ' + mono; ctx.fillStyle = DIM;                              // the rung: which h counts as one (pinch, wheel, ↑ ↓)
+  const rung = 'h = ' + fmtDur(dial.unit(s)) + ', the corner · window ' + fmtDur(s), tip = ' · pinch slides the rung';
+  ctx.fillText(ctx.measureText(rung + tip).width < Lay.dial.w - 16 ? rung + tip : rung, cx, cy + 92);   // the hint only where it fits
 }
 
 // ── THE FIGURE: centre, circle, tangent, hyperbola — the dial's own geometry ──────────────────────
@@ -238,7 +241,8 @@ function drawFigure(){
   dot(h.T, GOLD, 6, 'T', 16 * side, 14);
   dot(h.H, TEAL, 6, 'H', 16 * side, -6);
   ctx.font = '12px ' + mono; ctx.fillStyle = DIM; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-  ctx.fillText('drag P, T, H or S · wheel zooms the figure · [ ] the shape’s breadth b = ' + b.toFixed(2), ox, f.y + f.h - 12);
+  const hint = 'drag P, T, H or S · wheel zooms the figure · [ ] the shape’s breadth b = ' + b.toFixed(2);
+  ctx.fillText(ctx.measureText(hint).width < f.w - 16 ? hint : 'drag P, T, H, S · b = ' + b.toFixed(2), ox, f.y + f.h - 12);
   ctx.restore();
 }
 
@@ -255,7 +259,7 @@ function gRows(sAbs){                                          // the paper's re
     row('octave, t', oct ? oct[0] + ', ' + oct[1].toFixed(3) : '—', 'octaves out from the corner · share within one') +
     row('flip', (1 - g).toFixed(4), 's ↦ 1/s is g ↦ 1 − g · P′, T′') +
     row('b', b.toFixed(2), 'the shape: v breadth over h · [ ] to change') +
-    row('expressed', Math.abs(Math.sin(theta())).toFixed(4), 'sin t: 0 the unit circle (g 0) · 1 the shape (g 1) · Q = (cos t, b sin t)') +
+    row('sin t', Math.abs(Math.sin(theta())).toFixed(4), 'P carried toward Q, the gap (b − 1)·sin t · the breadth met is the path Q has traced (R170: expressed is met)') +
     row('b · s', (b * sAbs).toPrecision(4), 'the reading through the shape = the radius slid ' + Math.log2(b).toFixed(2) + ' octaves');
 }
 function updateNums(){
@@ -274,7 +278,7 @@ function updateNums(){
     gRows(Math.abs(t)) +
     '<span class="hd">the radius, a logarithm</span>' +
     row('r', f(dial.reach, 3), 'window = N^r = ' + fmtDur(s) + ' · [exponent]') +
-    row('unit', fmtDur(dial.unit(s)), 'the 45° corner · window half = 2^' + K + ' units');
+    row('h, the unit', fmtDur(dial.unit(s)), 'the corner, one h · the rung: pinch, wheel, ↑ ↓ slide it (Prop. 3.8) · window half = 2^' + K + ' h');
 }
 
 // ── DRAWING: only when something moved (dial-core.js's surface) ─────────────────────────────────

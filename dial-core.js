@@ -13,6 +13,11 @@
    (pushed away closes it; a trackpad pinch, which arrives with ctrlKey, opens with the fingers), sideways
    is ζ. Keys: ← → push the gold at 45°, ↑ ↓ the radius (to the next detent, if the page has detents).
 
+   THE READING. dial.reading() is the reading as Serial, Parallel and Nowhere writes it: the side (front
+   before the corner, back past it), the octave counted out from the corner, the share t within it, and
+   g, the sweep (§3.3, §3.5, R170). The radius is not g: it is h, which reading counts as one, and a
+   change of it slides the ladder of octaves (Proposition 3.8). drawReading puts the reading under a dial.
+
    THE DRAWING. A surface redraws only when the page's key changes or the size does, on a back canvas
    copied across in one act, and draws nothing while the canvas has no size. */
 (function () {
@@ -36,6 +41,17 @@
       unit: (s = d.span()) => s / 2 / 2 ** K,                         // the 45° corner; the window's half is 2^K units
       theta: () => Math.atan(Math.sinh(d.zeta)),                      // θ = gd(ζ)
       sweep: () => Math.abs(d.theta()) / (PI / 2),                    // g: 0 home, ½ the corner, 1 the horizon
+      // THE READING, AS Serial, Parallel and Nowhere WRITES IT (§3.3, §3.5): s = v/h = tan θ; the side (front
+      // before the corner, back past it); the share, min(v,h)/max(v,h), written as the octave k counted out
+      // from the corner and the share t within it, t = 2^(k+1)·share − 1; and g, the sweep. The flip
+      // s ↦ 1/s changes only the side; the carry moves one octave out.
+      reading() {
+        const s = Math.abs(Math.sinh(d.zeta)), g = d.sweep();
+        if (s < 1e-12) return { s: 0, g: 0, side: 'home', share: 0 };
+        if (Math.abs(s - 1) < 1e-9) return { s: 1, g: 0.5, side: 'corner', share: 1, k: 0, t: 1 };
+        const share = s < 1 ? s : 1 / s, x = -Math.log2(share), k = x <= 0 ? 0 : Math.ceil(x) - 1;
+        return { s, g, side: s < 1 ? 'front' : 'back', share, k, t: 2 ** (k + 1) * share - 1 };
+      },
       read() { d.index = clamp(d.centre + d.unit() * Math.sinh(d.zeta), 0, N - 1); },   // the value is the tangent
       recentre() {                                                    // the window onto the record; ζ keeps what the ends force
         const s = d.span(); d.centre = clamp(d.index, s / 2, N - s / 2);
@@ -194,8 +210,19 @@
     ctx.fillStyle = C.GOLD; ctx.beginPath(); ctx.arc(cx, cy, 4, 0, 2 * PI); ctx.fill();
   }
 
+  // the reading under the dial, one line: side · octave · t, then g. Front in teal, back in gold.
+  function drawReading(ctx, d, o) {
+    const r = d.reading(), C = COLORS;
+    const text = r.side === 'home' ? 'home · g 0 — pan to sweep'
+      : r.side === 'corner' ? 'the corner · octave 0 · share 1 · g ½'
+      : r.side + ' · octave ' + r.k + ' · t ' + r.t.toFixed(2) + ' · g ' + r.g.toFixed(3);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.font = (o.size || 12) + 'px ' + o.font;
+    ctx.fillStyle = r.side === 'front' ? C.TEAL : r.side === 'home' ? C.DIM : C.GOLD;
+    ctx.fillText(text, o.cx, o.y);
+  }
+
   // runs tick and draw every frame; draw is the page's, and decides for itself whether anything changed
   function run(d, draw) { const step = now => { d.tick(now); draw(now); requestAnimationFrame(step); }; requestAnimationFrame(step); }
 
-  window.Dial = { create, hands, surface, drawRim, drawNeedles, run, at, clamp, COLORS };
+  window.Dial = { create, hands, surface, drawRim, drawNeedles, drawReading, run, at, clamp, COLORS };
 })();

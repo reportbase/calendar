@@ -102,7 +102,7 @@ const cv = document.getElementById('cv'), surf = Dial.surface(cv, render);
 let cx = 0, cy = 0, R = 1, markHits = [];
 function render(ctx, W, H){
   // the dial as large as the width allows; on a tall narrow screen it sits in the middle, not at the foot
-  R = Math.max(60, Math.min(W * 0.46, H - 108)); cx = W / 2; cy = Math.min(H - 84, (H + R) / 2 + 10);
+  R = Math.max(60, Math.min(W * 0.46, H - 126)); cx = W / 2; cy = Math.min(H - 102, (H + R) / 2 + 10);
   ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
   const s = dial.span(), u = dial.unit(s), at = (a, r) => Dial.at(cx, cy, a, r);
   // the corners, labelled in the unit this radius rests on: ½, ¼ … before the corner, 1, 2 … 2^K past it
@@ -127,7 +127,8 @@ function render(ctx, W, H){
   ctx.textBaseline = 'alphabetic';
   ctx.font = '20px ' + MONO; line(date, cy + 30); ctx.font = '15px ' + MONO; line(time, cy + 52);
   ctx.font = '12px ' + MONO; ctx.fillStyle = DIM; ctx.textAlign = 'center';
-  ctx.fillText('the corner is ' + fmtUnits(u) + ' · the window ' + fmtUnits(s), cx, cy + 74);
+  ctx.fillText('h, the corner, is ' + fmtUnits(u) + ' · the window ' + fmtUnits(s), cx, cy + 74);   // the rung the radius rests on
+  Dial.drawReading(ctx, dial, { cx, y: cy + 92, font: MONO });                 // the reading: side · octave · t · g
 }
 // ── THE DOCK ─────────────────────────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id), noteEl = $('note');
