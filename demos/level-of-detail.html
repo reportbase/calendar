@@ -104,10 +104,12 @@ function hold(F, R, C){
   let ve = 0, vf = 0; for (let i = 0; i < ND; i++) { const fv = F.lr[i] - ma, e = fv - (held[i] - mb); ve += e * e; vf += fv * fv; }
   return { held, rungs: ks.size, railed, silent: ks.size === 1 && !railed, carried: vf > 0 ? 1 - ve / vf : 0 };
 }
-const cellsOf = r => Math.round(2 ** (1 + 7 * r));                      // the budget: 2 … 256 cells, from the dial's radius
+const cellsOf = r => Math.round(2 ** (1 + 11 * r));                     // the budget: 2 … 4096 cells, from the dial's radius
 
 // ── THE DIAL: the sweep is the level of detail; free, so it stays where it is left ────────────────────
-const dial = Dial.create({ N: 2 ** 53, K: 5, index: 2 ** 52, reach: 4 / 7, free: true, quarter: true });   // one sweep: R has no 'which way'
+// K = 10: the sweep runs to R = 2^10 = 1024, g = 0.9994, where a rung is under 0.1% of the reach and the figure
+// is smooth; 2048 cells by default, enough to follow it there (pinch them down to see the extremes rail)
+const dial = Dial.create({ N: 2 ** 53, K: 10, index: 2 ** 52, reach: 10 / 11, free: true, quarter: true });   // one sweep: R has no 'which way'
 dial.setZeta(Math.asinh(0.5));
 const R_OF = () => Math.sinh(dial.zeta);                                // ζ ≥ 0 on a quarter dial
 
@@ -210,7 +212,7 @@ Dial.hands(cv, dial, {
   move: (x, y) => { if (inBox(L.fig, x, y) && figGeom) { const a = Math.atan2(figGeom.cy - y, x - figGeom.cx);
     home = ((Math.round(a / (2 * PI) * ND) % ND) + ND) % ND; cache = null; } },
   wheel: { x: 1 / 2000, y: 1 / 600, pinch: 1 / 300 },
-  reachStep: 1 / 7,
+  reachStep: 1 / 11,
 });
 pickShape(0);
 </script>
