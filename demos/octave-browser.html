@@ -5,20 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Octave Browser</title>
 <!-- THE OCTAVE BROWSER. A reader browsing time back from now, the way Serial, Parallel and Nowhere says a
-     situated reader holds a reading (§3.3, §3.5, Proposition 3.8).
+     situated reader holds a reading (§3.3, §3.5, R167, Proposition 3.8), with every octal built alike.
 
-     THE HOME OCTAVE IS PROPORTIONAL. The reader counts in h, the corner. Its own octave runs from ½h to h
-     on the front side (v in terms of h) and from h to 2h on the back (h in terms of v): one octave, two
-     facings, drawn in plain proportion with the corner in the middle.
+     EVERY OCTAL HAS A FRONT AND A BACK, SPLIT BY ITS CORNER. The reader's own octal is R167's: one octave,
+     two facings, ½h to 2h, the corner h in the middle; before it v in terms of h (the front), past it h in
+     terms of v (the back). Every octal is built the same way round its own corner c: ½c to c the front,
+     c to 2c the back. Laid end to end they meet at their edges: octal +1 is 2h to 8h round 4h, octal −1
+     is ⅛h to ½h round ¼h, so each is two doublings wide and the corners go 4× apart. Inside each half the
+     reading is plain proportion of the share (v/c in front, c/v behind), t = 2·share − 1, 0 at the octal's
+     edge and 1 at its corner.
 
-     PAST IT, THE LADDER. Each octave beyond is half as wide as the one inside it and plain proportion
-     within itself: halvings run left toward home (now), doublings right toward the horizon (the far past).
-     A reading is (side, octave k, share t); the ladder is the float's exponent and significand.
+     THE LADDER. The home octal is drawn widest; each octal out is half as wide as the one inside it,
+     halvings toward home (now) on the left, doublings toward the horizon (the far past) on the right.
 
-     LEAVE THE HOME OCTAVE AND IT CARRIES. Take the reading out of the home octave and the view slides one
-     octave: h doubles or halves, and the octave entered becomes home, proportional again. Hold the hand
-     past the edge and it keeps carrying, one octave at a time. Nothing at any rung is special
-     (Proposition 3.7): every home octave looks the same; only the labels change.
+     LEAVE THE HOME OCTAL AND IT CARRIES. Take the reading out of the home octal and the view slides one
+     octal: h goes ×4 or ÷4 and the octal entered becomes home, proportional again. Hold the hand past
+     the edge and it keeps carrying. Nothing at any rung is special (Proposition 3.7): every home octal
+     looks the same; only the labels change.
 
      Hands: drag the ruler (or the marker) to place the reading · wheel or ← → step it · Home: the corner. -->
 <style>
@@ -29,40 +32,49 @@
 </style>
 </head>
 <body>
-<canvas id="cv" aria-label="The octave browser. Drag to place the reading; leaving the home octave carries the view one octave."></canvas>
+<canvas id="cv" aria-label="The octave browser. Drag to place the reading; leaving the home octal carries the view one octal."></canvas>
 <script>
 const GOLD = '#e8c86a', TEAL = '#1D9E75', BLUE = '#6aa8e8', INK = '#c9c7be', HI = '#f1efe6', DIM = '#8a909b', BG = '#0b0d12', LINE = '#2b2e36';
 const MONO = getComputedStyle(document.documentElement).getPropertyValue('--mono');
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const VMIN = 0.25, VMAX = 100 * 365.25 * 864e2;                   // a quarter second to a century, in seconds
-const R = 0.5;                                                   // each octave out is half as wide as the one inside it
+let R = 0.5;                                                     // each octal out is half as wide as the one inside it (0.4 on a phone)
 const T_NOW = Date.now();
 
 // ── THE STATE: the reading v, and the rung m (h = 2^m seconds); mu is the drawn rung, sliding to m ─────
-let v = 864e2, m = Math.floor(Math.log2(v)), mu = m, last = 0, dragging = false;
-const carryTarget = () => {                                      // the octave the reading is in becomes home
-  const s = v / 2 ** m; if (s >= 2) m += 1; else if (s < 0.5) m -= 1; };
+let v = 864e2, m = 2 * Math.round(Math.log2(v) / 2), mu = m, last = 0, dragging = false;   // m even: corners 4× apart
+const carryTarget = () => {                                      // the octal the reading is in becomes home: h ×4 or ÷4
+  const s = v / 2 ** m; if (s >= 2) m += 2; else if (s < 0.5) m -= 2; };
 
-// ── THE READING: (side, octave k, share t), as §3.3 writes it ─────────────────────────────────────────
-function readingOf(s){
-  if (Math.abs(s - 1) < 1e-12) return { side: 'corner', k: 0, t: 1, share: 1 };
-  const share = s < 1 ? s : 1 / s, k = Math.max(0, Math.ceil(-Math.log2(share)) - 1);
-  return { side: s < 1 ? 'front' : 'back', k, t: 2 ** (k + 1) * share - 1, share };
+// ── THE READING: (octal n, side, share t) round the octal's own corner c = 4^n (in units of h) ─────────
+function readingOf(sv){
+  const n = Math.floor((Math.log2(sv) + 1) / 2), c = 4 ** n;
+  if (Math.abs(sv / c - 1) < 1e-12) return { n, c, side: 'corner', t: 1, share: 1 };
+  const front = sv < c, share = front ? sv / c : c / sv;
+  return { n, c, side: front ? 'front' : 'back', share, t: 2 * share - 1 };
 }
-// ── THE LADDER LAID ON THE SCREEN: offset from the corner, home octave width w0 ───────────────────────
+// ── THE LADDER LAID ON THE SCREEN. Octal 0 has halves of width w0 either side of the main corner;
+// octal j ≥ 1 is 2·w0·R^j wide, starting at start(j) from the main corner. Its inner half (nearer the
+// main corner) runs from its edge to its own corner, its outer half from its corner to its far edge. ──
 let W = 0, H = 0, D = 0, cx = 0, y0 = 0, w0 = 100;
-const cum = k => w0 * (1 - R ** k) / (1 - R);                    // width of octaves 0 … k−1 on one side
+const start = j => j === 0 ? -w0 : w0 + 2 * w0 * R * (1 - R ** (j - 1)) / (1 - R);
+const side = () => w0 * (1 + 2 * R / (1 - R));
+const half = j => j === 0 ? w0 : w0 * R ** j;
 function xOf(val, hd){
-  const r = readingOf(val / hd); if (r.side === 'corner') return cx;
-  const off = cum(r.k) + w0 * R ** r.k * (1 - r.t);
-  return r.side === 'front' ? cx - off : cx + off;
+  const r = readingOf(val / hd), j = Math.abs(r.n);
+  const sideSign = r.n > 0 || (r.n === 0 && r.side !== 'front') ? 1 : -1;
+  const inner = j > 0 && ((r.n > 0) === (r.side === 'front'));   // right: front is inner; left: back is inner
+  const off = inner ? start(j) + half(j) * r.t : start(j) + half(j) + half(j) * (1 - r.t);
+  return cx + sideSign * off;
 }
 function valOf(x, hd){
-  const off = Math.abs(x - cx), sideFront = x < cx;
-  if (off < 1e-9) return hd;
-  let k = 0; while (cum(k + 1) < off && k < 60) k++;
-  const t = clamp(1 - (off - cum(k)) / (w0 * R ** k), 0, 1), share = (t + 1) / 2 ** (k + 1);
-  return hd * (sideFront ? share : 1 / share);
+  const right = x >= cx, off = Math.abs(x - cx);
+  if (off < w0) { const t = 1 - off / w0; return hd * (right ? 2 / (t + 1) : (t + 1) / 2); }
+  let j = 1; while (start(j + 1) <= off && j < 40) j++;
+  const n = right ? j : -j, c = 4 ** n, loc = off - start(j), hw = half(j);
+  const inner = loc < hw, t = clamp(inner ? loc / hw : 1 - (loc - hw) / hw, 0, 1);
+  const front = right ? inner : !inner;
+  return hd * c * (front ? (t + 1) / 2 : 2 / (t + 1));
 }
 
 // ── WORDS FOR DURATIONS AND DATES ────────────────────────────────────────────────────────────────────
@@ -85,34 +97,43 @@ function draw(){
   if (Math.abs(w - W) > 1 || Math.abs(h - H) > 1 || d !== D) { W = w; H = h; D = d; cv.width = back.width = W * D; cv.height = back.height = H * D; force = true; }
   const key = [v.toPrecision(9), mu.toFixed(5), m].join();
   if (key === lastKey && !force) return; lastKey = key; force = false;
-  cx = W / 2; y0 = H * 0.46; w0 = Math.min(W * 0.46, 520) / 2;   // each side holds 2·w0: the home octave half of it
+  cx = W / 2; y0 = H * 0.46; R = W < 700 ? 0.4 : 0.5; w0 = Math.min(W * 0.47, 780) / (1 + 2 * R / (1 - R));   // a side: the home octal's half w0, then the octals beyond
   const hd = 2 ** mu;
   ctx.setTransform(D, 0, 0, D, 0, 0); ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
   ctx.lineCap = 'round'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-  // the home octave, shaded: proportional ground
+  // the home octal, shaded: proportional ground
   const xa = xOf(hd / 2, hd), xb = xOf(hd * 2, hd);
   ctx.fillStyle = 'rgba(232,200,106,.07)'; ctx.fillRect(xa, y0 - 46, xb - xa, 92);
-  ctx.strokeStyle = 'rgba(201,199,190,.25)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(cx - 2 * w0 - 8, y0); ctx.lineTo(cx + 2 * w0 + 8, y0); ctx.stroke();
-  // the octave edges and the shares inside each octave, both sides
+  ctx.strokeStyle = 'rgba(201,199,190,.25)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(cx - side() - 8, y0); ctx.lineTo(cx + side() + 8, y0); ctx.stroke();
+  // every octal: its two edges, its own corner in the middle, and equal steps of the share in each half
   ctx.font = '11px ' + MONO;
-  for (const side of [-1, 1]) for (let k = 0; k < 40; k++) {
-    const ww = w0 * R ** k; if (ww < 2) break;
-    const edge = hd * 2 ** (side * (k + 1)), xe = xOf(edge, hd);
-    ctx.strokeStyle = k === 0 ? GOLD : side < 0 ? 'rgba(29,158,117,.8)' : 'rgba(232,200,106,.6)'; ctx.lineWidth = k === 0 ? 2 : 1.2;
-    ctx.beginPath(); ctx.moveTo(xe, y0 - 14); ctx.lineTo(xe, y0 + 14); ctx.stroke();
-    const sub = k === 0 ? 8 : ww > 60 ? 4 : ww > 24 ? 2 : 1;      // proportion inside the octave: equal steps of the share
-    ctx.strokeStyle = 'rgba(201,199,190,.35)'; ctx.lineWidth = 1;
-    for (let i = 1; i < sub; i++) { const t = i / sub, share = (t + 1) / 2 ** (k + 1), xs = xOf(hd * (side < 0 ? share : 1 / share), hd);
-      ctx.beginPath(); ctx.moveTo(xs, y0 - 6); ctx.lineTo(xs, y0 + 6); ctx.stroke(); }
-    if (ww > 46 || (k < 3 && ww > 30)) { ctx.fillStyle = k === 0 ? GOLD : DIM; ctx.fillText(dur(edge, true), xe, y0 + 30 + (k % 2) * 13); }
+  for (const side of [-1, 1]) for (let j = 0; j < 40; j++) {
+    const n = side * j, hw = half(j); if (j > 0 && hw < 1.5) break;
+    if (j === 0 && side < 0) continue;                           // octal 0 drawn once
+    const c = hd * 4 ** n, xc = xOf(c, hd), outer = c * (n < 0 ? 0.5 : 2), xo = xOf(outer, hd);
+    const sub = hw > 120 ? 8 : hw > 50 ? 4 : hw > 18 ? 2 : 1;
+    ctx.strokeStyle = 'rgba(201,199,190,.32)'; ctx.lineWidth = 1;
+    for (const f of [true, false]) for (let i = 1; i < sub; i++) {   // the share inside each half, in equal steps
+      const t = i / sub, share = (t + 1) / 2, xs = xOf(c * (f ? share : 1 / share), hd);
+      ctx.beginPath(); ctx.moveTo(xs, y0 - 5); ctx.lineTo(xs, y0 + 5); ctx.stroke(); }
+    if (j > 0) {                                                 // the octal's own corner: its front and back meet here
+      ctx.strokeStyle = n < 0 ? 'rgba(29,158,117,.9)' : 'rgba(232,200,106,.8)'; ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.moveTo(xc, y0 - 12); ctx.lineTo(xc, y0 + 12); ctx.stroke();
+      if (hw > 30) { ctx.fillStyle = n < 0 ? TEAL : GOLD; ctx.fillText(dur(c, true), xc, y0 - 18); }
+    }
+    ctx.strokeStyle = 'rgba(201,199,190,.6)'; ctx.lineWidth = 1;   // the octal's outer edge, where the next one starts
+    ctx.beginPath(); ctx.moveTo(xo, y0 - 16); ctx.lineTo(xo, y0 + 16); ctx.stroke();
+    if (j === 0) { const xi = xOf(c / 2, hd); ctx.beginPath(); ctx.moveTo(xi, y0 - 16); ctx.lineTo(xi, y0 + 16); ctx.stroke(); }
+    if (hw > 36 || j === 0) { ctx.fillStyle = DIM; ctx.fillText(dur(outer, true), xo, y0 + 30);
+      if (j === 0) ctx.fillText(dur(c / 2, true), xOf(c / 2, hd), y0 + 30); }
   }
   // the corner, h
   ctx.strokeStyle = GOLD; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(cx, y0 - 22); ctx.lineTo(cx, y0 + 22); ctx.stroke();
   ctx.fillStyle = GOLD; ctx.font = '12px ' + MONO; ctx.fillText('h = ' + dur(hd), cx, y0 + 46);   // below the ruler, clear of the reading
   ctx.fillStyle = DIM; ctx.font = '11px ' + MONO;
   const narrow = W < 700;                                        // a phone: the ends on one row, the facings on the next
-  ctx.textAlign = 'left'; ctx.fillText(narrow ? '◀ now' : '◀ home: now', cx - 2 * w0 - 8, y0 - (narrow ? 74 : 56));
-  ctx.textAlign = 'right'; ctx.fillText(narrow ? 'far past ▶' : 'the horizon: the far past ▶', cx + 2 * w0 + 8, y0 - (narrow ? 74 : 56));
+  ctx.textAlign = 'left'; ctx.fillText(narrow ? '◀ now' : '◀ home: now', cx - side() - 8, y0 - (narrow ? 74 : 56));
+  ctx.textAlign = 'right'; ctx.fillText(narrow ? 'far past ▶' : 'the horizon: the far past ▶', cx + side() + 8, y0 - (narrow ? 74 : 56));
   ctx.textAlign = 'center'; ctx.fillText(narrow ? 'front' : 'front: v in terms of h', (xa + cx) / 2, y0 - 56); ctx.fillText(narrow ? 'back' : 'back: h in terms of v', (xb + cx) / 2, y0 - 56);
   // the reading
   const xv = xOf(v, hd), rd = readingOf(v / hd), col = rd.side === 'front' ? TEAL : rd.side === 'back' ? GOLD : HI;
@@ -123,9 +144,10 @@ function draw(){
   ctx.textAlign = 'center'; ctx.fillStyle = HI; ctx.font = '22px ' + MONO; ctx.fillText(dur(v) + ' ago', cx, ty);
   ctx.fillStyle = BLUE; ctx.font = '15px ' + MONO; ctx.fillText(when(v), cx, ty + 26);
   ctx.font = '13px ' + MONO; ctx.fillStyle = col;
-  ctx.fillText(rd.side === 'corner' ? 'the corner · octave 0 · share 1' : rd.side + ' · octave ' + rd.k + ' · t ' + rd.t.toFixed(2) + ' · share ' + rd.share.toFixed(3), cx, ty + 50);
+  const nTxt = 'octal ' + (rd.n > 0 ? '+' : rd.n < 0 ? '−' : '') + Math.abs(rd.n);
+  ctx.fillText(rd.side === 'corner' ? nTxt + ' · its corner · share 1' : nTxt + ' · ' + rd.side + ' · t ' + rd.t.toFixed(2) + ' · share ' + rd.share.toFixed(3), cx, ty + 50);
   ctx.fillStyle = DIM; ctx.font = '11px ' + MONO;
-  const foot = ['rung m = ' + m + ' (h = 2^' + m + ' s)', 'leave the shaded octave and the view carries one octave'];
+  const foot = ['h = 2^' + m + ' s · corners 4× apart', 'leave the shaded octal and the view carries one octal'];
   if (ctx.measureText(foot.join(' · ')).width < W - 24) ctx.fillText(foot.join(' · '), cx, ty + 72);
   else { ctx.fillText(foot[0], cx, ty + 72); ctx.fillText(foot[1], cx, ty + 88); }
   vis.globalCompositeOperation = 'copy'; vis.drawImage(back, 0, 0);
@@ -134,7 +156,7 @@ function step(now){
   const dt = Math.min(0.05, (now - (last || now)) / 1000); last = now;
   if (dragging && grabX !== null) v = clamp(valOf(grabX, 2 ** mu), VMIN, VMAX);   // a hand held past the edge keeps carrying
   carryTarget();
-  mu += (m - mu) * (1 - Math.exp(-dt / 0.35));                     // the slide: a held hand carries a few octaves a second
+  mu += (m - mu) * (1 - Math.exp(-dt / 0.35));                     // the slide: a held hand carries an octal or two a second
   if (Math.abs(m - mu) < 1e-4) mu = m;
   draw(); requestAnimationFrame(step);
 }
