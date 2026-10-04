@@ -5,6 +5,7 @@ Each opens straight in a browser with no dependencies.
 
 | Page | What it shows | From draw.html |
 |---|---|---|
+| `octave-browser.html` | Time back from now, read as *Serial, Parallel and Nowhere* says a situated reader holds a reading: the home octave (½h to h front, h to 2h back) in plain proportion with the corner h in the middle; each octave beyond half as wide and proportional inside; the reading shown as (side, octave, t). Leave the home octave and the view carries: h doubles or halves and the octave entered becomes home. Held past the edge, it keeps carrying. | built here, from §3.3 and Proposition 3.8 |
 | `two-fisheyes.html` | Two views of one array disagree about positions and distances but agree about cross ratios, so one number sends an element across. Break one view's chart and a fourth element catches it. | lab "two fisheyes on one array" (`TWO_FISHEYES_CORE`, `startFisheyes`) |
 | `cycle-sheet.html` | Parties with no common unit. One ground explains the readings exactly when every cycle closes; otherwise the readings split into a ground and what goes round. | lab "the cycle sheet" (`startCycle`) |
 | `standpoint.html` | Read a closed contour from a point you drag. The winding jumps by whole turns only when the point crosses the contour; ΣD, twice the area, never moves; Π ρ is always 1. | lab "the closure sheet" (`startClosure`) and the four atoms (`fourAtomRead`) |

@@ -29,6 +29,7 @@ Standalone pages, one idea each, pulled out of the draw project's labs. See [dem
 
 | Page | |
 |---|---|
+| [octave-browser.html](https://reportbase.github.io/calendar/demos/octave-browser.html) | The home octave, ½h to 2h around the corner, in plain proportion; the octaves beyond it a ladder, halving toward now and doubling toward the far past; leave the home octave and the view carries one octave (Serial, Parallel and Nowhere §3.3, Prop. 3.8). |
 | [two-fisheyes.html](https://reportbase.github.io/calendar/demos/two-fisheyes.html) | Two views of one array disagree about positions and agree about cross ratios: one number sends an element across. |
 | [cycle-sheet.html](https://reportbase.github.io/calendar/demos/cycle-sheet.html) | Parties with no common unit: one ground explains the readings exactly when every cycle closes. |
 | [standpoint.html](https://reportbase.github.io/calendar/demos/standpoint.html) | The winding jumps by whole turns as the standpoint crosses the contour; twice the area never moves. |

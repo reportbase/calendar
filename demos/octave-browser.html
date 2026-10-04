@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Octave Browser</title>
+<!-- THE OCTAVE BROWSER. A reader browsing time back from now, the way Serial, Parallel and Nowhere says a
+     situated reader holds a reading (§3.3, §3.5, Proposition 3.8).
+
+     THE HOME OCTAVE IS PROPORTIONAL. The reader counts in h, the corner. Its own octave runs from ½h to h
+     on the front side (v in terms of h) and from h to 2h on the back (h in terms of v): one octave, two
+     facings, drawn in plain proportion with the corner in the middle.
+
+     PAST IT, THE LADDER. Each octave beyond is half as wide as the one inside it and plain proportion
+     within itself: halvings run left toward home (now), doublings right toward the horizon (the far past).
+     A reading is (side, octave k, share t); the ladder is the float's exponent and significand.
+
+     LEAVE THE HOME OCTAVE AND IT CARRIES. Take the reading out of the home octave and the view slides one
+     octave: h doubles or halves, and the octave entered becomes home, proportional again. Hold the hand
+     past the edge and it keeps carrying, one octave at a time. Nothing at any rung is special
+     (Proposition 3.7): every home octave looks the same; only the labels change.
+
+     Hands: drag the ruler (or the marker) to place the reading · wheel or ← → step it · Home: the corner. -->
+<style>
+  :root{--bg:#0b0d12;--panel:#12151c;--line:#2b2e36;--gold:#e8c86a;--teal:#1D9E75;--blue:#6aa8e8;--ink:#c9c7be;--hi:#f1efe6;--dim:#8a909b;
+        --mono:"SF Mono",Menlo,Consolas,monospace;color-scheme:dark}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);overflow:hidden;overscroll-behavior:none}
+  canvas{display:block;width:100%;height:100%;touch-action:none;cursor:ew-resize}
+</style>
+</head>
+<body>
+<canvas id="cv" aria-label="The octave browser. Drag to place the reading; leaving the home octave carries the view one octave."></canvas>
+<script>
+const GOLD = '#e8c86a', TEAL = '#1D9E75', BLUE = '#6aa8e8', INK = '#c9c7be', HI = '#f1efe6', DIM = '#8a909b', BG = '#0b0d12', LINE = '#2b2e36';
+const MONO = getComputedStyle(document.documentElement).getPropertyValue('--mono');
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const VMIN = 0.25, VMAX = 100 * 365.25 * 864e2;                   // a quarter second to a century, in seconds
+const R = 0.5;                                                   // each octave out is half as wide as the one inside it
+const T_NOW = Date.now();
+
+// ── THE STATE: the reading v, and the rung m (h = 2^m seconds); mu is the drawn rung, sliding to m ─────
+let v = 864e2, m = Math.floor(Math.log2(v)), mu = m, last = 0, dragging = false;
+const carryTarget = () => {                                      // the octave the reading is in becomes home
+  const s = v / 2 ** m; if (s >= 2) m += 1; else if (s < 0.5) m -= 1; };
+
+// ── THE READING: (side, octave k, share t), as §3.3 writes it ─────────────────────────────────────────
+function readingOf(s){
+  if (Math.abs(s - 1) < 1e-12) return { side: 'corner', k: 0, t: 1, share: 1 };
+  const share = s < 1 ? s : 1 / s, k = Math.max(0, Math.ceil(-Math.log2(share)) - 1);
+  return { side: s < 1 ? 'front' : 'back', k, t: 2 ** (k + 1) * share - 1, share };
+}
+// ── THE LADDER LAID ON THE SCREEN: offset from the corner, home octave width w0 ───────────────────────
+let W = 0, H = 0, D = 0, cx = 0, y0 = 0, w0 = 100;
+const cum = k => w0 * (1 - R ** k) / (1 - R);                    // width of octaves 0 … k−1 on one side
+function xOf(val, hd){
+  const r = readingOf(val / hd); if (r.side === 'corner') return cx;
+  const off = cum(r.k) + w0 * R ** r.k * (1 - r.t);
+  return r.side === 'front' ? cx - off : cx + off;
+}
+function valOf(x, hd){
+  const off = Math.abs(x - cx), sideFront = x < cx;
+  if (off < 1e-9) return hd;
+  let k = 0; while (cum(k + 1) < off && k < 60) k++;
+  const t = clamp(1 - (off - cum(k)) / (w0 * R ** k), 0, 1), share = (t + 1) / 2 ** (k + 1);
+  return hd * (sideFront ? share : 1 / share);
+}
+
+// ── WORDS FOR DURATIONS AND DATES ────────────────────────────────────────────────────────────────────
+const UNITS = [[365.25 * 864e2, 'year'], [30.4375 * 864e2, 'month'], [7 * 864e2, 'week'], [864e2, 'day'], [36e2, 'hour'], [60, 'minute'], [1, 'second']];
+function dur(sec, short){
+  for (const [u, n] of UNITS) if (sec >= u * 0.999) { const x = sec / u, t = x < 10 ? x.toFixed(1).replace(/\.0$/, '') : String(Math.round(x));
+    return t + (short ? ' ' + n[0] + (n === 'month' ? 'o' : n === 'minute' ? 'in' : '') : ' ' + n + (t === '1' ? '' : 's')); }
+  return (sec * 1000).toPrecision(2) + (short ? ' ms' : ' milliseconds');
+}
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], WD = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], p2 = n => String(n).padStart(2, '0');
+function when(sec){ const d = new Date(T_NOW - sec * 1000);
+  return WD[d.getDay()] + ' ' + p2(d.getDate()) + ' ' + MON[d.getMonth()] + ' ' + d.getFullYear() + ', ' + p2(d.getHours()) + ':' + p2(d.getMinutes()) + ':' + p2(d.getSeconds()); }
+
+// ── DRAWING: only when something moved ───────────────────────────────────────────────────────────────
+const cv = document.getElementById('cv'), vis = cv.getContext('2d'), back = document.createElement('canvas'), ctx = back.getContext('2d');
+let lastKey = '', force = true;
+function draw(){
+  const w = Math.round(cv.clientWidth), h = Math.round(cv.clientHeight), d = Math.min(2, devicePixelRatio || 1);
+  if (!w || !h) return;
+  if (Math.abs(w - W) > 1 || Math.abs(h - H) > 1 || d !== D) { W = w; H = h; D = d; cv.width = back.width = W * D; cv.height = back.height = H * D; force = true; }
+  const key = [v.toPrecision(9), mu.toFixed(5), m].join();
+  if (key === lastKey && !force) return; lastKey = key; force = false;
+  cx = W / 2; y0 = H * 0.46; w0 = Math.min(W * 0.46, 520) / 2;   // each side holds 2·w0: the home octave half of it
+  const hd = 2 ** mu;
+  ctx.setTransform(D, 0, 0, D, 0, 0); ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
+  ctx.lineCap = 'round'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  // the home octave, shaded: proportional ground
+  const xa = xOf(hd / 2, hd), xb = xOf(hd * 2, hd);
+  ctx.fillStyle = 'rgba(232,200,106,.07)'; ctx.fillRect(xa, y0 - 46, xb - xa, 92);
+  ctx.strokeStyle = 'rgba(201,199,190,.25)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(cx - 2 * w0 - 8, y0); ctx.lineTo(cx + 2 * w0 + 8, y0); ctx.stroke();
+  // the octave edges and the shares inside each octave, both sides
+  ctx.font = '11px ' + MONO;
+  for (const side of [-1, 1]) for (let k = 0; k < 40; k++) {
+    const ww = w0 * R ** k; if (ww < 2) break;
+    const edge = hd * 2 ** (side * (k + 1)), xe = xOf(edge, hd);
+    ctx.strokeStyle = k === 0 ? GOLD : side < 0 ? 'rgba(29,158,117,.8)' : 'rgba(232,200,106,.6)'; ctx.lineWidth = k === 0 ? 2 : 1.2;
+    ctx.beginPath(); ctx.moveTo(xe, y0 - 14); ctx.lineTo(xe, y0 + 14); ctx.stroke();
+    const sub = k === 0 ? 8 : ww > 60 ? 4 : ww > 24 ? 2 : 1;      // proportion inside the octave: equal steps of the share
+    ctx.strokeStyle = 'rgba(201,199,190,.35)'; ctx.lineWidth = 1;
+    for (let i = 1; i < sub; i++) { const t = i / sub, share = (t + 1) / 2 ** (k + 1), xs = xOf(hd * (side < 0 ? share : 1 / share), hd);
+      ctx.beginPath(); ctx.moveTo(xs, y0 - 6); ctx.lineTo(xs, y0 + 6); ctx.stroke(); }
+    if (ww > 46 || (k < 3 && ww > 30)) { ctx.fillStyle = k === 0 ? GOLD : DIM; ctx.fillText(dur(edge, true), xe, y0 + 30 + (k % 2) * 13); }
+  }
+  // the corner, h
+  ctx.strokeStyle = GOLD; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(cx, y0 - 22); ctx.lineTo(cx, y0 + 22); ctx.stroke();
+  ctx.fillStyle = GOLD; ctx.font = '12px ' + MONO; ctx.fillText('h = ' + dur(hd), cx, y0 + 46);   // below the ruler, clear of the reading
+  ctx.fillStyle = DIM; ctx.font = '11px ' + MONO;
+  const narrow = W < 700;                                        // a phone: the ends on one row, the facings on the next
+  ctx.textAlign = 'left'; ctx.fillText(narrow ? '◀ now' : '◀ home: now', cx - 2 * w0 - 8, y0 - (narrow ? 74 : 56));
+  ctx.textAlign = 'right'; ctx.fillText(narrow ? 'far past ▶' : 'the horizon: the far past ▶', cx + 2 * w0 + 8, y0 - (narrow ? 74 : 56));
+  ctx.textAlign = 'center'; ctx.fillText(narrow ? 'front' : 'front: v in terms of h', (xa + cx) / 2, y0 - 56); ctx.fillText(narrow ? 'back' : 'back: h in terms of v', (xb + cx) / 2, y0 - 56);
+  // the reading
+  const xv = xOf(v, hd), rd = readingOf(v / hd), col = rd.side === 'front' ? TEAL : rd.side === 'back' ? GOLD : HI;
+  ctx.strokeStyle = BLUE; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(xv, y0 - 34); ctx.lineTo(xv, y0 + 24); ctx.stroke();
+  ctx.fillStyle = BLUE; ctx.beginPath(); ctx.arc(xv, y0, 6, 0, 2 * Math.PI); ctx.fill();
+  // the payload, and the reading in the paper's form
+  const ty = Math.min(H - 90, y0 + 104);
+  ctx.textAlign = 'center'; ctx.fillStyle = HI; ctx.font = '22px ' + MONO; ctx.fillText(dur(v) + ' ago', cx, ty);
+  ctx.fillStyle = BLUE; ctx.font = '15px ' + MONO; ctx.fillText(when(v), cx, ty + 26);
+  ctx.font = '13px ' + MONO; ctx.fillStyle = col;
+  ctx.fillText(rd.side === 'corner' ? 'the corner · octave 0 · share 1' : rd.side + ' · octave ' + rd.k + ' · t ' + rd.t.toFixed(2) + ' · share ' + rd.share.toFixed(3), cx, ty + 50);
+  ctx.fillStyle = DIM; ctx.font = '11px ' + MONO;
+  const foot = ['rung m = ' + m + ' (h = 2^' + m + ' s)', 'leave the shaded octave and the view carries one octave'];
+  if (ctx.measureText(foot.join(' · ')).width < W - 24) ctx.fillText(foot.join(' · '), cx, ty + 72);
+  else { ctx.fillText(foot[0], cx, ty + 72); ctx.fillText(foot[1], cx, ty + 88); }
+  vis.globalCompositeOperation = 'copy'; vis.drawImage(back, 0, 0);
+}
+function step(now){
+  const dt = Math.min(0.05, (now - (last || now)) / 1000); last = now;
+  if (dragging && grabX !== null) v = clamp(valOf(grabX, 2 ** mu), VMIN, VMAX);   // a hand held past the edge keeps carrying
+  carryTarget();
+  mu += (m - mu) * (1 - Math.exp(-dt / 0.35));                     // the slide: a held hand carries a few octaves a second
+  if (Math.abs(m - mu) < 1e-4) mu = m;
+  draw(); requestAnimationFrame(step);
+}
+
+// ── HANDS ────────────────────────────────────────────────────────────────────────────────────────────
+let grabX = null;
+const local = e => e.clientX - cv.getBoundingClientRect().left;
+cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); dragging = true; grabX = local(e); });
+cv.addEventListener('pointermove', e => { if (dragging) grabX = local(e); });
+const up = () => { dragging = false; grabX = null; };
+cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+cv.addEventListener('wheel', e => { const f = e.deltaMode === 1 ? 16 : 1, dd = (e.deltaX || e.deltaY) * f;
+  v = clamp(v * 2 ** (dd / 800), VMIN, VMAX); e.preventDefault(); }, { passive: false });
+addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { v = clamp(v * 2 ** ((e.key === 'ArrowRight' ? 1 : -1) / 16), VMIN, VMAX); e.preventDefault(); }
+  if (e.key === 'Home') { v = 2 ** m; e.preventDefault(); }
+});
+addEventListener('resize', () => { force = true; });
+requestAnimationFrame(step);
+</script>
+</body>
+</html>
