@@ -32,7 +32,10 @@
   // free (the dial reads ζ itself: letting go keeps the blue where it is, and the radius is a separate
   // setting that leaves ζ alone; for pages where the needle's place is the setting, not a way to a record),
   // quarter (one sweep, 0 to π/2, home at the apex and the horizon along the right: for a reading with no
-  // 'which way', a magnitude only. ζ is held at 0 or above; the gold may still lean left, pushing back home)
+  // 'which way', a magnitude only. ζ is held at 0 or above, and THE GOLD PULLS THE BLUE TOWARD ITSELF: point
+  // ahead of the blue and it sweeps out, behind it and it comes back, at it and it holds, at a rate through
+  // the tangent of the angle between them. On a semicircle the gold's angle from the apex is the rate, and
+  // left of the apex is the other way; a quarter has no other way, so the rate is taken from the blue.)
   function create(o) {
     const N = o.N, K = o.K ?? 5, CAP = Math.atan(2 ** K), ZMAX = Math.asinh(2 ** K);
     const THRUST = o.thrust ?? 0.4, SPRING_MS = o.springMs ?? 150;
@@ -41,7 +44,7 @@
     const d = {
       N, K, CAP, ZMAX, detents: o.detents || null, quarter: !!o.quarter,
       index: clamp(o.index ?? 0, 0, N - 1), centre: 0, reach: o.reach ?? 0.5, zeta: 0,
-      gold: 0, held: false, thrusting: false, springAt: -1, settle: null,
+      gold: 0, held: false, thrusting: false, springAt: -1, settle: null, pushDir: 0,
       span: () => Math.max(1, Math.pow(N, d.reach)),                 // window = N^r
       unit: (s = d.span()) => s / 2 / 2 ** K,                         // the 45° corner; the window's half is 2^K units
       theta: () => Math.atan(Math.sinh(d.zeta)),                      // θ = gd(ζ)
@@ -72,9 +75,17 @@
       goTo(i) { d.index = clamp(i, 0, N - 1); d.recentre(); },
       // the gold: held, aimed, let go
       hold() { d.held = true; d.thrusting = false; d.springAt = -1; },
-      aim(a) { d.gold = clamp(a, -CAP, CAP); },
+      aim(a) { d.gold = o.quarter ? clamp(a, 0, PI / 2) : clamp(a, -CAP, CAP); },
+      push() {                                                        // the rate the gold gives the blue, in tan form
+        if (!o.quarter) return Math.tan(d.gold);
+        if (d.pushDir) return d.pushDir * 1.5;                        // a key: out or back at a steady rate
+        if (d.gold >= PI / 2 - 0.03) return 2.5;                      // along the horizon or below it: all the way out
+        if (d.gold <= 0.03) return -2.5;                              // at home or left of it: all the way back
+        return Math.tan(clamp(d.gold - d.theta(), -1.45, 1.45));      // between: the gold pulls the blue toward itself
+      },
       letGo() { if (d.held) { d.held = false; if (d.thrusting) d.springAt = performance.now(); d.thrusting = false; if (!o.free) d.recentre(); } },
       liveGold(now) {                                                 // the gold as drawn: the hand, or the spring back to the apex
+        if (o.quarter && d.held && d.pushDir) return clamp(d.theta() + d.pushDir * 0.6, 0, PI / 2);   // a key, drawn just ahead of or behind the blue
         if (d.held) return d.thrusting ? d.gold : 0;
         if (d.springAt >= 0) { const t = (now - d.springAt) / SPRING_MS; if (t >= 1) { d.springAt = -1; return 0; } return d.gold * Math.pow(1 - t, 3); }
         return 0;
@@ -87,7 +98,7 @@
       stepDetent(dir) { const i = d.detents.indexOf(d.nearestDetent()); d.settleTo(d.detents[clamp(i + dir, 0, d.detents.length - 1)][1]); },
       tick(now) {                                                     // per frame: the gold turns the blue; a settle runs its course
         const dt = Math.min(0.05, (now - (last || now)) / 1000); last = now;
-        if (d.held && d.thrusting) { d.zeta = zc(d.zeta + Math.tan(d.gold) * THRUST * dt); d.read(); }
+        if (d.held && d.thrusting) { d.zeta = zc(d.zeta + d.push() * THRUST * dt); d.read(); }
         if (d.settle) { const t = Math.min(1, (now - d.settle.t0) / 260), e = 1 - Math.pow(1 - t, 3);
           d.reach = d.settle.from + (d.settle.to - d.settle.from) * e; d.rezoom(); d.read();
           if (t >= 1) { d.settle = null; if (o.onSettle) o.onSettle(); } }
@@ -145,14 +156,15 @@
     }, { passive: false });
     addEventListener('keydown', e => {
       if (o.keysOff && o.keysOff()) return;
-      if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.repeat) { mode = 'dial'; d.hold(); d.thrusting = true; d.gold = (e.key === 'ArrowLeft' ? -1 : 1) * PI / 4; }
+      if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.repeat) { mode = 'dial'; d.hold(); d.thrusting = true; d.gold = (e.key === 'ArrowLeft' ? -1 : 1) * PI / 4;
+        if (d.quarter) d.pushDir = e.key === 'ArrowLeft' ? -1 : 1; }
       if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
         const dir = e.key === 'ArrowUp' ? 1 : -1;
         if (d.detents) d.stepDetent(dir); else d.setReach(d.reach + dir * (o.reachStep ?? 0.02));
       }
       if (e.key.startsWith('Arrow')) e.preventDefault();
     });
-    addEventListener('keyup', e => { if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && mode === 'dial') { d.letGo(); mode = null; } });
+    addEventListener('keyup', e => { if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && mode === 'dial') { d.pushDir = 0; d.letGo(); mode = null; } });
   }
 
   // ── THE SURFACE: draw only when something moved ────────────────────────────────────────────────
@@ -204,9 +216,9 @@
   // the gold (a rate), the blue (a place) with a dot at its tip, optionally its drop to the horizon line, and the hub
   function drawNeedles(ctx, d, o) {
     const { cx, cy, R } = o, C = COLORS;
-    const needle = (a, col, len = R) => { const [x, y] = at(cx, cy, a, len); ctx.strokeStyle = col; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(x, y); ctx.stroke(); };
+    const needle = (a, col) => { const [x, y] = at(cx, cy, a, R); ctx.strokeStyle = col; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(x, y); ctx.stroke(); };
     ctx.lineCap = 'round';
-    needle(o.gold, C.GOLD, d.quarter && o.gold < 0 ? R * 0.35 : R);            // on a quarter dial, a gold leaning back is a short push home
+    needle(o.gold, C.GOLD);
     if (Math.abs(d.zeta) > 1e-9) {
       const th = d.theta(), [tx, ty] = at(cx, cy, th, R);
       needle(th, C.BLUE);
