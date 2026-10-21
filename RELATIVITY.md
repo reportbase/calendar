@@ -153,3 +153,46 @@ absorbers, and the length from the altitudes: a rod's unit and the muon's own cl
 - X4 not killed: there are three routes, D, closed paths and the celerity.
 
 What is read at one place, or as an order, is always convention-free. A one-way number is always a writing.
+
+## SR and OFS: the same mathematics in two roles (a research note)
+
+Tom asked: "so why SR something special, it just the same math as OFS?" Claude answered that the mathematics is shared and
+what is special is that nature realises it, with a measured c. ChatGPT (via Tom) sharpened this: the question is whether
+one mathematical structure serves two roles, a geometry for organising readings and a geometry for physical
+relationships. This note keeps what is established apart from what is proposed. It is not part of OFS.
+
+**Established mathematics (classical):**
+- The gudermannian joins the circle and the hyperbola: θ = gd(ζ), tan θ = sinh ζ, sin θ = tanh ζ.
+- Collinear rapidities add. Velocity space is hyperbolic (Varićak 1910).
+- Lorentz transformations act on the celestial sphere as Möbius maps, PSL(2, ℂ) (Penrose 1959; Terrell 1959). On the
+  reading line the turns and rescalings are PSL(2, ℝ).
+- At γβ = 1: β = 1/√2, γ = √2, pc = mc², ζ = asinh 1 ≈ 0.8814. This is exact.
+- A uniform sky boosted is a spherical Cauchy (Kato and McCullagh 2020).
+
+**Proposed, each needing its own argument:**
+- *That OFS's corner and SR's γβ = 1 play the same structural role.* The equality of the numbers is exact. That the
+  reciprocal's fixed point (OFS) and the momentum–mass balance (SR) are one thing still has to be argued, by a matching
+  of what each divides by what.
+- *That SR's horizon is OFS's horizon, with c the bridge carried in.* c is an amount, measured; OFS's horizon has no
+  value. That light realises the reader's horizon is an interpretation.
+- *That SR carries the address/payload split without naming it.* This would need a precise map, row by row, from SR's
+  quantities to the four kinds. `demos/one-boost.html` is a first one, for one boost.
+- *That the sky's Cauchy is OFS's Cauchy.* Not automatically. The uniform sky lives on S²; OFS's turn on a circle. They
+  match on a great circle, and in the stereographic chart for a circle sky. A sphere sky's single signed coordinate is
+  not Cauchy (quartiles ±1/√3; wander's `plans/archive-gems.md`, C1). The measure and the projection have to be matched
+  case by case.
+
+**Where they differ:**
+- OFS reaches its horizon in a bounded quarter turn; SR composes in an unbounded rapidity, so its horizon takes
+  infinite pushing.
+- OFS's horizon carries no value; SR's carries c.
+- One reader's group commutes; the Lorentz group does not (the Wigner turn).
+- SR has dynamics, which in this sort are payload and amounts.
+
+**The question carried forward.** Should a reader compose its sweeps additively in an unbounded parameter, as rapidity
+does and as the calendar dial does, rather than in a bounded angle? This is a concrete bridge between the two
+frameworks, and it stays out of the current OFS paper.
+
+**The possibility worth testing** is not that SR is secretly OFS. It is that the same mathematics, used for both the
+reading and the thing read, can hide a distinction OFS names. The test is whether naming it adds explanatory power, and
+one-boost's ε result (the convention is the writer's, never the reader's) is the first candidate.
