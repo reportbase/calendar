@@ -288,3 +288,20 @@ boosts commute. A dial pushed in two directions should come home turned.
   turn, within 2%.
 - Reading: like the triangle row, the turn is an angle with no unit and no ε. For a dial, the turn is the record of the
   path taken, and only a loop of pushes all along one line avoids it.
+
+### Run (21 Oct, 13:31 MDT), `demos/two-pushes.html` through its hook, in headless Chromium
+
+| | Result |
+|---|---|
+| W1 | Geodesic triangles (ahead ζ, left ζ, home) at ζ = 0.3, 1.2, 2: turn + area = 10⁻¹⁴, 3·10⁻¹⁴, 4·10⁻¹³. Squares at four sizes: under 3·10⁻¹⁴. A stepped loop of 400 pushes turning once round the reader's own compass: turn −1.6968 rad, area 1.6968, to 10⁻¹³. The animated triangle on the page matches the headless one. **Not killed.** |
+| W2 | Along one line only (ahead 1, back 2, ahead 1): turn 9·10⁻³⁰. **Not killed.** |
+| W3 | True by construction on this page: a push is a rapidity, and no clock enters it, so how fast it is pushed cannot matter here. **Not a test;** recorded as such. |
+| W4 | Halving the square: the turn divides by 4.857 (0.9 → 0.45), 4.211 (→ 0.225), 4.051 (→ 0.1125). **Killed in its letter:** within 2% only at the smallest pair. "Small" was not said, and hyperbolic area outgrows the square at the page's sizes. The ratio tends to 4 as the loop shrinks. |
+
+**Reading.**
+- A two-dimensional dial built from true boosts carries a turn equal to minus the area of its velocity loop, exactly.
+  The one-dimensional dial has none because a line encloses nothing.
+- For a list dial the turn is a choice the designer has to make. Show it as a record of the path pushed, or cancel it,
+  either by pushing home along the same line or by adding the opposite turn back.
+- The page's text was corrected for W4 before commit: very small loops turn as the square, larger ones faster.
+- A real drag on the page pushes (750 path points from a 0.7 s drag), and it fits a 390 px phone.
