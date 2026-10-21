@@ -19,6 +19,7 @@ Each opens straight in a browser with no dependencies.
 | `blind-spots.html` | *Where it cannot see*: A still reader holds only addresses (jumps and edges); tap a place and it answers whether it can see it. | added as is |
 | `two-readers.html` | *Two models of observation*: One reader circles a shape: kept payloads go stale when the shape changes; bearings held now do not. | added as is |
 | `one-boost.html` | *One boost, sorted*: a Lorentz boost of rapidity ζ taken apart into what is an address (aberration, a slide of ζ on ln tan(θ/2); the radar ratio k = e^ζ), a payload (D, D², D⁴, each a power of the address map's Jacobian), an amount (the proper time √(t₁t₂), the distance) and a convention (ε, which γ and β read off the pair depend on). ε = ½ is the only choice that writes the speed odd under k ↦ 1/k; it moves the writer's horizons (the one-way light speeds), never the corner. Moving things: velocity a point of the hyperbolic plane (address, relative rapidities unchanged by any boost), mass the payload, energy an amount. Every row checked live. | new (from wander's address/payload split; Tom, 21 Oct 2026) |
+| `two-pushes.html` | *Two pushes, one turn*: the dial in two dimensions with true boosts. Each push is along the reader's own axes; a loop back to rest turns the frame by minus the hyperbolic area its velocity path encloses (Thomas; Gauss–Bonnet at curvature −1), checked live when the velocity returns to rest; pushes along one line never turn. | new (RELATIVITY.md, W1–W4) |
 
 Notes carried into the pages:
 
