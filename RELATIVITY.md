@@ -114,3 +114,42 @@ the useful one:
 **Open.**
 - Bertozzi's cable calibration, from the primary paper (Am. J. Phys. 32, 551).
 - Rossi–Hall's analysis, to confirm the celerity reading (Phys. Rev. 59, 223).
+
+### Run 2 (21 Oct, 12:35 MDT): the two open items
+
+**Rossi–Hall, from the paper's own words.** Bonizzoni and Giuliani (arXiv:physics/0008012, 2000, §5.2.1) quote Rossi
+and Hall 1941, pp. 223–224, directly:
+- Their eq. (26) is τ = τ₀/(1 − β²)^½.
+- Their eq. (27) is "the 'average range before decay' L … L = βτ = pτ₀/µ, where µ is the mass and p … the momentum".
+- They wrote that the experiments "were primarily designed to test the dependence of disintegration probability on
+  momentum expressed by equation (27)".
+- And at p. 227: "while a quantitative proof of equation (26) is still wanting, its approximate validity may be
+  considered as established".
+
+So what they tested was the decay length against momentum, L/τ₀ = p/µ = γβ, the celerity. γ alone (eq. 26) they say
+was not proved. X4's third route is the paper's own; it is no longer post hoc. The momentum came from range in
+absorbers, and the length from the altitudes: a rod's unit and the muon's own clock, no synchronisation.
+
+**Bertozzi: the calibration still unread.**
+- The primary paper (Am. J. Phys. 32, 551) was not reachable here. The full-text mirror the teaching sheet cites
+  (spiff.rit.edu) does not resolve, and an Italian teaching sheet (Roma Tre) describes the two pulses and the
+  oscilloscope but not the cables.
+- So how the delays were matched stays open.
+- The convention question does not wait on it. A synchronisation shift t′ = t − κx, with κ = 1 − 2ε and c = 1:
+  - moves every one-way speed by v ↦ v/(1 − κv);
+  - keeps their order (v < 1 exactly when v′ < c₊′ = 1/(2ε));
+  - leaves every round trip unchanged.
+
+  Checked in exact fractions at ε = 1/5, ½, 7/10 and v = 0.1, 0.9, 0.999.
+- So Bertozzi's ordinal result is a reading, whatever the cables: no electron outran light along the same path. Its
+  numbers, the speeds and the curve of E against v, carry the synchronisation in, whatever the calibration was. A
+  matched pair of cables is itself a synchronisation (Finkelstein's point).
+- The X3 kill stands.
+
+**Where the record now stands.**
+- X1 killed (Rossi–Hall, two places).
+- X2 killed for Fizeau and Rossi–Hall.
+- X3 killed for Bertozzi's and Rømer's numbers, not their order.
+- X4 not killed: there are three routes, D, closed paths and the celerity.
+
+What is read at one place, or as an order, is always convention-free. A one-way number is always a writing.
