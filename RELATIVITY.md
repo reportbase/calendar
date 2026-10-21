@@ -305,3 +305,32 @@ boosts commute. A dial pushed in two directions should come home turned.
   either by pushing home along the same line or by adding the opposite turn back.
 - The page's text was corrected for W4 before commit: very small loops turn as the square, larger ones faster.
 - A real drag on the page pushes (750 path points from a 0.7 s drag), and it fits a 390 px phone.
+
+## The held push: acceleration and the Rindler horizon
+
+Tom: "proceed", on the second item: acceleration, where physics has a real horizon.
+
+**Known beforehand.**
+- Hyperbolic motion and the Rindler horizon (Rindler 1966): an observer at constant proper acceleration a (c = 1) has a
+  horizon a distance 1/a behind it.
+- Wander's MOT run 3: uniform acceleration is one level per ln 2/a of proper time.
+- `city-dial.html`'s step: `zeta += tan(theta) * THRUST * dt` per frame. Holding the gold at a fixed angle adds rapidity
+  at a constant rate on the reader's own clock.
+
+**Predictions** (written at 13:32 MDT, before any computation):
+- **R1. The held gold is hyperbolic motion.** A constant rapidity rate on the reader's own clock is constant proper
+  acceleration, ζ = aτ, with a = tan θ · THRUST. The dial's held thumb is a Rindler observer.
+- **R2. Every source behind fades by the reader's own rapidity alone.** A source at rest anywhere behind the reader
+  arrives with Doppler weight exactly D = e^(−ζ) = 1/k: the payload weight is the reading k, whatever the source's
+  distance.
+- **R3. Every source behind freezes, by levels.** The source's own time, as received, approaches a last value (its
+  place plus 1/a) and never passes it. What is left of it halves every ln 2/a of the reader's own time.
+- **R4. Ahead there is no horizon.** Sources ahead arrive with D = e^(+ζ), and their received times grow without bound.
+- **R5. The sort.**
+  - The horizon's distance, 1/a = c²/a, is an amount: it needs c and the unit of a.
+  - The halving time ln 2/a is a reading on the reader's own clock.
+  - The fading e^(−ζ) is a reading: the rapidity, the dial's own variable.
+  - So the reader meets the horizon as a payload going dark while the address (which source, which direction) stays.
+    That is OFS's horizon, reached here from the payload's side.
+- *Killed:* R2 if D depends on the source's distance, beyond 10⁻⁴⁰; R3 if the halving time is not ln 2/a to 10⁻⁴⁰; R4
+  if a source ahead ever freezes.
