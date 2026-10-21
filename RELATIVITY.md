@@ -265,3 +265,26 @@ Nothing killed.
   tan θ = 2^K) has the corner as the median of uniform pushes only if its reach is Z = 2·asinh 1. At K = 5,
   Z = asinh 32 ≈ 4.16, and the share of pushes inside the corner is 0.212.
 - That is a design trade, not a flaw. Neither motion is wrong; they answer different questions.
+
+## Two pushes, one turn: a two-dimensional dial
+
+Tom: "proceed", on making the dial two-dimensional with true boosts. The calendar dial pushes along one line, so its
+boosts commute. A dial pushed in two directions should come home turned.
+
+**Known beforehand.**
+- Thomas precession, and the Wigner rotation of two non-collinear boosts (Thomas 1926; Wigner 1939).
+- The rotation of a frame carried round a closed loop in velocity space equals the loop's hyperbolic area, by
+  Gauss–Bonnet at curvature −1. This is classical; see e.g. Ungar's gyrovector work, Rhodes and Semon 2004.
+- `one-boost.html`'s Wigner row: a two-boost triangle's turn equals its area to 10⁻¹⁵.
+
+**Predictions** (written at 13:29 MDT, before the page):
+- **W1.** A loop of pushes, each along the reader's own current axes, that brings its velocity back to rest leaves its
+  frame turned by the hyperbolic area enclosed by the loop in velocity space, in the opposite sense: turn = −(signed
+  area). *Killed* if |turn + area| > 10⁻⁹ for a geodesic triangle, or > 10⁻³ rad for a stepped loop at the page's step.
+- **W2.** Pushes along one line never turn the frame (0 to 10⁻¹²). That is the one-dimensional dial.
+- **W3.** The turn depends on the loop's path in velocity space, not on how fast it was pushed: the same loop at two
+  push rates gives the same turn within the step's error.
+- **W4.** For small loops the turn goes as the square of the size: halving every push of a square loop quarters the
+  turn, within 2%.
+- Reading: like the triangle row, the turn is an angle with no unit and no ε. For a dial, the turn is the record of the
+  path taken, and only a loop of pushes all along one line avoids it.
