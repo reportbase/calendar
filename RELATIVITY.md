@@ -57,7 +57,7 @@ convention. Sources: the Robertson–Mansouri–Sexl test theory (Robertson 1949
 
 ## Runs
 
-### Run 1 (21 Oct, about 12:30 MDT)
+### Run 1 (21 Oct, 12:09 MDT)
 
 **Method.** A separate agent read each experiment's method; it was not told the predictions. It had full text of the
 four critiques of Greaves et al. (arXiv) and Wikipedia's pages for each experiment. It had only a teaching sheet quoting
@@ -106,7 +106,7 @@ rod's unit (the height). No clock is read across the distance.
 the useful one:
 - SR's experiments read convention-free things at one place: directions, frequency ratios, round trips, clocks brought
   together, decay lengths.
-- Every one-way speed in the record is a reading with a synchronisation carried in.
+- Every one-way speed in the record is a writing: a reading with a synchronisation carried in.
 - That is the sort of `one-boost.html` (ε is the writer's choice) found in the experiments themselves.
 - Nothing here is new physics: the ε-independence is classical. What the run adds is that each experiment lands in one
   of the page's kinds once its method is read.
