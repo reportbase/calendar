@@ -196,3 +196,39 @@ frameworks, and it stays out of the current OFS paper.
 **The possibility worth testing** is not that SR is secretly OFS. It is that the same mathematics, used for both the
 reading and the thing read, can hide a distinction OFS names. The test is whether naming it adds explanatory power, and
 one-boost's ε result (the convention is the writer's, never the reader's) is the first candidate.
+
+## The corner, matched
+
+Tom: "proceed", on the note's first open item: does OFS's corner play the same role as SR's γβ = 1, argued by matching
+what each divides by what?
+
+**Known beforehand** (wander, `plans/emc-plan.md`):
+- E² = (pc)² + (mc²)² is the unit circle in the one unit E, with h = mc²/E = 1/γ and v = pc/E = β.
+- Newton's form and the ultra-relativistic form are exchanges of each other, e_N(x) = e_U(1/x).
+- They hand over at the corner pc = mc², both √(9/8) − 1 = 6.07% high.
+
+**Predictions** (written at 13:18 MDT, before the checks):
+- **C1. The reading.** On that circle the reading is s = v/h = pc/mc² = γβ, the celerity, which is the dial's tan θ. The
+  corner s = 1 is β = 1/√2 for every mass.
+- **C2. Two motions, one quarter circle.** A boost at fixed m moves along the readings with ζ, s = sinh ζ. A turn at
+  fixed E moves along the same readings with θ, s = tan θ: it changes the split of E between mass and momentum, which is
+  another particle, not another frame. The two meet at every reading through θ = gd(ζ). The calendar dial is this
+  change of parameter.
+- **C3. The exchange is not a symmetry of SR.** No element of the 1+1 Lorentz group, parity and time reversal
+  included, maps s to 1/s for every s:
+  - a boost is ζ ↦ ζ + a;
+  - a reflection is ζ ↦ −ζ, which gives s ↦ −s;
+  - mc² is invariant and pc is not.
+
+  So SR's corner is the reciprocal's fixed point of a reading, but not the fixed point of a symmetry the reader cannot
+  detect, which it is in OFS. *Killed* if some element maps s ↦ 1/s.
+- **C4. Under additive composition the corner is not the median.** Readings taken uniformly in ζ over [0, Z] put
+  P(s ≤ 1) = asinh(1)/Z. That is ½ only at Z = 2·asinh 1 ≈ 1.7627, so the median moves with the reach. Readings
+  uniform in θ over the quarter turn keep the median at the corner whatever happens (OFS Proposition 5(d)). *Killed*
+  if the ζ-uniform median sits at s = 1 for more than one Z.
+- **C5. What survives.** The corner's role as where the two regimes hand over (EMC P3) holds under either motion, since
+  it is a fact about the reading s, not about the measure.
+
+So the predicted answer is half a match. The same reading has the same fixed point under the exchange, and the
+regimes swap there. But the corner's role as a median, and as a symmetry of the reader's ignorance, belongs to OFS's
+uniform turn, not to SR's boosts.
