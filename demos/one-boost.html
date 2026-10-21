@@ -82,7 +82,7 @@
     (pc, mc²) has its corner at ζ = asinh 1 for every mass, so the corner belongs to the address, not the payload.</p>
   <p class="note"><b>What is classical.</b> Aberration as a Möbius map of the celestial sphere (Penrose 1959; Terrell 1959);
     the Doppler factor and I<sub>ν</sub>/ν³ (Rybicki and Lightman 1979, §4.9); Bondi's k-calculus (1964); the conventionality of
-    simultaneity (Reichenbach 1928; Winnie 1970); velocity space as hyperbolic space (Varićak 1910; Fock). The sorting is this project's; SR's formalism already writes the pieces apart.</p>
+    simultaneity (Reichenbach 1928; Winnie 1970); velocity space as hyperbolic space (Varićak 1910; Fock); the Wigner–Thomas turn as the velocity triangle's area. The sorting is this project's; SR's formalism already writes the pieces apart.</p>
 </main>
 <script>
 // One boost, sorted (21 Oct 2026; Tom, of special relativity and the address/payload split: "we've explored these ideas in
@@ -118,6 +118,21 @@ const THINGS = [[0.0, 0, 1], [0.9, 0.6, 2], [1.6, 2.4, 0.5], [0.5, 3.6, 3], [2.2
 function boostU(u, z) { const g = Math.cosh(z), gb = Math.sinh(z); return [g * u[0] - gb * u[1], g * u[1] - gb * u[0], u[2]]; }
 function mink(a, b) { return a[0] * b[0] - a[1] * b[1] - a[2] * b[2]; }
 function relRap(a, b) { return Math.acosh(Math.max(1, mink(a, b))); }
+// The Wigner turn: two boosts in different directions make a boost and a turn. The turn's angle is the area of the
+// velocity triangle (rest, after the first boost, after both) in hyperbolic space: an angle, read with no unit and no ε.
+function Bm(nx, ny, z) { const g = Math.cosh(z), s = Math.sinh(z), q = g - 1;
+  return [[g, s * nx, s * ny], [s * nx, 1 + q * nx * nx, q * nx * ny], [s * ny, q * nx * ny, 1 + q * ny * ny]]; }
+const mmul = (A, C) => A.map((r, i) => C[0].map((_, j) => r.reduce((a, _, k) => a + A[i][k] * C[k][j], 0)));
+const mapp = (A, v) => A.map(r => r[0] * v[0] + r[1] * v[1] + r[2] * v[2]);
+function angleAt(P, Q, R) { const tq = Q.map((x, i) => x - mink(P, Q) * P[i]), tr = R.map((x, i) => x - mink(P, R) * P[i]);
+  return Math.acos(Math.max(-1, Math.min(1, -mink(tq, tr) / Math.sqrt(mink(tq, tq) * mink(tr, tr))))); }
+function wigner(z1, z2, phi) {
+  const L = mmul(Bm(1, 0, z1), Bm(Math.cos(phi), Math.sin(phi), z2)), O = [1, 0, 0], A = mapp(Bm(1, 0, z1), O), C = mapp(L, O);
+  const zc = Math.acosh(C[0]), sc = Math.hypot(C[1], C[2]), Bc = sc < 1e-15 ? Bm(1, 0, 0) : Bm(C[1] / sc, C[2] / sc, -zc);   // the pure boost back to rest
+  const R = mmul(Bc, L), turn = Math.atan2(R[2][1], R[1][1]);
+  const area = z1 < 1e-12 || z2 < 1e-12 ? 0 : Math.PI - angleAt(O, A, C) - angleAt(A, O, C) - angleAt(C, O, A);
+  return { turn, area, restStays: Math.abs(R[0][0] - 1) + Math.abs(R[0][1]) + Math.abs(R[0][2]) };
+}
 function checks() {
   const z = S.zeta, eps = S.eps, { b, g, k } = boost(z), R = [];
   let e1 = 0, e2 = 0, e3 = 0, e4 = 0;
@@ -179,6 +194,10 @@ function checks() {
     ok: true, chk: z === 0 ? 'none at rest' : 'moved' });
   R.push({ kind: 'addr', what: 'The pair (pc, mc²) has its corner at γβ = 1, ζ = asinh 1, the same for every mass (where E = √2·mc²)', val: `asinh 1 = ${Math.asinh(1).toFixed(4)}`,
     ok: Math.abs(Math.sinh(Math.asinh(1)) - 1) < 1e-15 && Math.abs(Math.cosh(Math.asinh(1)) - Math.SQRT2) < 1e-15, chk: 'γ = √2 there' });
+  const W = wigner(z, 0.8, Math.PI / 2);
+  R.push({ kind: 'addr', what: 'Two boosts, ζ then 0.8 at right angles, make a boost and a turn (Wigner, Thomas): the turn is the area of the velocity triangle, an angle with no unit and no ε',
+    val: `turn ${(Math.abs(W.turn) * 180 / Math.PI).toFixed(3)}°`, ok: Math.abs(Math.abs(W.turn) - W.area) < 1e-9 && W.restStays < 1e-9,
+    chk: `area ${(W.area * 180 / Math.PI).toFixed(3)}°, |Δ| ${Math.abs(Math.abs(W.turn) - W.area).toExponential(1)}` });
   return R;
 }
 const NAMES = { addr: ['address', 'addr'], pay: ['payload', 'pay'], amt: ['amount', 'amt'], conv: ['convention', 'conv'] };
@@ -284,7 +303,7 @@ const q = new URLSearchParams(location.search);
 if (q.has('z')) zetaEl.value = q.get('z'); if (q.has('eps')) epsEl.value = q.get('eps'); if (q.has('w')) wtEl.value = q.get('w');
 render();
 // test hook
-window.__oneBoost = { checks, radar, vEps, THINGS, boostU, relRap, seenCos, seenHalf, D, Drest, set(o) { if (o.z != null) zetaEl.value = o.z; if (o.eps != null) epsEl.value = o.eps; if (o.w != null) wtEl.value = o.w; render(); return checks(); } };
+window.__oneBoost = { checks, radar, vEps, wigner, THINGS, boostU, relRap, seenCos, seenHalf, D, Drest, set(o) { if (o.z != null) zetaEl.value = o.z; if (o.eps != null) epsEl.value = o.eps; if (o.w != null) wtEl.value = o.w; render(); return checks(); } };
 </script>
 </body>
 </html>
