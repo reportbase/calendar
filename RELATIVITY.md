@@ -56,3 +56,61 @@ convention. Sources: the Robertson–Mansouri–Sexl test theory (Robertson 1949
   appears as a one-way "dilation" read across a distance. *Killed* if an experiment reads γ across a distance.
 
 ## Runs
+
+### Run 1 (21 Oct, about 12:30 MDT)
+
+**Method.** A separate agent read each experiment's method; it was not told the predictions. It had full text of the
+four critiques of Greaves et al. (arXiv) and Wikipedia's pages for each experiment. It had only a teaching sheet quoting
+Bertozzi. It could not reach the primary papers for items 1–9. Where it relied on memory it said so, and those details
+are marked "(memory)" below.
+
+| Experiment | What was read, and where | Predicted kind | Scored |
+|---|---|---|---|
+| Bradley 1729 | the zenith distance of γ Draconis through the year, one zenith sector, one place | address | not killed |
+| Fizeau 1851 | fringe shift on reversing the flow; both beams on one closed path through both tubes | address | **killed in its letter:** the reading is a round trip; the address (rapidities composing) is what it confirms, not what it reads |
+| Michelson–Morley 1887 | fringe position at 16 azimuths, equal arms, one place | round trip | not killed |
+| Kennedy–Thorndike 1932 | photographed fringes over months, unequal arms, one place | round trip | not killed |
+| Ives–Stilwell 1938 | on one plate: the forward line, its mirror image (backward) and the undisplaced line; the forward and backward mean against the undisplaced | payload, the mean of the two shifts | not killed (the first-order, convention-sensitive term cancels between the two views) |
+| Rossi–Hall 1941 | counting rates at two altitudes (Echo Lake, Denver), momentum selected by absorbers; no clocks | clocks at one place | **killed:** two places, no clocks |
+| Bailey et al. 1977 | decays against time since injection on one time base, muons circling | clocks at one place (closed path) | not killed |
+| Hafele–Keating 1972 | caesium clocks compared with USNO's before and after, side by side | clocks at one place | not killed |
+| Bertozzi 1964 | two pulses on one oscilloscope through cables (cables 1 and 2), 8.4 m of flight; energy from the potential and a calorimeter | amount ratio against a time of flight | kind not killed; see X3 |
+| Rømer 1676 | Io's eclipse times on one clock; the intervals longer while receding, shorter approaching | payload timing | kind not killed (the changing intervals are a Doppler of Io's period); see X3 |
+| Greaves et al. 2009 | phase at one place as the light path varies, the return carried by a cable of assumed delay | not one-way | not killed (Finkelstein 2010; de Abreu and Guerra; Macdonald and Minguzzi; Klauber) |
+
+**X1** (every experiment reads a ratio at one place): **killed by Rossi–Hall.** It compares counts at two places a
+known height apart, a length carried in. Everything it reads is still unitless (a ratio of counts) or an amount in a
+rod's unit (the height). No clock is read across the distance.
+
+**X2** (the sorting): **killed for Fizeau and Rossi–Hall,** not killed for the other nine.
+
+**X3** (no experiment depends on ε, the dependence cancelling for Bertozzi and Rømer): **killed for both.**
+- In each, what is read at one place is ε-free: two pulses on one screen, eclipse times on one clock. But the published
+  speed needs a synchronisation carried in.
+- For Bertozzi it is the cable delays. Their calibration is unverified here: the primary paper was not reached, and a
+  round-trip calibration was not found. Finkelstein's point against Greaves applies: a known delay "is only meaningful
+  if one imagines having synchronized clocks at the two ends".
+- For Rømer it is the Jupiter system used as a slowly carried clock (Zhang 1997, pp. 91–94; Karlov 1970), which is
+  equivalent to ε = ½.
+- The standard statement survives: every prediction SR makes for what is read is ε-free (Zhang 1997; Anderson,
+  Vetharaniam and Stedman 1998). What depends on ε is the stated one-way speed, which is a writing.
+
+**X4** (γ enters only through D or a closed path): **not killed in its letter, but incomplete.**
+- Rossi–Hall reads neither γ nor a closed path. It reads a decay length in metres against a momentum. Its decay length
+  is (p/m)·τ₀ = γβ·τ₀, so the confirmed quantity is the **celerity** γβ = sinh ζ, the dial's tan θ (GEOMETRY.md).
+- The celerity needs no synchronisation: a rod's length over the muon's own clock (post hoc, from the standard decay
+  law; to check against the paper).
+- So there is a third route, and it is the dial's own variable.
+
+**Reading.** Of the four predictions, X2's two misplacements and X1 came from guessing method from memory. X3's kill is
+the useful one:
+- SR's experiments read convention-free things at one place: directions, frequency ratios, round trips, clocks brought
+  together, decay lengths.
+- Every one-way speed in the record is a reading with a synchronisation carried in.
+- That is the sort of `one-boost.html` (ε is the writer's choice) found in the experiments themselves.
+- Nothing here is new physics: the ε-independence is classical. What the run adds is that each experiment lands in one
+  of the page's kinds once its method is read.
+
+**Open.**
+- Bertozzi's cable calibration, from the primary paper (Am. J. Phys. 32, 551).
+- Rossi–Hall's analysis, to confirm the celerity reading (Phys. Rev. 59, 223).
