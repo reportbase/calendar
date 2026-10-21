@@ -334,3 +334,31 @@ Tom: "proceed", on the second item: acceleration, where physics has a real horiz
     That is OFS's horizon, reached here from the payload's side.
 - *Killed:* R2 if D depends on the source's distance, beyond 10⁻⁴⁰; R3 if the halving time is not ln 2/a to 10⁻⁴⁰; R4
   if a source ahead ever freezes.
+
+### Runs (21 Oct, 13:32 and 13:33 MDT), `checks/rindler.py` and `checks/rindler2.py`
+
+- **Method.** The worldline is integrated from the held rapidity rate (dt/dτ = cosh ζ, dx/dτ = sinh ζ, ζ = aτ, a = 0.7),
+  not taken from the closed form. Light from sources at rest is found from the ray equation, and D is the derivative of
+  the received source time.
+- **Run 1, at 50 digits.**
+  - R1 holds: proper acceleration a to 4·10⁻²⁵.
+  - R3 holds: the gap halves every ln 2/a to 6·10⁻⁴⁸.
+  - R4 holds: ahead, D·e^(−ζ) = 1 to 2·10⁻³¹, and the received time keeps growing.
+  - **R2 killed by my set-up:** D·e^(ζ) = 1 to 1.3·10⁻³¹ over four times and four distances (0 to 1000 behind), against
+    my stated 10⁻⁴⁰. The finite-difference step limited it.
+- **Run 2.** Predicted before it ran: at 80 digits with step 10⁻³⁰, R2 below 10⁻⁴⁰. Result 4·10⁻⁴⁸. **Not killed.** R1,
+  R3 and R4 hold again.
+
+**Reading.**
+- The dial's held thumb is a Rindler observer.
+- Everything behind it fades by the same factor, e^(−ζ) = 1/k. That is the reader's own rapidity, the radar ratio, and
+  it does not depend on how far the source is. Each source's time freezes at its own last value (its place plus 1/a),
+  approached one level, a halving, per ln 2/a of the reader's own time. Ahead nothing freezes, and light arrives
+  brightening by e^(ζ).
+- In the sort: the payload weight goes to zero while the address stays, and the rate of going dark is a reading.
+  Only the horizon's distance, c²/a, is an amount. So the physical horizon is met from the payload's side, as OFS's
+  horizon: what is there is still addressed, and nothing more arrives from it.
+- Not physics-new: the Rindler horizon, the exponential redshift and the freezing are classical (Rindler 1966). What is
+  added is the sort, and that the dial's held push is this motion.
+- The calendar dial clamps ζ at ZMAX (the window's K-th corner), so its push stops short of the horizon's limit. That
+  is the dial's choice to keep a finite window, not SR's.

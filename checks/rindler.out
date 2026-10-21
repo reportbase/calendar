@@ -1,0 +1,8 @@
+R1 proper acceleration of the held push, worst |α − a| 4.26e-25
+R2 behind: D·e^(ζ) − 1, worst over 4 times × 4 distances 1.25e-31
+R3 behind: the gap to x_s + 1/a halves every ln 2/a, worst |ratio − ½| 5.99e-48
+R4 ahead: D·e^(−ζ) − 1, worst 1.72e-31 ; received time keeps growing: True
+R1 not killed
+R2 not killed
+R3 not killed
+R4 not killed
