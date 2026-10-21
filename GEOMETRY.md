@@ -19,6 +19,13 @@ the same line at A.
 So `sin θ = tanh ζ`, `tan θ = sinh ζ`, `sec θ = cosh ζ`: **θ = gd(ζ)**, the gudermannian.
 Each angle is twice the area of its sector: O–A–P on the circle, O–A–H on the hyperbola.
 
+**Read as spacetime** (`s` toggles it, on at first; RELATIVITY.md, "The held push"). Take u (up the axis) as place and
+v (across) as time, both in units of c/a. The hyperbola is then the path of a reader under a steady push. The corner
+lines, the asymptotes, are light: the horizon it never catches, and the past horizon. The line O–H is the reader's
+"now". A source at rest behind it, the line u = 0.55, meets the horizon at its last moment. The light reaching the
+reader now left the source e^(−|ζ|) before that moment, and arrives weighted by the same e^(−|ζ|), however far behind
+the source is. The readout's "read as spacetime" rows give these numbers.
+
 ## Names
 
 | Geometry (use this) | Dial | [Special relativity] | [Mercator / maps] | [Optics, other] |

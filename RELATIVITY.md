@@ -362,3 +362,6 @@ Tom: "proceed", on the second item: acceleration, where physics has a real horiz
   added is the sort, and that the dial's held push is this motion.
 - The calendar dial clamps ζ at ZMAX (the window's K-th corner), so its push stops short of the horizon's limit. That
   is the dial's choice to keep a finite window, not SR's.
+- `geometry.html` draws this on its figure (`s` toggles it). The hyperbola is the held reader's path, and the corner
+  lines are the horizons. O–H is its "now". A source behind is shown with its last moment and with the light now
+  arriving, which was sent e^(−|ζ|) before that last moment.
