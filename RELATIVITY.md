@@ -232,3 +232,36 @@ what each divides by what?
 So the predicted answer is half a match. The same reading has the same fixed point under the exchange, and the
 regimes swap there. But the corner's role as a median, and as a symmetry of the reader's ignorance, belongs to OFS's
 uniform turn, not to SR's boosts.
+
+### Run (21 Oct, 13:19 MDT), `checks/corner.py` (output `checks/corner.out`), mpmath at 50 digits
+
+Nothing killed.
+
+| | Result |
+|---|---|
+| C1 | h² + v² = 1 and v/h = γβ to 10⁻⁵⁰ over β ∈ (0, 1); γβ = 1 at β = 1/√2 exactly |
+| C2 | tan(gd ζ) = sinh ζ to 2·10⁻⁴⁹: the boost and the turn meet at every reading |
+| C3 | no boost or reflection gives s ↦ 1/s; the least residual over a ∈ [−10, 10], both signs, is 2.6. The mass is unchanged by a boost (m² = 1 before and after) and the momentum is not (pc 2 → 4.21) |
+| C4 | uniform in ζ on [0, Z]: P(s ≤ 1) = 0.881, 0.500, 0.294, 0.147 at Z = 1, 2·asinh 1, 3, 6; uniform in θ: 0.5 |
+| C5 | e_N(x) = e_U(1/x) to 7·10⁻⁴⁹; both 0.0606602 at the corner |
+
+**Answer: half a match, and the half that differs is the useful part.**
+- **What matches.** OFS's corner and SR's γβ = 1 are the same reading's fixed point under the exchange. The reading is
+  the celerity pc/mc², and the regimes hand over there (Newton near, massless far).
+- **What does not.**
+  - In OFS the exchange is a symmetry the reader cannot detect, part of its ignorance, and with the uniform turn the
+    corner is also the median. In SR the exchange swaps an invariant (mass) for a frame's quantity (momentum), so it
+    is no symmetry of the theory.
+  - SR's own motion, the boost, composes additively in ζ. Under it the corner is the median only for one reach of the
+    window.
+  - The turn that keeps the corner at the median is a turn at fixed energy. It changes which particle, not which frame.
+- **So the two roles ChatGPT asked about are separable, and differ.** One quarter circle of readings is traversed by two
+  motions: SR's boost, uniform in ζ, and OFS's turn, uniform in θ. The gudermannian, which the calendar dial runs on,
+  is the change between them. The corner is common to both. Its standing as a median belongs to the turn alone.
+
+**For the question carried forward** (should a reader compose additively in ζ?):
+- The dial does, and gains a horizon that is never reached and additive pushes.
+- It pays for that: its corner is no longer the median of a uniform sweep. A dial whose window reaches 2^K (rungs to
+  tan θ = 2^K) has the corner as the median of uniform pushes only if its reach is Z = 2·asinh 1. At K = 5,
+  Z = asinh 32 ≈ 4.16, and the share of pushes inside the corner is 0.212.
+- That is a design trade, not a flaw. Neither motion is wrong; they answer different questions.
