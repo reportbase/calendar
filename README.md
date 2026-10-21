@@ -39,6 +39,8 @@ Standalone pages, one idea each, pulled out of the draw project's labs. See [dem
 | [ladder.html](https://reportbase.github.io/calendar/demos/ladder.html) | A bar of 1 sweeps through home, corner and horizon; the rungs show what the view from nowhere adds, and what each one needs. |
 | [blind-spots.html](https://reportbase.github.io/calendar/demos/blind-spots.html) | A still reader holds only addresses (jumps and edges); tap a place and it answers whether it can see it. |
 | [two-readers.html](https://reportbase.github.io/calendar/demos/two-readers.html) | One reader circles a shape: kept payloads go stale when the shape changes; bearings held now do not. |
+| [one-boost.html](https://reportbase.github.io/calendar/demos/one-boost.html) | One Lorentz boost sorted into address, payload, amount and convention: directions move by one Möbius map, the payload's weights are that map's Jacobian, the radar ratio k reads the boost, and γ and β need ε = ½. ε moves the writer's horizons, never the corner; a moving thing's velocity is a point of hyperbolic space (the address), its mass the payload. |
+| [two-pushes.html](https://reportbase.github.io/calendar/demos/two-pushes.html) | A two-dimensional SR dial: pushes along the reader's own axes; a loop back to rest turns the frame by minus the velocity loop's hyperbolic area (Thomas precession), checked live. Pushes along one line never turn. |
 
 ## Sweeps — [dials/](dials/)
 

@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Two Pushes, One Turn</title>
+<style>
+  :root { --bg:#0e0f12; --panel:#16181d; --fg:#e8e6e1; --muted:#8b8f98; --line:#2a2d35;
+          --gold:#e8c86a; --blue:#7fb2ff; --teal:#4fc1c1; --ok:#6fcf8e; --bad:#ff6b8a; color-scheme:dark; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.45 system-ui, -apple-system, sans-serif; }
+  main { max-width:1180px; margin:0 auto; padding:14px 16px 40px; display:flex; flex-direction:column; gap:12px; }
+  h1 { margin:0; font-size:20px; font-weight:600; }
+  p { margin:0; color:var(--muted); max-width:880px; }
+  p b { color:var(--fg); font-weight:600; }
+  .panes { display:grid; grid-template-columns:3fr 2fr; gap:12px; }
+  @media (max-width:800px) { .panes { grid-template-columns:1fr; } }
+  .pane { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px; }
+  .pane h2 { margin:0 0 6px; font:600 11px ui-monospace, Menlo, monospace; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
+  canvas { display:block; width:100%; touch-action:none; }
+  #disc { height:440px; cursor:crosshair; } #view { height:440px; }
+  .bar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px 12px; }
+  button { background:#20232a; color:var(--fg); border:1px solid var(--line); border-radius:8px; padding:7px 11px; font:inherit; min-height:36px; cursor:pointer; }
+  button:hover { border-color:var(--gold); }
+  .read { font:13px ui-monospace, Menlo, monospace; color:var(--fg); }
+  .ok { color:var(--ok); } .bad { color:var(--bad); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Two pushes, one turn</h1>
+  <p>The calendar dial pushes along one line, so its pushes commute. Here the reader can push any way. Each push is a
+    boost along the reader's <b>own</b> axes, the way a ship's controls work. <b>Press and drag on the disc</b>: the drag
+    from where you pressed is the push, ahead and to the side as the compass shows them. The blue point is the reader's
+    velocity in the disc of velocities (rest in the middle, light at the rim). Push out and come back to rest, and the
+    reader's frame comes home turned, by the area its velocity path enclosed.</p>
+  <div class="bar">
+    <button id="tri">a triangle: ahead, left, home</button>
+    <button id="sq">a square: ahead, left, back, right, home</button>
+    <button id="sqh">the same square, half size</button>
+    <button id="line">along one line only</button>
+    <button id="home">push home</button>
+    <button id="reset">reset</button>
+    <span class="read" id="read"></span>
+  </div>
+  <div class="panes">
+    <div class="pane"><h2>Velocities: the Poincaré disc, the path pushed, the reader's compass</h2><canvas id="disc"></canvas></div>
+    <div class="pane"><h2>The list seen from the reader's own frame</h2><canvas id="view"></canvas></div>
+  </div>
+  <p id="check"></p>
+  <p><b>What it shows.</b> A loop of pushes that returns to rest turns the reader's frame by minus the hyperbolic area the
+    loop enclosed in velocity space (Thomas precession; Gauss–Bonnet at curvature −1). Pushes along one line enclose no
+    area and never turn: that is why the one-dimensional dial has no turn. The turn is a reading, an angle with no unit
+    and no convention. It records the path taken and depends on the loop. Very small loops
+    turn as the square of their size; larger ones faster, since hyperbolic area outgrows the square (halving the page's
+    square divides its turn by 4.86, not 4). For a two-dimensional dial over a list, the turn is either a record worth showing
+    or a drift to cancel, by pushing home along a line or by adding the opposite turn back.</p>
+  <p><b>Classical.</b> Thomas 1926; Wigner 1939; the area law by Gauss–Bonnet in the velocity space of Varićak 1910. The page
+    checks it live: when the velocity returns to rest it compares the turn with the area enclosed.</p>
+</main>
+<script>
+// Two pushes, one turn (21 Oct 2026; Tom: "proceed", on a two-dimensional SR dial with true boosts). The state is the
+// reader's Lorentz matrix L in (t, x, y) relative to the list's rest frame. A push is a small boost along the reader's
+// own axes, right-multiplied: L ← L·B(n, dζ). The velocity is L applied to rest; the frame's turn is the rotation left
+// in L once its pure boost is taken out, R = B(w)⁻¹·L.
+const TAU = Math.PI * 2, DZ = 0.002;                                           // the largest rapidity of one step
+function B(nx, ny, z) { const g = Math.cosh(z), s = Math.sinh(z), q = g - 1;
+  return [[g, s * nx, s * ny], [s * nx, 1 + q * nx * nx, q * nx * ny], [s * ny, q * nx * ny, 1 + q * ny * ny]]; }
+const mul = (A, C) => A.map((r, i) => [0, 1, 2].map(j => r[0] * C[0][j] + r[1] * C[1][j] + r[2] * C[2][j]));
+const I3 = () => [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+function velocity(L) { return [L[0][0], L[1][0], L[2][0]]; }                    // the 4-velocity: L applied to rest
+function disc(u) { return [u[1] / (1 + u[0]), u[2] / (1 + u[0])]; }            // its point on the Poincaré disc
+function turnOf(L) { const u = velocity(L), z = Math.acosh(Math.max(1, u[0])), s = Math.hypot(u[1], u[2]);
+  const Bi = s < 1e-15 ? I3() : B(-u[1] / s, -u[2] / s, z), R = mul(Bi, L); return Math.atan2(R[2][1], R[1][1]); }
+// a push of rapidity z along the reader's own direction a (radians from its own "ahead"), in steps; the path is kept
+function push(S, a, z) { const n = Math.max(1, Math.ceil(Math.abs(z) / DZ)), dz = z / n, c = Math.cos(a), s = Math.sin(a);
+  const Bs = B(c, s, dz); for (let i = 0; i < n; i++) { S.L = mul(S.L, Bs); S.path.push(disc(velocity(S.L))); } }
+// push straight home: the boost that cancels the velocity, along the reader's own axes (a geodesic back to rest)
+function homeDir(S) { const u = velocity(S.L), s = Math.hypot(u[1], u[2]); if (s < 1e-15) return null;
+  const t = turnOf(S.L), wx = -u[1] / s, wy = -u[2] / s;                       // −ŵ in the list's axes, then into the reader's
+  return { a: Math.atan2(wy, wx) - t, z: Math.acosh(u[0]) }; }
+function goHome(S) { const h = homeDir(S); if (h) push(S, h.a, h.z); }
+// the signed hyperbolic area of a closed path on the disc, as a fan of triangles from the middle: 2·arg(1 − pᵢ·conj(pᵢ₊₁))
+function areaOf(path) { let A = 0; for (let i = 0; i + 1 < path.length; i++) { const [ax, ay] = path[i], [bx, by] = path[i + 1];
+  A += 2 * Math.atan2(-(ay * bx - ax * by), 1 - (ax * bx + ay * by)); } return A; }
+const fresh = () => ({ L: I3(), path: [[0, 0]] });
+// the presets, headless (the hook uses these; the buttons animate the same legs)
+function loop(legs, rate) { const S = fresh(); for (const [a, z] of legs) push(S, a, z); goHome(S);
+  return { turn: turnOf(S.L), area: areaOf(S.path), rest: Math.acosh(Math.max(1, velocity(S.L)[0])) }; }
+const LEGS = {
+  tri: z => [[0, z], [Math.PI / 2, z]],
+  sq: z => [[0, z], [Math.PI / 2, z], [Math.PI, z], [-Math.PI / 2, z]],
+  line: z => [[0, z], [Math.PI, 2 * z], [0, z]],
+};
+// ── the live page ─────────────────────────────────────────────────────────────────────────────────────────────────
+let S = fresh(), queue = [], drag = null, last = performance.now(), lastClosed = null;
+const discEl = document.getElementById('disc'), viewEl = document.getElementById('view');
+function fit(cv) { const dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight; cv.width = w * dpr; cv.height = h * dpr;
+  const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); return { c, w, h }; }
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+function play(name, z) { S = fresh(); lastClosed = null; queue = LEGS[name](z).map(([a, zz]) => ({ a, left: zz })); queue.push({ home: true }); }
+document.getElementById('tri').onclick = () => play('tri', 1.2);
+document.getElementById('sq').onclick = () => play('sq', 0.9);
+document.getElementById('sqh').onclick = () => play('sq', 0.45);
+document.getElementById('line').onclick = () => play('line', 1.0);
+document.getElementById('home').onclick = () => { queue = [{ home: true }]; };
+document.getElementById('reset').onclick = () => { S = fresh(); queue = []; lastClosed = null; };
+function geom() { const w = discEl.clientWidth, h = discEl.clientHeight, R = Math.min(w, h) / 2 - 16; return { cx: w / 2, cy: h / 2, R }; }
+discEl.addEventListener('pointerdown', e => { const r = discEl.getBoundingClientRect(); drag = { x0: e.clientX - r.left, y0: e.clientY - r.top, x: e.clientX - r.left, y: e.clientY - r.top }; queue = []; discEl.setPointerCapture(e.pointerId); });
+discEl.addEventListener('pointermove', e => { if (!drag) return; const r = discEl.getBoundingClientRect(); drag.x = e.clientX - r.left; drag.y = e.clientY - r.top; });
+const endDrag = () => { drag = null; };
+discEl.addEventListener('pointerup', endDrag); discEl.addEventListener('pointercancel', endDrag);
+function step(dt) {
+  const before = Math.acosh(Math.max(1, velocity(S.L)[0]));
+  if (drag) {                                                                   // the drag is a rate: rapidity per second along the reader's own axes
+    const dx = drag.x - drag.x0, dy = -(drag.y - drag.y0), m = Math.hypot(dx, dy);
+    if (m > 6) { const rate = Math.min(2.5, m / 60); push(S, Math.atan2(dy, dx), rate * dt); }
+  } else if (queue.length) {
+    const q = queue[0];
+    if (q.home) { const h = homeDir(S); if (!h || h.z < 1e-9) queue.shift(); else push(S, h.a, Math.min(h.z, 1.6 * dt)); }
+    else { const z = Math.min(q.left, 1.6 * dt); push(S, q.a, z); q.left -= z; if (q.left <= 1e-12) queue.shift(); }
+  }
+  const after = Math.acosh(Math.max(1, velocity(S.L)[0]));
+  if (S.path.length > 1 && before > 1e-6 && after < 1e-6) {                     // back at rest: compare the turn with the area enclosed
+    lastClosed = { turn: turnOf(S.L), area: areaOf(S.path) };
+  }
+  if (S.path.length > 40000) S.path = S.path.filter((_, i) => i % 2 === 0);
+}
+function draw() {
+  const { c, w, h } = fit(discEl), { cx, cy, R } = geom();
+  c.strokeStyle = css('--line'); c.lineWidth = 1; c.beginPath(); c.arc(cx, cy, R, 0, TAU); c.stroke();
+  for (const z of [0.5, 1, 1.5, 2, 2.5]) { c.setLineDash([2, 4]); c.beginPath(); c.arc(cx, cy, R * Math.tanh(z / 2), 0, TAU); c.stroke(); }
+  c.setLineDash([]); c.fillStyle = css('--muted'); c.font = '12px system-ui'; c.fillText('rest', cx + 6, cy + 14); c.fillText('light', cx + R * 0.72, cy - R * 0.72);
+  // the path
+  c.strokeStyle = css('--gold'); c.globalAlpha = 0.8; c.lineWidth = 1.6; c.beginPath();
+  S.path.forEach(([x, y], i) => { const X = cx + R * x, Y = cy - R * y; i ? c.lineTo(X, Y) : c.moveTo(X, Y); }); c.stroke(); c.globalAlpha = 1;
+  // the reader: its velocity and its compass (its own ahead and left, turned by the turn so far)
+  const [px, py] = disc(velocity(S.L)), X = cx + R * px, Y = cy - R * py, t = turnOf(S.L);
+  c.strokeStyle = css('--blue'); c.lineWidth = 2;
+  c.beginPath(); c.moveTo(X, Y); c.lineTo(X + 26 * Math.cos(t), Y - 26 * Math.sin(t)); c.stroke();
+  c.strokeStyle = css('--teal'); c.beginPath(); c.moveTo(X, Y); c.lineTo(X + 16 * Math.cos(t + Math.PI / 2), Y - 16 * Math.sin(t + Math.PI / 2)); c.stroke();
+  c.fillStyle = css('--blue'); c.beginPath(); c.arc(X, Y, 5, 0, TAU); c.fill();
+  if (drag) { c.strokeStyle = css('--gold'); c.setLineDash([4, 3]); c.beginPath(); c.moveTo(drag.x0, drag.y0); c.lineTo(drag.x, drag.y); c.stroke(); c.setLineDash([]); }
+  // the view: the list's axes as the reader's own frame sees them, turned by −turn
+  const v = fit(viewEl), vx = v.w / 2, vy = v.h / 2, G = Math.min(v.w, v.h) * 0.38;
+  v.c.save(); v.c.translate(vx, vy); v.c.rotate(t);                               // canvas y is down, so +t on screen is −t in the plane
+  v.c.strokeStyle = css('--line'); v.c.lineWidth = 1;
+  for (let k = -4; k <= 4; k++) { v.c.beginPath(); v.c.moveTo(-G, k * G / 4); v.c.lineTo(G, k * G / 4); v.c.stroke(); v.c.beginPath(); v.c.moveTo(k * G / 4, -G); v.c.lineTo(k * G / 4, G); v.c.stroke(); }
+  v.c.strokeStyle = css('--gold'); v.c.lineWidth = 2; v.c.beginPath(); v.c.moveTo(0, 0); v.c.lineTo(G, 0); v.c.stroke();
+  v.c.fillStyle = css('--gold'); v.c.font = '12px system-ui'; v.c.fillText('the list’s first record →', 8, -6); v.c.restore();
+  v.c.strokeStyle = css('--blue'); v.c.lineWidth = 2; v.c.beginPath(); v.c.moveTo(vx, vy); v.c.lineTo(vx + G * 0.6, vy); v.c.stroke();
+  v.c.fillStyle = css('--blue'); v.c.font = '12px system-ui'; v.c.fillText('the reader’s ahead', vx + 8, vy + 16);
+  // readouts
+  const zeta = Math.acosh(Math.max(1, velocity(S.L)[0]));
+  document.getElementById('read').textContent = `rapidity ${zeta.toFixed(3)} · turn ${(t * 180 / Math.PI).toFixed(3)}°`;
+  const ck = document.getElementById('check');
+  if (lastClosed) { const d = Math.abs(lastClosed.turn + lastClosed.area), good = d < 1e-3;
+    ck.innerHTML = `Back at rest: turn <b>${(lastClosed.turn * 180 / Math.PI).toFixed(4)}°</b>, area enclosed <b>${(lastClosed.area * 180 / Math.PI).toFixed(4)}°</b>; turn + area = ${d.toExponential(1)} rad <span class="${good ? 'ok' : 'bad'}">${good ? '✓' : '✗'}</span>`; }
+  else ck.textContent = 'Push out and come back to rest to compare the turn with the area enclosed.';
+}
+function frame(now) { const dt = Math.min(0.05, (now - last) / 1000); last = now; step(dt); draw(); requestAnimationFrame(frame); }
+requestAnimationFrame(frame);
+// test hook: the presets computed headless, at any size and push step
+window.__twoPushes = { loop, LEGS, B, turnOf, areaOf, push, goHome, fresh, state: () => ({ turn: turnOf(S.L), area: areaOf(S.path), lastClosed, n: S.path.length }), play };
+</script>
+</body>
+</html>

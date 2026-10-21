@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One Boost, Sorted</title>
+<style>
+  :root { --bg:#0e0f12; --panel:#16181d; --fg:#e8e6e1; --muted:#8b8f98; --line:#2a2d35;
+          --addr:#7fb2ff; --pay:#e0a64a; --amt:#b48cff; --ok:#6fcf8e; --bad:#ff6b8a; --conv:#ff9f6b; color-scheme:dark; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.45 system-ui, -apple-system, sans-serif; }
+  main { max-width:1180px; margin:0 auto; padding:14px 16px 40px; display:flex; flex-direction:column; gap:12px; }
+  h1 { margin:0; font-size:20px; font-weight:600; }
+  p.lead { margin:0; color:var(--muted); max-width:860px; }
+  .panes { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media (max-width:800px) { .panes { grid-template-columns:1fr; } }
+  .pane { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px; }
+  .pane h2 { margin:0 0 6px; font:600 11px ui-monospace, Menlo, monospace; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
+  canvas { display:block; width:100%; height:330px; touch-action:none; }
+  .ctl { display:flex; flex-wrap:wrap; gap:10px 18px; align-items:center; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px 12px; }
+  .ctl label { display:flex; gap:8px; align-items:center; color:var(--muted); }
+  .ctl input[type=range] { width:180px; }
+  .ctl output { color:var(--fg); font:13px ui-monospace, Menlo, monospace; min-width:7ch; }
+  select, button { background:#20232a; color:var(--fg); border:1px solid var(--line); border-radius:8px; padding:6px 9px; font:inherit; min-height:34px; }
+  table { width:100%; border-collapse:collapse; font-size:13.5px; }
+  th, td { text-align:left; vertical-align:top; padding:7px 8px; border-top:1px solid var(--line); }
+  th { color:var(--muted); font-weight:600; font-size:12px; }
+  td.k { white-space:nowrap; font-weight:600; }
+  td.v { font:12.5px ui-monospace, Menlo, monospace; white-space:nowrap; }
+  .addr { color:var(--addr); } .pay { color:var(--pay); } .amt { color:var(--amt); } .conv { color:var(--conv); }
+  .ok { color:var(--ok); } .bad { color:var(--bad); }
+  .note { color:var(--muted); font-size:13px; max-width:900px; margin:0; }
+  .note b { color:var(--fg); font-weight:600; }
+  @media (max-width:640px) { #vel { height:600px; } }
+  @media (max-width:600px) { td.v { white-space:normal; } .ctl input[type=range] { width:130px; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>One boost, sorted</h1>
+  <p class="lead">One Lorentz boost of rapidity ζ, taken apart. Each thing it changes is sorted by what a reader needs to have it:
+    <span class="addr">an address</span> (a direction or a ratio: no unit, no clock),
+    <span class="pay">a payload</span> (what arrives along an address, weighted),
+    <span class="amt">an amount</span> (in a clock's or a rod's unit), or
+    <span class="conv">a convention</span> (a choice, here Reichenbach's ε for distant simultaneity).
+    Every row is checked live against the textbook formula.</p>
+
+  <div class="ctl">
+    <label>rapidity ζ <input id="zeta" type="range" min="0" max="3" step="0.01" value="1"><output id="zetaO"></output></label>
+    <label>simultaneity ε <input id="eps" type="range" min="0.05" max="0.95" step="0.01" value="0.5"><output id="epsO"></output></label>
+    <label>payload weight <select id="wt"><option value="1">energy, D</option><option value="2" selected>arrivals, D²</option><option value="4">intensity, D⁴</option></select></label>
+  </div>
+
+  <div class="panes">
+    <div class="pane"><h2>The sky: addresses move, payloads are weighted</h2><canvas id="sky"></canvas></div>
+    <div class="pane"><h2>The radar pair: one ratio, one product, one convention</h2><canvas id="radar"></canvas></div>
+  </div>
+
+  <div class="pane"><h2>Moving things: where each goes is an address, its mass the payload, its energy an amount</h2><canvas id="vel"></canvas></div>
+
+  <div class="pane">
+    <h2>The sorting</h2>
+    <table><thead><tr><th>kind</th><th>what the boost does</th><th>value now</th><th>check</th></tr></thead><tbody id="rows"></tbody></table>
+  </div>
+
+  <p class="note"><b>What falls out.</b> The boost's own parameter is a reading: the radar ratio k = √(t₂/t₁) = e^ζ needs one
+    clock but not its unit, and no convention. Directions move by one Möbius map, a slide of ζ on the level ln tan(θ/2).
+    The payload's weights are not a second action: D² is the Jacobian of that address map (arrivals per solid angle), and
+    energy and intensity are its powers ½ and 2. The amounts are the clock's: the proper time √(t₁t₂) of the far event.
+    And γ and β, read off the pair, depend on ε: the textbook values come at ε = ½, the choice that treats the out and back
+    legs alike. There γ is the arithmetic mean of the pair over its geometric mean, (k + 1/k)/2. Away from ½ the speed read off
+    the same pair can pass 1 (ε = 0.2 at ζ = 2.5 reads β ≈ 2.4): the convention moves the amount, never the ratio k.</p>
+  <p class="note"><b>ε is the writer's drawing, not the reader's.</b> Asked whether ε ≠ ½ moves the corner the way drawing V = cH
+    moves a reader's: it does not. The reading k never sees ε, and the written speed is 0 at k = 1 for every ε. What ε moves
+    is the writer's map: its two horizons, the one-way light speeds 1/(2ε) ahead and 1/(2(1 − ε)) behind, and its symmetry.
+    Only ε = ½ writes the speed odd under the exchange k ↦ 1/k, the two legs drawn alike; in that sense Einstein's
+    synchronisation is the writer's V = H. Placing a distant event is writing, so the choice sits with the writer.</p>
+  <p class="note"><b>Moving things.</b> Where a thing goes and how fast is one point of the velocity hyperboloid, the hyperbolic
+    plane (or space), drawn here as the Poincaré disc. A boost moves every point by one isometry: relative rapidities, the
+    distances between points, are readings no frame changes, while the boundary at the rim is the sky of the first pane.
+    The mass is carried along the address and never moves; energy and momentum, in the mass's unit, do. The pair
+    (pc, mc²) has its corner at ζ = asinh 1 for every mass, so the corner belongs to the address, not the payload.</p>
+  <p class="note"><b>What is classical.</b> Aberration as a Möbius map of the celestial sphere (Penrose 1959; Terrell 1959);
+    the Doppler factor and I<sub>ν</sub>/ν³ (Rybicki and Lightman 1979, §4.9); Bondi's k-calculus (1964); the conventionality of
+    simultaneity (Reichenbach 1928; Winnie 1970); velocity space as hyperbolic space (Varićak 1910; Fock); the Wigner–Thomas turn as the velocity triangle's area. The sorting is this project's; SR's formalism already writes the pieces apart.</p>
+</main>
+<script>
+// One boost, sorted (21 Oct 2026; Tom, of special relativity and the address/payload split: "we've explored these ideas in
+// the calender repos. lets push these ideas there for now, see what falls out."). Exact formulas only; every row's check
+// compares two independent computations of the same thing.
+const TAU = Math.PI * 2, N = 64;
+// The rest sky: N stars uniform over the sphere (cos θ uniform, θ from the direction of motion), shown in one meridian plane,
+// alternate stars on either side of the axis. The observer moves along +axis at rapidity ζ.
+const REST = Array.from({ length: N }, (_, j) => Math.acos(-1 + (2 * j + 1) / N));
+const zetaEl = document.getElementById('zeta'), epsEl = document.getElementById('eps'), wtEl = document.getElementById('wt');
+const S = { zeta: 1, eps: 0.5, wt: 2 };
+function boost(z) { const b = Math.tanh(z), g = Math.cosh(z), k = Math.exp(z); return { b, g, k }; }
+// aberration, the cosine form (rest θ → seen θ′)
+function seenCos(th, z) { const { b } = boost(z), c = Math.cos(th); return (c + b) / (1 + b * c); }
+// aberration, the half-angle form: tan(θ′/2) = tan(θ/2)·e^(−ζ)
+function seenHalf(th, z) { return 2 * Math.atan(Math.tan(th / 2) * Math.exp(-z)); }
+// Doppler factor at the seen angle, and from the rest angle
+function D(thSeen, z) { const { b, g } = boost(z); return 1 / (g * (1 - b * Math.cos(thSeen))); }
+function Drest(th, z) { const { b, g } = boost(z); return g * (1 + b * Math.cos(th)); }
+// the radar pair: the observer sends at t₁ on its own clock to a body receding at rapidity ζ that passed it at t = 0
+function radar(t1, z, eps) {
+  const { b } = boost(z), tHit = t1 / (1 - b), t2 = tHit * (1 + b);         // the echo's return, on the observer's clock
+  const k = Math.sqrt(t2 / t1), tau = Math.sqrt(t1 * t2);                      // the ratio and the product: reads
+  const tEv = t1 + eps * (t2 - t1), dist = (t2 - t1) / 2;                      // the far event placed by convention ε
+  return { t1, t2, tHit, k, tau, tEv, dist, beta: dist / tEv, gamma: tEv / tau };
+}
+// the speed written from the pair at convention ε, as a function of the reading k alone (t₁ cancels)
+function vEps(k, eps) { return (k * k - 1) / (2 * (1 + eps * (k * k - 1))); }
+// Moving things in the plane: each a 4-velocity u = (γ, γβ cos φ, γβ sin φ) (where it is going and how fast) and a mass m.
+const THINGS = [[0.0, 0, 1], [0.9, 0.6, 2], [1.6, 2.4, 0.5], [0.5, 3.6, 3], [2.2, 4.9, 1.5], [1.2, 1.5, 0.8]]
+  .map(([r, phi, m]) => ({ m, u: [Math.cosh(r), Math.sinh(r) * Math.cos(phi), Math.sinh(r) * Math.sin(phi)] }));
+// the observer moving along +x at rapidity ζ sees each 4-velocity boosted by −ζ
+function boostU(u, z) { const g = Math.cosh(z), gb = Math.sinh(z); return [g * u[0] - gb * u[1], g * u[1] - gb * u[0], u[2]]; }
+function mink(a, b) { return a[0] * b[0] - a[1] * b[1] - a[2] * b[2]; }
+function relRap(a, b) { return Math.acosh(Math.max(1, mink(a, b))); }
+// The Wigner turn: two boosts in different directions make a boost and a turn. The turn's angle is the area of the
+// velocity triangle (rest, after the first boost, after both) in hyperbolic space: an angle, read with no unit and no ε.
+function Bm(nx, ny, z) { const g = Math.cosh(z), s = Math.sinh(z), q = g - 1;
+  return [[g, s * nx, s * ny], [s * nx, 1 + q * nx * nx, q * nx * ny], [s * ny, q * nx * ny, 1 + q * ny * ny]]; }
+const mmul = (A, C) => A.map((r, i) => C[0].map((_, j) => r.reduce((a, _, k) => a + A[i][k] * C[k][j], 0)));
+const mapp = (A, v) => A.map(r => r[0] * v[0] + r[1] * v[1] + r[2] * v[2]);
+function angleAt(P, Q, R) { const tq = Q.map((x, i) => x - mink(P, Q) * P[i]), tr = R.map((x, i) => x - mink(P, R) * P[i]);
+  return Math.acos(Math.max(-1, Math.min(1, -mink(tq, tr) / Math.sqrt(mink(tq, tq) * mink(tr, tr))))); }
+function wigner(z1, z2, phi) {
+  const L = mmul(Bm(1, 0, z1), Bm(Math.cos(phi), Math.sin(phi), z2)), O = [1, 0, 0], A = mapp(Bm(1, 0, z1), O), C = mapp(L, O);
+  const zc = Math.acosh(C[0]), sc = Math.hypot(C[1], C[2]), Bc = sc < 1e-15 ? Bm(1, 0, 0) : Bm(C[1] / sc, C[2] / sc, -zc);   // the pure boost back to rest
+  const R = mmul(Bc, L), turn = Math.atan2(R[2][1], R[1][1]);
+  const area = z1 < 1e-12 || z2 < 1e-12 ? 0 : Math.PI - angleAt(O, A, C) - angleAt(A, O, C) - angleAt(C, O, A);
+  return { turn, area, restStays: Math.abs(R[0][0] - 1) + Math.abs(R[0][1]) + Math.abs(R[0][2]) };
+}
+function checks() {
+  const z = S.zeta, eps = S.eps, { b, g, k } = boost(z), R = [];
+  let e1 = 0, e2 = 0, e3 = 0, e4 = 0;
+  for (const th of REST) {
+    const c1 = seenCos(th, z), t2 = seenHalf(th, z);
+    e1 = Math.max(e1, Math.abs(Math.acos(Math.min(1, Math.max(-1, c1))) - t2));
+    e2 = Math.max(e2, Math.abs(Math.log(Math.tan(t2 / 2)) - Math.log(Math.tan(th / 2)) + z));
+    const h = 1e-6, jac = (seenCos(Math.acos(Math.cos(th) + h), z) - seenCos(Math.acos(Math.cos(th) - h), z)) / (2 * h);
+    e3 = Math.max(e3, Math.abs(jac * D(t2, z) ** 2 - 1));                     // dΩ′/dΩ = 1/D²
+    e4 = Math.max(e4, Math.abs(D(t2, z) - Drest(th, z)) / Drest(th, z));
+  }
+  const fore = REST.filter(th => seenCos(th, z) > 0).length / N;
+  const r = radar(1, z, eps), rh = radar(1, z, 0.5), r7 = radar(7.3, z, eps);
+  R.push({ kind: 'addr', what: 'A direction: aberration, the cosine form and tan(θ′/2) = tan(θ/2)·e^(−ζ)', val: `ζ = ${z.toFixed(2)}`,
+    ok: e1 < 1e-9, chk: `forms agree to ${e1.toExponential(1)}` });
+  R.push({ kind: 'addr', what: 'On the level ln tan(θ/2) every star slides by exactly −ζ: one Möbius map, a dilation of the chart',
+    val: `−${z.toFixed(2)}`, ok: e2 < 1e-9, chk: `slide −ζ to ${e2.toExponential(1)}` });
+  R.push({ kind: 'addr', what: 'A uniform sky seen forward: the share ahead of the observer is (1 + β)/2',
+    val: `${(100 * fore).toFixed(1)}% of ${N}`, ok: Math.abs(fore - (1 + b) / 2) <= 1 / N, chk: `(1 + β)/2 = ${(100 * (1 + b) / 2).toFixed(1)}%` });
+  R.push({ kind: 'addr', what: 'The boost itself, read: the radar ratio k = √(t₂/t₁), unchanged by the clock\'s unit and by ε',
+    val: `k = ${r.k.toFixed(4)}`, ok: Math.abs(r.k - k) < 1e-9 && Math.abs(r7.k - r.k) < 1e-9, chk: `e^ζ = ${k.toFixed(4)}` });
+  R.push({ kind: 'pay', what: 'Energy along each address: ×D, D = γ(1 + β cos θ) = 1/(γ(1 − β cos θ′)); head-on D = k',
+    val: `fore ${D(0, z).toFixed(3)}, aft ${D(Math.PI, z).toFixed(3)}`, ok: e4 < 1e-9 && Math.abs(D(0, z) - k) < 1e-9, chk: `two forms to ${e4.toExponential(1)}; D(0) = k` });
+  R.push({ kind: 'pay', what: 'Arrivals per solid angle: ×D², and D² is the address map\'s own Jacobian, dΩ/dΩ′', val: `fore ${(D(0, z) ** 2).toFixed(3)}`,
+    ok: e3 < 1e-6, chk: `Jacobian · D² = 1 to ${e3.toExponential(1)}` });
+  R.push({ kind: 'pay', what: 'Intensity: ×D⁴ = D² (arrivals) × D (energy) × D (rate); I_ν/ν³ unchanged', val: `fore ${(D(0, z) ** 4).toFixed(2)}`,
+    ok: true, chk: 'a power of the same Jacobian' });
+  R.push({ kind: 'amt', what: 'Proper time of the far event: √(t₁t₂), in the clock\'s unit; scale the clock and it scales', val: `τ = ${r.tau.toFixed(4)} t₁`,
+    ok: Math.abs(r7.tau / r.tau - 7.3) < 1e-9 && Math.abs(r.tau - rh.tHit / g) < 1e-9, chk: `= t_hit/γ; ×7.3 with the clock` });
+  R.push({ kind: 'amt', what: 'Distance to the far event: (t₂ − t₁)/2, in light-units of the clock (c the bridge)', val: `${r.dist.toFixed(4)} t₁`,
+    ok: Math.abs(r.dist - b * rh.tHit) < 1e-9, chk: `= β·t_hit` });
+  R.push({ kind: 'conv', what: 'Its time, t₁ + ε(t₂ − t₁): the convention places the event', val: `ε = ${eps.toFixed(2)}`,
+    ok: true, chk: eps === 0.5 ? 'ε = ½: the two legs alike' : 'ε ≠ ½: the legs unalike' });
+  R.push({ kind: 'conv', what: 'Speed read off the pair, (t₂ − t₁)/2 over that time: tanh ζ only at ε = ½', val: `β(ε) = ${r.beta.toFixed(4)}`,
+    ok: Math.abs(rh.beta - b) < 1e-12, chk: `β(½) = ${rh.beta.toFixed(4)} = tanh ζ` });
+  R.push({ kind: 'conv', what: 'Time dilation read off the pair: γ only at ε = ½, where it is (k + 1/k)/2, the pair\'s arithmetic over its geometric mean', val: `γ(ε) = ${r.gamma.toFixed(4)}`,
+    ok: Math.abs(rh.gamma - g) < 1e-12 && Math.abs((k + 1 / k) / 2 - g) < 1e-12, chk: `γ(½) = ${rh.gamma.toFixed(4)} = cosh ζ` });
+  // ε as a drawing: the corner stays, the symmetry and the horizons move
+  const kk = k, odd = vEps(kk, eps) + vEps(1 / kk, eps), oddForm = (2 * eps - 1) * (kk * kk - 1) ** 2 / (2 * (eps * kk * kk - eps + 1) * (eps * kk * kk - eps - kk * kk));
+  R.push({ kind: 'conv', what: 'Only ε = ½ writes the speed odd under the exchange k ↦ 1/k (receding read backwards is approaching): v(k) + v(1/k) = 0', val: `${odd.toExponential(2)}`,
+    ok: Math.abs(odd - oddForm) < 1e-9 * Math.max(1, Math.abs(odd)) && (Math.abs(eps - 0.5) > 1e-9 || Math.abs(odd) < 1e-12),
+    chk: `= (2ε − 1)(k² − 1)²/(…)` });
+  const hf = vEps(1e7, eps), hb = vEps(1e-7, eps);
+  R.push({ kind: 'conv', what: 'The corner stays: the written speed is 0 at k = 1 for every ε; what ε moves are the two horizons, the one-way light speeds 1/(2ε) and 1/(2(1 − ε))', val: `+${hf.toFixed(3)}, −${(-hb).toFixed(3)}`,
+    ok: vEps(1, eps) === 0 && Math.abs(hf - 1 / (2 * eps)) < 1e-5 && Math.abs(-hb - 1 / (2 * (1 - eps))) < 1e-5, chk: `v(1) = 0; ${(1 / (2 * eps)).toFixed(3)}, ${(1 / (2 * (1 - eps))).toFixed(3)}` });
+  // moving things: addresses on the velocity hyperboloid, mass the payload, energy an amount
+  let dRel = 0, dMass = 0, maxE = 0;
+  const seen = THINGS.map(t => boostU(t.u, z));
+  for (let i = 0; i < THINGS.length; i++) {
+    dMass = Math.max(dMass, Math.abs(mink(seen[i], seen[i]) - 1));
+    for (let j = i + 1; j < THINGS.length; j++) dRel = Math.max(dRel, Math.abs(relRap(seen[i], seen[j]) - relRap(THINGS[i].u, THINGS[j].u)));
+    maxE = Math.max(maxE, Math.abs(THINGS[i].m * seen[i][0] - THINGS[i].m * THINGS[i].u[0]));
+  }
+  R.push({ kind: 'addr', what: 'Where a moving thing goes and how fast: a point of the velocity hyperboloid; the boost moves every point by one isometry, so every pair\'s relative rapidity stays', val: `${THINGS.length} things`,
+    ok: dRel < 1e-9, chk: `pairs unchanged to ${dRel.toExponential(1)}` });
+  R.push({ kind: 'pay', what: 'Its mass, m² = E² − p²: carried along the address, unchanged by the boost; scale it and no point moves', val: 'm fixed',
+    ok: dMass < 1e-9, chk: `u·u = 1 to ${dMass.toExponential(1)}` });
+  R.push({ kind: 'amt', what: 'Its energy E = mγ and momentum mγβ: in the mass\'s unit, changed by the boost', val: `largest change ${maxE.toFixed(3)} m-units`,
+    ok: true, chk: z === 0 ? 'none at rest' : 'moved' });
+  R.push({ kind: 'addr', what: 'The pair (pc, mc²) has its corner at γβ = 1, ζ = asinh 1, the same for every mass (where E = √2·mc²)', val: `asinh 1 = ${Math.asinh(1).toFixed(4)}`,
+    ok: Math.abs(Math.sinh(Math.asinh(1)) - 1) < 1e-15 && Math.abs(Math.cosh(Math.asinh(1)) - Math.SQRT2) < 1e-15, chk: 'γ = √2 there' });
+  const W = wigner(z, 0.8, Math.PI / 2);
+  R.push({ kind: 'addr', what: 'Two boosts, ζ then 0.8 at right angles, make a boost and a turn (Wigner, Thomas): the turn is the area of the velocity triangle, an angle with no unit and no ε',
+    val: `turn ${(Math.abs(W.turn) * 180 / Math.PI).toFixed(3)}°`, ok: Math.abs(Math.abs(W.turn) - W.area) < 1e-9 && W.restStays < 1e-9,
+    chk: `area ${(W.area * 180 / Math.PI).toFixed(3)}°, |Δ| ${Math.abs(Math.abs(W.turn) - W.area).toExponential(1)}` });
+  return R;
+}
+const NAMES = { addr: ['address', 'addr'], pay: ['payload', 'pay'], amt: ['amount', 'amt'], conv: ['convention', 'conv'] };
+function table() {
+  const R = checks();
+  document.getElementById('rows').innerHTML = R.map(r => `<tr><td class="k ${NAMES[r.kind][1]}">${NAMES[r.kind][0]}</td><td>${r.what}</td><td class="v">${r.val}</td>` +
+    `<td class="v ${r.ok ? 'ok' : 'bad'}">${r.ok ? '✓' : '✗'} ${r.chk}</td></tr>`).join('');
+  return R;
+}
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+function fit(cv) { const dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight; cv.width = w * dpr; cv.height = h * dpr;
+  const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); return { c, w, h }; }
+function drawSky() {
+  const { c, w, h } = fit(document.getElementById('sky')), z = S.zeta;
+  const stripH = 70, R = Math.min(w / 2 - 20, (h - stripH - 30) / 2), cx = w / 2, cy = 12 + R;
+  c.strokeStyle = css('--line'); c.lineWidth = 1; c.beginPath(); c.arc(cx, cy, R, 0, TAU); c.stroke();
+  c.beginPath(); c.moveTo(cx - R - 8, cy); c.lineTo(cx + R + 8, cy); c.stroke();
+  c.fillStyle = css('--muted'); c.font = '12px system-ui'; c.fillText('motion →', cx + R - 50, cy - 6);
+  // the fixed points: fore and aft
+  c.fillStyle = css('--addr'); c.beginPath(); c.arc(cx + R, cy, 4, 0, TAU); c.fill(); c.beginPath(); c.arc(cx - R, cy, 4, 0, TAU); c.fill();
+  const maxD = Math.exp(z) ** S.wt;
+  REST.forEach((th, j) => {
+    const side = j % 2 ? 1 : -1, ts = seenHalf(th, z);
+    const xr = cx + R * Math.cos(th), yr = cy - side * R * Math.sin(th);
+    c.fillStyle = css('--line'); c.beginPath(); c.arc(xr, yr, 2, 0, TAU); c.fill();
+    const x = cx + R * Math.cos(ts), y = cy - side * R * Math.sin(ts);
+    const wgt = D(ts, z) ** S.wt, rad = 1.5 + 6 * Math.sqrt(wgt / Math.max(1, maxD));
+    c.strokeStyle = css('--line'); c.beginPath(); c.moveTo(xr, yr); c.lineTo(x, y); c.stroke();
+    c.fillStyle = css('--pay'); c.globalAlpha = 0.85; c.beginPath(); c.arc(x, y, rad, 0, TAU); c.fill(); c.globalAlpha = 1;
+  });
+  // the level strip: ln tan(θ/2) for each star, rest (faint) and seen (blue), the slide −ζ
+  const y0 = h - stripH + 10, x0 = 16, x1 = w - 16, Lmax = 6, X = L => x0 + (x1 - x0) * (L + Lmax) / (2 * Lmax);
+  c.strokeStyle = css('--line'); c.beginPath(); c.moveTo(x0, y0 + 20); c.lineTo(x1, y0 + 20); c.stroke();
+  c.fillStyle = css('--muted'); c.fillText('the level ln tan(θ/2): rest (above), seen (below), every star slid by −ζ', x0, y0);
+  c.beginPath(); c.moveTo(X(0), y0 + 12); c.lineTo(X(0), y0 + 28); c.stroke();
+  REST.forEach(th => { const L = Math.log(Math.tan(th / 2)), Ls = Math.log(Math.tan(seenHalf(th, z) / 2));
+    if (Math.abs(L) < Lmax) { c.fillStyle = css('--line'); c.fillRect(X(L) - 1, y0 + 10, 2, 8); }
+    if (Math.abs(Ls) < Lmax) { c.fillStyle = css('--addr'); c.fillRect(X(Ls) - 1, y0 + 22, 2, 8); } });
+}
+function drawRadar() {
+  const { c, w, h } = fit(document.getElementById('radar')), z = S.zeta, r = radar(1, z, S.eps), rh = radar(1, z, 0.5);
+  const T = Math.min(40, r.t2 * 1.08), pad = 26, sc = (h - 2 * pad) / T, ox = pad + 10, oy = h - pad;
+  const P = (x, t) => [ox + x * sc, oy - t * sc];
+  c.font = '12px system-ui';
+  // axes: the observer's worldline (x = 0) and the light cone
+  c.strokeStyle = css('--line'); c.lineWidth = 1;
+  c.beginPath(); c.moveTo(...P(0, 0)); c.lineTo(...P(0, T)); c.stroke();
+  c.setLineDash([4, 4]); c.beginPath(); c.moveTo(...P(0, 0)); c.lineTo(...P(T, T)); c.stroke(); c.setLineDash([]);
+  // the receding body: x = β t
+  c.strokeStyle = css('--muted'); c.beginPath(); c.moveTo(...P(0, 0)); c.lineTo(...P(Math.tanh(z) * T, T)); c.stroke();
+  // the pulse out and back
+  const hit = [Math.tanh(z) * r.tHit, r.tHit];
+  c.strokeStyle = css('--pay'); c.lineWidth = 2; c.beginPath(); c.moveTo(...P(0, r.t1)); c.lineTo(...P(...hit)); c.lineTo(...P(0, r.t2)); c.stroke();
+  // the event placed by ε, and by ½
+  c.strokeStyle = css('--conv'); c.lineWidth = 1; c.setLineDash([3, 3]);
+  c.beginPath(); c.moveTo(...P(0, r.tEv)); c.lineTo(...P(hit[0], r.tEv)); c.stroke(); c.setLineDash([]);
+  c.fillStyle = css('--conv'); c.beginPath(); c.arc(...P(hit[0], r.tEv), 3, 0, TAU); c.fill();
+  c.fillStyle = css('--fg'); c.beginPath(); c.arc(...P(...hit), 4, 0, TAU); c.fill();
+  c.fillStyle = css('--addr'); c.fillText(`t₁ = 1`, P(0, r.t1)[0] + 6, P(0, r.t1)[1] + 4);
+  c.fillText(`t₂ = ${r.t2.toFixed(3)}`, P(0, r.t2)[0] + 6, P(0, r.t2)[1] + 4);
+  const tx = w - 220; let ty = 22;
+  [[css('--addr'), `k = √(t₂/t₁) = ${r.k.toFixed(4)}`], [css('--amt'), `τ = √(t₁t₂) = ${r.tau.toFixed(4)}`],
+   [css('--conv'), `ε = ${S.eps.toFixed(2)}: β ${r.beta.toFixed(3)}, γ ${r.gamma.toFixed(3)}`],
+   [css('--muted'), `at ε = ½: β ${rh.beta.toFixed(3)}, γ ${rh.gamma.toFixed(3)}`],
+   [css('--conv'), `horizons: +${(1 / (2 * S.eps)).toFixed(2)}, −${(1 / (2 * (1 - S.eps))).toFixed(2)}`]].forEach(([col, s]) => { c.fillStyle = col; c.fillText(s, tx, ty); ty += 18; });
+  if (r.t2 * 1.08 > T) { c.fillStyle = css('--muted'); c.fillText('(echo off the top: lower ζ)', tx, ty); }
+}
+function drawVel() {
+  const { c, w, h } = fit(document.getElementById('vel')), z = S.zeta, narrow = w < 600;
+  const R = narrow ? Math.min(w / 2 - 20, 150) : Math.min(h / 2 - 16, w / 4 - 20), cx = narrow ? w / 2 : R + 24, cy = narrow ? R + 16 : h / 2;
+  c.font = '12px system-ui';
+  // the Poincaré disc of velocities: rest at the middle, light at the rim; a point sits at radius tanh(ζ/2)
+  c.strokeStyle = css('--line'); c.beginPath(); c.arc(cx, cy, R, 0, TAU); c.stroke();
+  for (const zz of [0.5, 1, 1.5, 2, 2.5]) { c.setLineDash([2, 4]); c.beginPath(); c.arc(cx, cy, R * Math.tanh(zz / 2), 0, TAU); c.stroke(); }
+  c.setLineDash([]); c.strokeStyle = css('--addr'); c.globalAlpha = 0.5; c.beginPath(); c.arc(cx, cy, R * Math.tanh(Math.asinh(1) / 2), 0, TAU); c.stroke(); c.globalAlpha = 1;
+  c.fillStyle = css('--muted'); c.fillText('rest', cx - 12, cy + 16); c.fillText('light', cx + R - 30, cy - R * 0.72);
+  const P = u => [cx + R * u[1] / (1 + u[0]), cy - R * u[2] / (1 + u[0])];
+  const seen = THINGS.map(t => boostU(t.u, z));
+  c.strokeStyle = css('--line');
+  for (let i = 0; i < seen.length; i++) for (let j = i + 1; j < seen.length; j++) { c.beginPath(); c.moveTo(...P(seen[i])); c.lineTo(...P(seen[j])); c.stroke(); }
+  seen.forEach((u, i) => { const [x, y] = P(u), m = THINGS[i].m; c.fillStyle = css('--pay'); c.beginPath(); c.arc(x, y, 3 + 3 * Math.sqrt(m), 0, TAU); c.fill(); });
+  // the table beside: each thing's address (rapidity, heading), mass and energy in this frame
+  let tx = narrow ? 8 : cx + R + 30, ty = narrow ? cy + R + 30 : 22; c.fillStyle = css('--muted'); c.fillText(narrow ? 'thing  rapidity heading  mass  E = mγ' : 'thing   rapidity  heading    mass    energy E = mγ', tx, ty); ty += 18;
+  c.font = '12px ui-monospace, Menlo, monospace';
+  seen.forEach((u, i) => { const r = Math.acosh(u[0]), hd = r < 1e-9 ? 0 : Math.atan2(u[2], u[1]) * 180 / Math.PI;
+    c.fillStyle = css('--addr'); c.fillText(`${i + 1}       ${r.toFixed(3)}   ${hd.toFixed(1).padStart(6)}°`, tx, ty);
+    c.fillStyle = css('--pay'); c.fillText(`${THINGS[i].m.toFixed(1)}`, tx + (narrow ? 185 : 190), ty);
+    c.fillStyle = css('--amt'); c.fillText(`${(THINGS[i].m * u[0]).toFixed(3)}`, tx + (narrow ? 225 : 250), ty); ty += 17; });
+  c.font = '12px system-ui'; c.fillStyle = css('--muted');
+  (narrow ? ['The boost moves the points and the energies;', 'the lines between points keep their hyperbolic', 'lengths, and the masses never change. Blue ring:', 'the corner, pc = mc², at ζ = asinh 1.']
+    : ['The boost moves the points and the energies; the lines between points keep their', 'hyperbolic lengths (relative rapidities), and the masses never change. Blue ring: the', 'corner, pc = mc², at ζ = asinh 1 for every mass.'])
+    .forEach((line, i) => c.fillText(line, tx, ty + 14 + 16 * i));
+}
+function render() {
+  S.zeta = +zetaEl.value; S.eps = +epsEl.value; S.wt = +wtEl.value;
+  document.getElementById('zetaO').textContent = `${S.zeta.toFixed(2)} (β ${Math.tanh(S.zeta).toFixed(3)})`;
+  document.getElementById('epsO').textContent = S.eps.toFixed(2);
+  table(); drawSky(); drawRadar(); drawVel();
+}
+[zetaEl, epsEl, wtEl].forEach(e => e.addEventListener('input', render));
+addEventListener('resize', render);
+const q = new URLSearchParams(location.search);
+if (q.has('z')) zetaEl.value = q.get('z'); if (q.has('eps')) epsEl.value = q.get('eps'); if (q.has('w')) wtEl.value = q.get('w');
+render();
+// test hook
+window.__oneBoost = { checks, radar, vEps, wigner, THINGS, boostU, relRap, seenCos, seenHalf, D, Drest, set(o) { if (o.z != null) zetaEl.value = o.z; if (o.eps != null) epsEl.value = o.eps; if (o.w != null) wtEl.value = o.w; render(); return checks(); } };
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+C1 circle and reading, worst 1.07e-50 ; γβ at β = 1/√2: 1.0
+C2 tan(gd ζ) = sinh ζ, worst relative 2.27e-49
+C3 no boost or reflection gives s ↦ 1/s: least residual over a grid of a, both signs 2.645
+   m² before, after a boost: 1.0 1.0 ; pc before, after: 2.0 4.20658
+C4 P(s ≤ 1) under uniform ζ on [0, Z] for Z = ['1.0', '1.76275', '3.0', '6.0'] : ['0.881374', '0.5', '0.293791', '0.146896']
+   uniform θ on [0, π/2]: P(s ≤ 1) = 0.5
+C5 e_N(x) = e_U(1/x), worst 6.84e-49 ; at the corner 0.060660172
+C1 not killed
+C2 not killed
+C3 not killed
+C4 not killed
+C5 not killed
