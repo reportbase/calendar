@@ -31,6 +31,7 @@
   .ok { color:var(--ok); } .bad { color:var(--bad); }
   .note { color:var(--muted); font-size:13px; max-width:900px; margin:0; }
   .note b { color:var(--fg); font-weight:600; }
+  @media (max-width:640px) { #vel { height:600px; } }
   @media (max-width:600px) { td.v { white-space:normal; } .ctl input[type=range] { width:130px; } }
 </style>
 </head>
@@ -55,6 +56,8 @@
     <div class="pane"><h2>The radar pair: one ratio, one product, one convention</h2><canvas id="radar"></canvas></div>
   </div>
 
+  <div class="pane"><h2>Moving things: where each goes is an address, its mass the payload, its energy an amount</h2><canvas id="vel"></canvas></div>
+
   <div class="pane">
     <h2>The sorting</h2>
     <table><thead><tr><th>kind</th><th>what the boost does</th><th>value now</th><th>check</th></tr></thead><tbody id="rows"></tbody></table>
@@ -67,9 +70,19 @@
     And γ and β, read off the pair, depend on ε: the textbook values come at ε = ½, the choice that treats the out and back
     legs alike. There γ is the arithmetic mean of the pair over its geometric mean, (k + 1/k)/2. Away from ½ the speed read off
     the same pair can pass 1 (ε = 0.2 at ζ = 2.5 reads β ≈ 2.4): the convention moves the amount, never the ratio k.</p>
+  <p class="note"><b>ε is the writer's drawing, not the reader's.</b> Asked whether ε ≠ ½ moves the corner the way drawing V = cH
+    moves a reader's: it does not. The reading k never sees ε, and the written speed is 0 at k = 1 for every ε. What ε moves
+    is the writer's map: its two horizons, the one-way light speeds 1/(2ε) ahead and 1/(2(1 − ε)) behind, and its symmetry.
+    Only ε = ½ writes the speed odd under the exchange k ↦ 1/k, the two legs drawn alike; in that sense Einstein's
+    synchronisation is the writer's V = H. Placing a distant event is writing, so the choice sits with the writer.</p>
+  <p class="note"><b>Moving things.</b> Where a thing goes and how fast is one point of the velocity hyperboloid, the hyperbolic
+    plane (or space), drawn here as the Poincaré disc. A boost moves every point by one isometry: relative rapidities, the
+    distances between points, are readings no frame changes, while the boundary at the rim is the sky of the first pane.
+    The mass is carried along the address and never moves; energy and momentum, in the mass's unit, do. The pair
+    (pc, mc²) has its corner at ζ = asinh 1 for every mass, so the corner belongs to the address, not the payload.</p>
   <p class="note"><b>What is classical.</b> Aberration as a Möbius map of the celestial sphere (Penrose 1959; Terrell 1959);
     the Doppler factor and I<sub>ν</sub>/ν³ (Rybicki and Lightman 1979, §4.9); Bondi's k-calculus (1964); the conventionality of
-    simultaneity (Reichenbach 1928; Winnie 1970). The sorting is this project's; SR's formalism already writes the pieces apart.</p>
+    simultaneity (Reichenbach 1928; Winnie 1970); velocity space as hyperbolic space (Varićak 1910; Fock). The sorting is this project's; SR's formalism already writes the pieces apart.</p>
 </main>
 <script>
 // One boost, sorted (21 Oct 2026; Tom, of special relativity and the address/payload split: "we've explored these ideas in
@@ -96,6 +109,15 @@ function radar(t1, z, eps) {
   const tEv = t1 + eps * (t2 - t1), dist = (t2 - t1) / 2;                      // the far event placed by convention ε
   return { t1, t2, tHit, k, tau, tEv, dist, beta: dist / tEv, gamma: tEv / tau };
 }
+// the speed written from the pair at convention ε, as a function of the reading k alone (t₁ cancels)
+function vEps(k, eps) { return (k * k - 1) / (2 * (1 + eps * (k * k - 1))); }
+// Moving things in the plane: each a 4-velocity u = (γ, γβ cos φ, γβ sin φ) (where it is going and how fast) and a mass m.
+const THINGS = [[0.0, 0, 1], [0.9, 0.6, 2], [1.6, 2.4, 0.5], [0.5, 3.6, 3], [2.2, 4.9, 1.5], [1.2, 1.5, 0.8]]
+  .map(([r, phi, m]) => ({ m, u: [Math.cosh(r), Math.sinh(r) * Math.cos(phi), Math.sinh(r) * Math.sin(phi)] }));
+// the observer moving along +x at rapidity ζ sees each 4-velocity boosted by −ζ
+function boostU(u, z) { const g = Math.cosh(z), gb = Math.sinh(z); return [g * u[0] - gb * u[1], g * u[1] - gb * u[0], u[2]]; }
+function mink(a, b) { return a[0] * b[0] - a[1] * b[1] - a[2] * b[2]; }
+function relRap(a, b) { return Math.acosh(Math.max(1, mink(a, b))); }
 function checks() {
   const z = S.zeta, eps = S.eps, { b, g, k } = boost(z), R = [];
   let e1 = 0, e2 = 0, e3 = 0, e4 = 0;
@@ -133,6 +155,30 @@ function checks() {
     ok: Math.abs(rh.beta - b) < 1e-12, chk: `β(½) = ${rh.beta.toFixed(4)} = tanh ζ` });
   R.push({ kind: 'conv', what: 'Time dilation read off the pair: γ only at ε = ½, where it is (k + 1/k)/2, the pair\'s arithmetic over its geometric mean', val: `γ(ε) = ${r.gamma.toFixed(4)}`,
     ok: Math.abs(rh.gamma - g) < 1e-12 && Math.abs((k + 1 / k) / 2 - g) < 1e-12, chk: `γ(½) = ${rh.gamma.toFixed(4)} = cosh ζ` });
+  // ε as a drawing: the corner stays, the symmetry and the horizons move
+  const kk = k, odd = vEps(kk, eps) + vEps(1 / kk, eps), oddForm = (2 * eps - 1) * (kk * kk - 1) ** 2 / (2 * (eps * kk * kk - eps + 1) * (eps * kk * kk - eps - kk * kk));
+  R.push({ kind: 'conv', what: 'Only ε = ½ writes the speed odd under the exchange k ↦ 1/k (receding read backwards is approaching): v(k) + v(1/k) = 0', val: `${odd.toExponential(2)}`,
+    ok: Math.abs(odd - oddForm) < 1e-9 * Math.max(1, Math.abs(odd)) && (Math.abs(eps - 0.5) > 1e-9 || Math.abs(odd) < 1e-12),
+    chk: `= (2ε − 1)(k² − 1)²/(…)` });
+  const hf = vEps(1e7, eps), hb = vEps(1e-7, eps);
+  R.push({ kind: 'conv', what: 'The corner stays: the written speed is 0 at k = 1 for every ε; what ε moves are the two horizons, the one-way light speeds 1/(2ε) and 1/(2(1 − ε))', val: `+${hf.toFixed(3)}, −${(-hb).toFixed(3)}`,
+    ok: vEps(1, eps) === 0 && Math.abs(hf - 1 / (2 * eps)) < 1e-5 && Math.abs(-hb - 1 / (2 * (1 - eps))) < 1e-5, chk: `v(1) = 0; ${(1 / (2 * eps)).toFixed(3)}, ${(1 / (2 * (1 - eps))).toFixed(3)}` });
+  // moving things: addresses on the velocity hyperboloid, mass the payload, energy an amount
+  let dRel = 0, dMass = 0, maxE = 0;
+  const seen = THINGS.map(t => boostU(t.u, z));
+  for (let i = 0; i < THINGS.length; i++) {
+    dMass = Math.max(dMass, Math.abs(mink(seen[i], seen[i]) - 1));
+    for (let j = i + 1; j < THINGS.length; j++) dRel = Math.max(dRel, Math.abs(relRap(seen[i], seen[j]) - relRap(THINGS[i].u, THINGS[j].u)));
+    maxE = Math.max(maxE, Math.abs(THINGS[i].m * seen[i][0] - THINGS[i].m * THINGS[i].u[0]));
+  }
+  R.push({ kind: 'addr', what: 'Where a moving thing goes and how fast: a point of the velocity hyperboloid; the boost moves every point by one isometry, so every pair\'s relative rapidity stays', val: `${THINGS.length} things`,
+    ok: dRel < 1e-9, chk: `pairs unchanged to ${dRel.toExponential(1)}` });
+  R.push({ kind: 'pay', what: 'Its mass, m² = E² − p²: carried along the address, unchanged by the boost; scale it and no point moves', val: 'm fixed',
+    ok: dMass < 1e-9, chk: `u·u = 1 to ${dMass.toExponential(1)}` });
+  R.push({ kind: 'amt', what: 'Its energy E = mγ and momentum mγβ: in the mass\'s unit, changed by the boost', val: `largest change ${maxE.toFixed(3)} m-units`,
+    ok: true, chk: z === 0 ? 'none at rest' : 'moved' });
+  R.push({ kind: 'addr', what: 'The pair (pc, mc²) has its corner at γβ = 1, ζ = asinh 1, the same for every mass (where E = √2·mc²)', val: `asinh 1 = ${Math.asinh(1).toFixed(4)}`,
+    ok: Math.abs(Math.sinh(Math.asinh(1)) - 1) < 1e-15 && Math.abs(Math.cosh(Math.asinh(1)) - Math.SQRT2) < 1e-15, chk: 'γ = √2 there' });
   return R;
 }
 const NAMES = { addr: ['address', 'addr'], pay: ['payload', 'pay'], amt: ['amount', 'amt'], conv: ['convention', 'conv'] };
@@ -196,14 +242,41 @@ function drawRadar() {
   const tx = w - 220; let ty = 22;
   [[css('--addr'), `k = √(t₂/t₁) = ${r.k.toFixed(4)}`], [css('--amt'), `τ = √(t₁t₂) = ${r.tau.toFixed(4)}`],
    [css('--conv'), `ε = ${S.eps.toFixed(2)}: β ${r.beta.toFixed(3)}, γ ${r.gamma.toFixed(3)}`],
-   [css('--muted'), `at ε = ½: β ${rh.beta.toFixed(3)}, γ ${rh.gamma.toFixed(3)}`]].forEach(([col, s]) => { c.fillStyle = col; c.fillText(s, tx, ty); ty += 18; });
+   [css('--muted'), `at ε = ½: β ${rh.beta.toFixed(3)}, γ ${rh.gamma.toFixed(3)}`],
+   [css('--conv'), `horizons: +${(1 / (2 * S.eps)).toFixed(2)}, −${(1 / (2 * (1 - S.eps))).toFixed(2)}`]].forEach(([col, s]) => { c.fillStyle = col; c.fillText(s, tx, ty); ty += 18; });
   if (r.t2 * 1.08 > T) { c.fillStyle = css('--muted'); c.fillText('(echo off the top: lower ζ)', tx, ty); }
+}
+function drawVel() {
+  const { c, w, h } = fit(document.getElementById('vel')), z = S.zeta, narrow = w < 600;
+  const R = narrow ? Math.min(w / 2 - 20, 150) : Math.min(h / 2 - 16, w / 4 - 20), cx = narrow ? w / 2 : R + 24, cy = narrow ? R + 16 : h / 2;
+  c.font = '12px system-ui';
+  // the Poincaré disc of velocities: rest at the middle, light at the rim; a point sits at radius tanh(ζ/2)
+  c.strokeStyle = css('--line'); c.beginPath(); c.arc(cx, cy, R, 0, TAU); c.stroke();
+  for (const zz of [0.5, 1, 1.5, 2, 2.5]) { c.setLineDash([2, 4]); c.beginPath(); c.arc(cx, cy, R * Math.tanh(zz / 2), 0, TAU); c.stroke(); }
+  c.setLineDash([]); c.strokeStyle = css('--addr'); c.globalAlpha = 0.5; c.beginPath(); c.arc(cx, cy, R * Math.tanh(Math.asinh(1) / 2), 0, TAU); c.stroke(); c.globalAlpha = 1;
+  c.fillStyle = css('--muted'); c.fillText('rest', cx - 12, cy + 16); c.fillText('light', cx + R - 30, cy - R * 0.72);
+  const P = u => [cx + R * u[1] / (1 + u[0]), cy - R * u[2] / (1 + u[0])];
+  const seen = THINGS.map(t => boostU(t.u, z));
+  c.strokeStyle = css('--line');
+  for (let i = 0; i < seen.length; i++) for (let j = i + 1; j < seen.length; j++) { c.beginPath(); c.moveTo(...P(seen[i])); c.lineTo(...P(seen[j])); c.stroke(); }
+  seen.forEach((u, i) => { const [x, y] = P(u), m = THINGS[i].m; c.fillStyle = css('--pay'); c.beginPath(); c.arc(x, y, 3 + 3 * Math.sqrt(m), 0, TAU); c.fill(); });
+  // the table beside: each thing's address (rapidity, heading), mass and energy in this frame
+  let tx = narrow ? 8 : cx + R + 30, ty = narrow ? cy + R + 30 : 22; c.fillStyle = css('--muted'); c.fillText(narrow ? 'thing  rapidity heading  mass  E = mγ' : 'thing   rapidity  heading    mass    energy E = mγ', tx, ty); ty += 18;
+  c.font = '12px ui-monospace, Menlo, monospace';
+  seen.forEach((u, i) => { const r = Math.acosh(u[0]), hd = r < 1e-9 ? 0 : Math.atan2(u[2], u[1]) * 180 / Math.PI;
+    c.fillStyle = css('--addr'); c.fillText(`${i + 1}       ${r.toFixed(3)}   ${hd.toFixed(1).padStart(6)}°`, tx, ty);
+    c.fillStyle = css('--pay'); c.fillText(`${THINGS[i].m.toFixed(1)}`, tx + (narrow ? 185 : 190), ty);
+    c.fillStyle = css('--amt'); c.fillText(`${(THINGS[i].m * u[0]).toFixed(3)}`, tx + (narrow ? 225 : 250), ty); ty += 17; });
+  c.font = '12px system-ui'; c.fillStyle = css('--muted');
+  (narrow ? ['The boost moves the points and the energies;', 'the lines between points keep their hyperbolic', 'lengths, and the masses never change. Blue ring:', 'the corner, pc = mc², at ζ = asinh 1.']
+    : ['The boost moves the points and the energies; the lines between points keep their', 'hyperbolic lengths (relative rapidities), and the masses never change. Blue ring: the', 'corner, pc = mc², at ζ = asinh 1 for every mass.'])
+    .forEach((line, i) => c.fillText(line, tx, ty + 14 + 16 * i));
 }
 function render() {
   S.zeta = +zetaEl.value; S.eps = +epsEl.value; S.wt = +wtEl.value;
   document.getElementById('zetaO').textContent = `${S.zeta.toFixed(2)} (β ${Math.tanh(S.zeta).toFixed(3)})`;
   document.getElementById('epsO').textContent = S.eps.toFixed(2);
-  table(); drawSky(); drawRadar();
+  table(); drawSky(); drawRadar(); drawVel();
 }
 [zetaEl, epsEl, wtEl].forEach(e => e.addEventListener('input', render));
 addEventListener('resize', render);
@@ -211,7 +284,7 @@ const q = new URLSearchParams(location.search);
 if (q.has('z')) zetaEl.value = q.get('z'); if (q.has('eps')) epsEl.value = q.get('eps'); if (q.has('w')) wtEl.value = q.get('w');
 render();
 // test hook
-window.__oneBoost = { checks, radar, seenCos, seenHalf, D, Drest, set(o) { if (o.z != null) zetaEl.value = o.z; if (o.eps != null) epsEl.value = o.eps; if (o.w != null) wtEl.value = o.w; render(); return checks(); } };
+window.__oneBoost = { checks, radar, vEps, THINGS, boostU, relRap, seenCos, seenHalf, D, Drest, set(o) { if (o.z != null) zetaEl.value = o.z; if (o.eps != null) epsEl.value = o.eps; if (o.w != null) wtEl.value = o.w; render(); return checks(); } };
 </script>
 </body>
 </html>
