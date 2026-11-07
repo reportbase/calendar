@@ -48,6 +48,10 @@
      tan θ = sinh ζ is the tangent [proper velocity; gnomonic distance]. The horizon is θ = 90°
      [speed of light; the pole; the vanishing point]. The radius is a logarithm of scale [exponent].
 
+     THE DIAL IS dial.js (7 Nov 2026; Tom: "move the dial into a javacript class so that it an be reused."): the dial's
+     state, motion, hands and drawing are the Dial class's, loaded beside this page; this page keeps the figure, the
+     readout and the bar, and routes a press to the figure or the dial by where it lands.
+
      HANDS. On the dial: pan away from the hub and the gold needle's angle adds ζ at tan(gold) · 0.4 a
      second; letting go springs the gold home and rests the window on the record reached. Wheel or
      pinch: the radius. On the figure: drag P, T, H or S and everything follows; the blue stays where
@@ -130,44 +134,41 @@
   <p>Tap anywhere to close.</p>
 </div>
 <div id="nums" hidden><div id="numsHead"><span>readout</span><button id="numsClose" type="button" aria-label="Close the readout">close ✕</button></div><div id="numsBody"></div></div>
+<script src="dial.js"></script>
 <script>
-const PI = Math.PI, K = 5, CAP = Math.atan(2 ** K), ZMAX = Math.asinh(2 ** K);   // the window's end: the K-th corner, tan θ = 2^K
-const THRUST = 0.4, SPRING_MS = 150, TAP_PX = 6;
+const PI = Math.PI;
 const T0 = Date.UTC(2000, 0, 1), N = 3155760000000;                              // the list: a century of milliseconds
 const BG = '#0b0d12', GOLD = '#e8c86a', TEAL = '#1D9E75', BLUE = '#6aa8e8', INK = '#c9c7be', DIM = '#7f8590', SHAPE = '#e0876a';
-const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const clamp = Dial.clamp;
 
-// ── THE STATE: a record, a window round it, and the hyperbolic angle ζ between them ──────────────
-let index = clamp(Date.now() - T0, 0, N - 1), centre = index, reach = 0.45, zeta = 0;
-let gold = 0, held = false, thrusting = false, springAt = -1, last = 0, figZoom = 1;
+// ── THE DIAL (dial.js): a record, a window round it, and the hyperbolic angle ζ between them ─────────
+// The dial's state, motion, hands and drawing are the Dial class's, shared with any page that loads dial.js; this page
+// adds the figure the dial is made of, the readout and the bar, all drawn from the dial's state.
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const pad = (v, n) => String(v).padStart(n, '0');
+function fields(i){ const d = new Date(T0 + Math.round(i));
+  return [[[pad(d.getUTCDate(), 2) + ' ', 864e5], [MON[d.getUTCMonth()] + ' ', 26298e5], [String(d.getUTCFullYear()), 315576e5]],
+          [[pad(d.getUTCHours(), 2) + ':', 36e5], [pad(d.getUTCMinutes(), 2) + ':', 6e4],
+           [pad(d.getUTCSeconds(), 2) + '.', 1e3], [pad(d.getUTCMilliseconds(), 3), 1]]]; }
+function fmtDur(ms){
+  if (ms < 1) return ms.toPrecision(2) + ' ms';
+  for (const [u, n] of [[315576e5, 'y'], [864e5, 'd'], [36e5, 'h'], [6e4, 'min'], [1e3, 's'], [1, 'ms']])
+    if (ms >= u) { const v = ms / u; return v.toFixed(v >= 100 ? 0 : v >= 10 ? 1 : 2) + ' ' + n; }
+}
+const dial = new Dial({ count: N, index: Date.now() - T0, reach: 0.45, label: fields, sizeText: fmtDur,
+  hint: ['press and drag sideways to move', 'wheel or pinch: the window · ? for help'] });
+const K = dial.K;
+const theta = () => dial.theta(), sweepG = () => dial.sweep();
+let figZoom = 1, last = 0;
 let b = 2;                                                     // the shape's breadth ratio: v breadth over h breadth
-let spacetime = true;
-let showFig = true, touched = false;                           // the figure shown; the hint shown until the first touch                                          // the figure read as spacetime: horizons, the "now" line, a source behind
+let spacetime = true;                                          // the figure read as spacetime: horizons, the "now" line, a source behind
+let showFig = true;                                            // the figure shown
 const U0 = 0.55;                                               // that source's place, behind the reader (the reader starts at u = 1)
-const sweepG = () => Math.abs(theta()) / (PI / 2);             // g: the sweep as a share of the quarter turn, the side carried in it
 const shareOf = s => s <= 1 ? s : 1 / s;                       // the smaller part over the larger: v/h before the corner, h/v past it
 function octaveOf(share){                                      // the share as (count of octaves from the corner, share t within one)
   if (share <= 0) return null;
   const x = -Math.log2(share), k = x <= 0 ? 0 : Math.ceil(x) - 1;
   return [k, 2 ** (k + 1) * share - 1];
-}
-const span = () => Math.max(1, Math.pow(N, reach));            // the radius is a logarithm: window = N^r
-const unit = s => s / 2 / 2 ** K;                              // one unit = the 45° corner; the window's half is 2^K units
-const theta = () => Math.atan(Math.sinh(zeta));                // the circular angle of ζ: θ = gd(ζ)
-function read(){ index = clamp(centre + unit(span()) * Math.sinh(zeta), 0, N - 1); }   // the value is the tangent: unit · sinh ζ = unit · tan θ
-function recentre(){                                           // the window onto the record; ζ keeps only what the list's ends force
-  const s = span(); centre = clamp(index, s / 2, N - s / 2);
-  zeta = clamp(Math.asinh((index - centre) / unit(s)), -ZMAX, ZMAX);
-}
-function rezoom(){                                             // a new radius keeps the record and restates ζ in the new unit
-  const s = span(), c = clamp(centre, s / 2, N - s / 2);
-  if (Math.abs(index - c) <= s / 2) { centre = c; zeta = clamp(Math.asinh((index - c) / unit(s)), -ZMAX, ZMAX); }
-  else recentre();
-}
-function liveGold(now){                                        // the gold as drawn: the hand, or the spring back to the apex
-  if (held) return thrusting ? gold : 0;
-  if (springAt >= 0) { const t = (now - springAt) / SPRING_MS; if (t >= 1) { springAt = -1; return 0; } return gold * Math.pow(1 - t, 3); }
-  return 0;
 }
 
 // ── LAYOUT: the dial and the figure share the screen ─────────────────────────────────────────────
@@ -185,104 +186,32 @@ nums.addEventListener('click', () => setNums(false));                   // a tap
 addEventListener('keydown', e => { if (e.key === 'Escape' && !nums.hidden) setNums(false); });
 function layout(){
   const land = W >= H * 1.05;
-  const dial = !showFig ? { x: 0, y: 0, w: W, h: H } : land ? { x: 0, y: 0, w: W / 2, h: H } : { x: 0, y: H * 0.5, w: W, h: H * 0.5 };
+  const box = !showFig ? { x: 0, y: 0, w: W, h: H } : land ? { x: 0, y: 0, w: W / 2, h: H } : { x: 0, y: H * 0.5, w: W, h: H * 0.5 };
   const fig  = !showFig ? { x: W, y: H, w: 0, h: 0 } : land ? { x: W / 2, y: 0, w: W / 2, h: H } : { x: 0, y: 0, w: W, h: H * 0.5 };
   // the button sits in the dial's corner; the open panel takes the top of the screen, never more than
-  // the screen, and scrolls inside itself when it is longer. Only beside the dial does it push the dial down.
-  nums.style.left = numsBtn.style.left = (dial.x + 14) + 'px'; numsBtn.style.top = (dial.y + 14) + 'px';
-  nums.style.top = '14px'; nums.style.maxWidth = Math.max(200, (land ? dial.w : W) - 28) + 'px';
-  // the bar sits along the top of the dial's own box, right of the readout button, so it never covers the figure
+  // the screen, and scrolls inside itself when it is longer. Only beside the box does it push the box down.
+  nums.style.left = numsBtn.style.left = (box.x + 14) + 'px'; numsBtn.style.top = (box.y + 14) + 'px';
+  nums.style.top = '14px'; nums.style.maxWidth = Math.max(200, (land ? box.w : W) - 28) + 'px';
+  // the bar sits along the top of the box's own box, right of the readout button, so it never covers the figure
   const bar = document.getElementById('bar');
-  bar.style.top = (dial.y + 14) + 'px'; bar.style.left = (dial.x + 110) + 'px'; bar.style.right = (W - dial.x - dial.w + 14) + 'px';
+  bar.style.top = (box.y + 14) + 'px'; bar.style.left = (box.x + 110) + 'px'; bar.style.right = (W - box.x - box.w + 14) + 'px';
   const top = (land && !nums.hidden) ? nums.offsetHeight + 40 : nums.hidden ? bar.offsetHeight + 34 : 40;
-  dial.cx = dial.x + dial.w / 2; dial.cy = dial.y + dial.h - 86;
-  dial.R = Math.max(40, Math.min(dial.w * 0.44, dial.cy - dial.y - top));
-  dial.cy -= Math.max(0, dial.cy - dial.y - top - dial.R) / 2;   // a dial narrower than its box sits in the middle of the room left
+  box.cx = box.x + box.w / 2; box.cy = box.y + box.h - 86;
+  box.R = Math.max(40, Math.min(box.w * 0.44, box.cy - box.y - top));
+  box.cy -= Math.max(0, box.cy - box.y - top - box.R) / 2;   // a box narrower than its box sits in the middle of the room left
+  dial.layout({ cx: box.cx, cy: box.cy, R: box.R });
   fig.ox = fig.x + fig.w / 2; fig.oy = fig.y + fig.h - 46;
   fig.L = Math.max(10, Math.min(fig.w / 3.4, (fig.h - 90) / 3.2)) * figZoom;
-  Lay = { dial, fig };
+  Lay = { dial: box, fig };
 }
 const inBox = (b, x, y) => x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h;
 
-// ── THE READOUT: the record's fields, coloured by what this radius reaches ───────────────────────
-const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const pad = (v, n) => String(v).padStart(n, '0');
-function fields(i){ const d = new Date(T0 + Math.round(i));
-  return [[[pad(d.getUTCDate(), 2) + ' ', 864e5], [MON[d.getUTCMonth()] + ' ', 26298e5], [String(d.getUTCFullYear()), 315576e5]],
-          [[pad(d.getUTCHours(), 2) + ':', 36e5], [pad(d.getUTCMinutes(), 2) + ':', 6e4],
-           [pad(d.getUTCSeconds(), 2) + '.', 1e3], [pad(d.getUTCMilliseconds(), 3), 1]]]; }
-const band = mag => { const s = span(); return mag <= unit(s) ? TEAL : mag <= s / 2 ? BLUE : GOLD; };   // within a unit · within the window · out of reach
-function fmtDur(ms){
-  if (ms < 1) return ms.toPrecision(2) + ' ms';
-  for (const [u, n] of [[315576e5, 'y'], [864e5, 'd'], [36e5, 'h'], [6e4, 'min'], [1e3, 's'], [1, 'ms']])
-    if (ms >= u) { const v = ms / u; return v.toFixed(v >= 100 ? 0 : v >= 10 ? 1 : 2) + ' ' + n; }
-}
-function line(parts, cx, y){
-  const w = parts.reduce((t, [s]) => t + ctx.measureText(s).width, 0); let x = cx - w / 2;
-  for (const [s, mag] of parts) { ctx.fillStyle = band(mag); ctx.fillText(s, x, y); x += ctx.measureText(s).width; }
-}
-
-// ── THE DIAL ─────────────────────────────────────────────────────────────────────────────────────
-function needle(cx, cy, a, r, color, width){
-  ctx.strokeStyle = color; ctx.lineWidth = width;
-  ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + r * Math.sin(a), cy - r * Math.cos(a)); ctx.stroke();
-}
-function drawDial(g){
-  const { cx, cy, R } = Lay.dial;
-  ctx.lineCap = 'round';
-  ctx.strokeStyle = 'rgba(201,199,190,.18)'; ctx.lineWidth = 1;                 // the horizon: 90°, never reached
-  ctx.beginPath(); ctx.moveTo(cx - R - 14, cy); ctx.lineTo(cx + R + 14, cy); ctx.stroke();
-  ctx.strokeStyle = 'rgba(232,200,106,.22)'; ctx.beginPath(); ctx.arc(cx, cy, R, -PI, 0); ctx.stroke();
-  // THE HEAT: the turn per record, cos²θ, shaded just outside the arc; full at home, half at the corner, none at the horizon
-  ctx.lineCap = 'butt'; ctx.lineWidth = 9;
-  for (let i = 0; i < 120; i++) {
-    const a0 = -PI / 2 + PI * i / 120, a1 = a0 + PI / 120, h = Math.cos((a0 + a1) / 2) ** 2;
-    ctx.strokeStyle = 'rgba(232,200,106,' + (0.04 + 0.62 * h).toFixed(3) + ')';
-    ctx.beginPath(); ctx.arc(cx, cy, R + 9, a0 - PI / 2, a1 - PI / 2 + 0.002); ctx.stroke();
-  }
-  ctx.lineCap = 'round';
-  { const mono = getComputedStyle(document.body).getPropertyValue('--mono');
-    ctx.font = '11px ' + mono; ctx.fillStyle = DIM; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-    ctx.fillText('heat 1', cx, cy - R - 20);
-    for (const sg of [-1, 1]) ctx.fillText('½', cx + sg * (R + 24) * Math.SQRT1_2, cy - (R + 24) * Math.SQRT1_2); }
-  const rr = Math.max(8, R * reach);                                           // the rung: where the radius is
-  ctx.strokeStyle = GOLD; ctx.globalAlpha = 0.55; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.arc(cx, cy, rr, -PI, 0); ctx.stroke(); ctx.globalAlpha = 1;
-  // THE OCTAVE EDGES, BOTH WAYS FROM THE CORNER: doublings past it (tan θ = 2, 4 … 2^K, gold) and
-  // halvings before it (tan θ = ½, ¼ … 2^−K, teal). The flip carries each onto its mirror.
-  for (let k = -K; k <= K; k++) for (const sg of [-1, 1]) {
-    const a = sg * Math.atan(2 ** k), sx = Math.sin(a), cy_ = Math.cos(a);
-    ctx.strokeStyle = k === 0 ? GOLD : k > 0 ? 'rgba(232,200,106,.6)' : 'rgba(29,158,117,.75)'; ctx.lineWidth = k === 0 ? 2 : 1.2;
-    ctx.beginPath(); ctx.moveTo(cx + (rr - 7) * sx, cy - (rr - 7) * cy_); ctx.lineTo(cx + (rr + 7) * sx, cy - (rr + 7) * cy_); ctx.stroke();
-  }
-  needle(cx, cy, g, R, GOLD, 2.5);                                             // the gold: a rate
-  if (Math.abs(zeta) > 1e-9) {                                                 // the blue: a place, θ = gd(ζ)
-    const th = theta(), tx = cx + R * Math.sin(th), ty = cy - R * Math.cos(th);
-    needle(cx, cy, th, R, BLUE, 2.5);
-    ctx.setLineDash([4, 5]); ctx.strokeStyle = 'rgba(106,168,232,.55)'; ctx.lineWidth = 1;   // the tip's sideways reach: R · sin θ = R · tanh ζ
-    ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(tx, cy); ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle = BLUE; ctx.beginPath(); ctx.arc(tx, ty, 4, 0, 2 * PI); ctx.fill();
-  }
-  ctx.fillStyle = GOLD; ctx.beginPath(); ctx.arc(cx, cy, 4, 0, 2 * PI); ctx.fill();
-  const [date, time] = fields(index), s = span();
-  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-  ctx.font = '19px ' + getComputedStyle(document.body).getPropertyValue('--mono'); line(date, cx, cy + 30);
-  ctx.font = '15px ' + getComputedStyle(document.body).getPropertyValue('--mono'); line(time, cx, cy + 52);
-  ctx.font = '12px ' + getComputedStyle(document.body).getPropertyValue('--mono'); ctx.fillStyle = DIM; ctx.textAlign = 'center';
-  ctx.fillText('g ' + sweepG().toFixed(3) + ' · window ' + fmtDur(s) + ' · unit ' + fmtDur(unit(s)) + ' · heat ' + (Math.cos(theta()) ** 2).toFixed(3), cx, cy + 74);
-  if (!touched) {                                               // the hint, until the first touch
-    ctx.font = '13px ' + getComputedStyle(document.body).getPropertyValue('--mono'); ctx.fillStyle = INK;
-    ctx.fillText('press and drag sideways to move', cx, cy - R * 0.74);
-    ctx.fillStyle = DIM; ctx.fillText('wheel or pinch: the window · ? for help', cx, cy - R * 0.74 + 18);
-  }
-}
-
 // ── THE FIGURE: centre, circle, tangent, hyperbola — the dial's own geometry ──────────────────────
 const fp = (u, v) => [Lay.fig.ox + Lay.fig.L * v, Lay.fig.oy - Lay.fig.L * u];   // (u along the axis, v sideways) → screen
-function handles(){ const th = theta(), z = zeta;
+function handles(){ const th = theta(), z = dial.zeta;
   return { P: fp(Math.cos(th), Math.sin(th)), T: fp(1, Math.tan(th)), H: fp(Math.cosh(z), Math.sinh(z)), S: fp(1, Math.tanh(z)) }; }
 function drawFigure(){
-  const f = Lay.fig, s = f.L, th = theta(), z = zeta, [ox, oy] = [f.ox, f.oy], mono = getComputedStyle(document.body).getPropertyValue('--mono');
+  const f = Lay.fig, s = f.L, th = theta(), z = dial.zeta, [ox, oy] = [f.ox, f.oy], mono = getComputedStyle(document.body).getPropertyValue('--mono');
   ctx.save(); ctx.beginPath(); ctx.rect(f.x, f.y, f.w, f.h); ctx.clip();
   // THE TWO ANGLES AS AREAS: θ is twice the circular sector O-A-P, ζ twice the hyperbolic sector O-A-H
   ctx.fillStyle = 'rgba(106,168,232,.16)'; ctx.beginPath(); ctx.moveTo(ox, oy);
@@ -336,7 +265,7 @@ function drawFigure(){
   ctx.beginPath(); ctx.arc(ox, oy, s * 0.22, -PI / 2, -PI / 2 + th, th < 0); ctx.stroke();
   const dot = ([x, y], c, r, label, dx, dy) => { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * PI); ctx.fill();
     if (label) { ctx.font = '600 15px ' + mono; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, x + dx, y + dy); } };
-  const side = zeta < 0 ? -1 : 1;
+  const side = dial.zeta < 0 ? -1 : 1;
   if (th) {                                                     // Q, the expression P → Q, and the reading through the shape, b · tan t
     const q = fp(Math.cos(th), b * Math.sin(th)), tb = fp(1, b * Math.tan(th));
     ctx.strokeStyle = 'rgba(224,135,106,.85)'; ctx.lineWidth = 2; ctx.setLineDash([4, 4]);
@@ -436,7 +365,7 @@ function gRows(sAbs){                                          // the paper's re
 }
 function updateNums(){
   if (nums.hidden) return;
-  const th = theta(), z = zeta, t = Math.sinh(z), s = span(), f = (x, d) => (Math.abs(x) < 5e-13 ? 0 : x).toFixed(d);
+  const th = theta(), z = dial.zeta, t = Math.sinh(z), s = dial.span(), f = (x, d) => (Math.abs(x) < 5e-13 ? 0 : x).toFixed(d);
   const row = (k, v, o) => '<span class="k">' + k + '</span><span class="v">' + v + '</span><span class="o">' + o + '</span>';
   numsBody.innerHTML =
     '<span class="hd">the two angles</span>' +
@@ -457,8 +386,8 @@ function updateNums(){
     row('gap', f(spacetimeGap(z), 4), 'e^(−|ζ|): a source behind, how long before its last moment the light now arriving left it; halves per ln 2 of push') +
     row('fade', f(spacetimeGap(z), 4), 'its light arrives weighted by e^(−|ζ|), however far behind') +
     '<span class="hd">the radius, a logarithm</span>' +
-    row('r', f(reach, 3), 'window = N^r = ' + fmtDur(s) + ' · [exponent]') +
-    row('unit', fmtDur(unit(s)), 'the 45° corner · window half = 2^' + K + ' units');
+    row('r', f(dial.reach, 3), 'window = N^r = ' + fmtDur(s) + ' · [exponent]') +
+    row('unit', fmtDur(dial.unit(s)), 'the 45° corner · window half = 2^' + K + ' units');
 }
 
 // ── DRAWING: only when something moved, sized only when the size did, copied across in one act ───
@@ -468,92 +397,80 @@ function draw(now){
   if (Math.abs(w - W) > 1 || Math.abs(h - H) > 1 || d !== D) {
     W = w; H = h; D = d; cv.width = back.width = W * D; cv.height = back.height = H * D; force = true;
   }
-  const g = liveGold(now);
-  const key = [Math.round(index), zeta.toFixed(7), g.toFixed(5), reach.toFixed(5), figZoom.toFixed(4), b.toFixed(4), W, H, nums.hidden, spacetime, showFig, touched].join();
+  const key = [dial.stateKey(now), figZoom.toFixed(4), b.toFixed(4), W, H, nums.hidden, spacetime, showFig].join();
   if (key === lastKey && !force) return;
   lastKey = key;
   updateNums(); if (force) layout(); force = false;
   ctx.setTransform(D, 0, 0, D, 0, 0); ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
-  if (showFig) drawFigure(); drawDial(g);
+  if (showFig) drawFigure(); dial.draw(ctx, now);
   vis.globalCompositeOperation = 'copy'; vis.drawImage(back, 0, 0);
 }
 function step(now){
-  const dt = Math.min(0.05, (now - (last || now)) / 1000); last = now;
-  if (held && thrusting) { zeta = clamp(zeta + Math.tan(gold) * THRUST * dt, -ZMAX, ZMAX); read(); }   // the gold adds ζ through its tangent
+  dial.step(now);                                               // the held gold adds ζ through its tangent
   draw(now); requestAnimationFrame(step);
 }
 
-// ── HANDS ─────────────────────────────────────────────────────────────────────────────────────────
+// ── HANDS: the figure's own, the rest the dial's ─────────────────────────────────────────────────
 const local = e => { const b = cv.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
-function aim(x, y){ const { cx, cy } = Lay.dial; gold = clamp(Math.atan2(x - cx, Math.max(0, cy - y)), -CAP, CAP); }
-function setZeta(z){ zeta = clamp(z, -ZMAX, ZMAX); read(); }
+const setZeta = z => dial.setZeta(z);
 function dragFigure(which, x, y){                               // each handle sets ζ by its own coordinate
   const f = Lay.fig, u = (f.oy - y) / f.L, v = (x - f.ox) / f.L;
-  if (which === 'P') setZeta(Math.asinh(Math.tan(clamp(Math.atan2(v, Math.max(0, u)), -CAP, CAP))));
-  else if (which === 'S') setZeta(Math.atanh(clamp(v, -Math.tanh(ZMAX), Math.tanh(ZMAX))));
+  if (which === 'P') setZeta(Math.asinh(Math.tan(clamp(Math.atan2(v, Math.max(0, u)), -dial.CAP, dial.CAP))));
+  else if (which === 'S') setZeta(Math.atanh(clamp(v, -Math.tanh(dial.ZMAX), Math.tanh(dial.ZMAX))));
   else setZeta(Math.asinh(v));                                  // T and H: the tangent, sinh ζ
 }
 function pick(x, y){ let best = 'P', bd = 30;
   for (const [n, [hx, hy]] of Object.entries(handles())) { const d = Math.hypot(hx - x, hy - y); if (d < bd) { bd = d; best = n; } }
   return best; }
-const touching = new Map(); let mode = null, which = 'P', pinch = null, x0 = 0, y0 = 0;
+const touching = new Map(); let mode = null, which = 'P', spread0 = 1;
 const fingers = () => { const [a, b] = [...touching.values()]; return Math.max(8, Math.hypot(a.x - b.x, a.y - b.y)); };
-function letGo(){ if (mode === 'dial') { held = false; if (thrusting) springAt = performance.now(); thrusting = false; recentre(); } }
 cv.addEventListener('pointerdown', e => {
-  touched = true; cv.setPointerCapture(e.pointerId); touching.set(e.pointerId, { x: e.clientX, y: e.clientY });
-  if (touching.size === 2) { letGo(); mode = 'pinch'; pinch = { d0: fingers(), r0: reach }; return; }   // two fingers: the radius
+  dial.touched = true; cv.setPointerCapture(e.pointerId); touching.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (touching.size === 2) { dial.pinchStart(); mode = 'pinch'; spread0 = fingers(); return; }   // two fingers: the radius
   if (touching.size > 2) return;
-  const [x, y] = local(e); x0 = x; y0 = y;
+  const [x, y] = local(e);
   if (inBox(Lay.fig, x, y)) { mode = 'fig'; which = pick(x, y); dragFigure(which, x, y); }
-  else { mode = 'dial'; held = true; thrusting = false; springAt = -1; }
+  else { mode = 'dial'; dial.press(x, y); }
 });
 cv.addEventListener('pointermove', e => {
   if (!touching.has(e.pointerId)) return; touching.set(e.pointerId, { x: e.clientX, y: e.clientY });
   const [x, y] = local(e);
-  if (mode === 'pinch' && touching.size === 2) { reach = clamp(pinch.r0 + Math.log2(fingers() / pinch.d0) * 0.25, 0, 1); rezoom(); read(); }
+  if (mode === 'pinch' && touching.size === 2) dial.pinchTo(fingers() / spread0);
   else if (mode === 'fig') dragFigure(which, x, y);
-  else if (mode === 'dial') { if (!thrusting && Math.hypot(x - x0, y - y0) > TAP_PX) thrusting = true; if (thrusting) aim(x, y); }   // a tap changes nothing
+  else if (mode === 'dial') dial.drag(x, y);                    // a tap changes nothing
 });
 const up = e => { touching.delete(e.pointerId);
-  if (mode === 'pinch') { if (touching.size < 2) { pinch = null; mode = null; } return; }
-  letGo(); mode = null; };
+  if (mode === 'pinch') { if (touching.size < 2) mode = null; return; }
+  if (mode === 'dial') dial.release(); mode = null; };
 cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
 cv.addEventListener('wheel', e => {
-  touched = true; const [x, y] = local(e), f = e.deltaMode === 1 ? 16 : 1;
+  dial.touched = true; const [x, y] = local(e), f = e.deltaMode === 1 ? 16 : 1;
   if (inBox(Lay.fig, x, y)) { figZoom = clamp(figZoom * Math.exp(-e.deltaY * f * 0.0015), 0.2, 8); force = true; }   // the figure's own zoom
-  else {
-    if (e.deltaX) setZeta(zeta + e.deltaX * f / 2000);
-    // as city-dial: the wheel pushed away closes the radius; a trackpad pinch (ctrlKey) opens with the fingers
-    if (e.deltaY) { reach = clamp(reach + (e.ctrlKey ? -e.deltaY / 200 : e.deltaY / 400) * f, 0, 1); rezoom(); read(); }
-  }
+  else dial.wheel(e);
   e.preventDefault();
 }, { passive: false });
 addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') { if (e.key === 'Escape') e.target.blur(); return; }   // typing a date is not steering
-  touched = true;
+  dial.touched = true;
   if (!help.hidden && e.key !== '?') { help.hidden = true; if (e.key === 'Escape') return; }
-  if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.repeat) {
-    mode = 'dial'; held = true; thrusting = true; springAt = -1; gold = (e.key === 'ArrowLeft' ? -1 : 1) * PI / 4; }
-  if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { reach = clamp(reach + (e.key === 'ArrowUp' ? 0.02 : -0.02), 0, 1); rezoom(); read(); }
-  if (e.key === 'h') recentre();
-  if (e.key === 't') { index = clamp(Date.now() - T0, 0, N - 1); recentre(); }
+  if (dial.key(e)) { if (e.key.startsWith('Arrow')) e.preventDefault(); return; }   // ← → ↑ ↓ and h are the dial's
+  if (e.key === 't') act('now');
   if (e.key === 'n') setNums(nums.hidden);
   if (e.key === '[' || e.key === ']') b = clamp(b * 2 ** (e.key === ']' ? 0.25 : -0.25), 1 / 8, 8);
   if (e.key === 's') act('st');
   if (e.key === 'f') act('fig');
   if (e.key === 'g') { e.preventDefault(); goDate.focus(); }
   if (e.key === '?') act('help');
-  if (e.key.startsWith('Arrow')) e.preventDefault();
 });
-addEventListener('keyup', e => { if (e.target.tagName === 'INPUT') return; if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { letGo(); mode = null; } });
+addEventListener('keyup', e => { if (e.target.tagName === 'INPUT') return; dial.keyUp(e); });
 
 // ── THE BAR: each key's job as a button ──────────────────────────────────────────────────────────
 const bar = document.getElementById('bar'), help = document.getElementById('help'), goDate = document.getElementById('goDate');
 function act(a){
-  touched = true;
-  if (a === 'now') { index = clamp(Date.now() - T0, 0, N - 1); recentre(); }
-  else if (a === 'centre') recentre();
-  else if (a === 'narrow' || a === 'widen') { reach = clamp(reach + (a === 'widen' ? 0.05 : -0.05), 0, 1); rezoom(); read(); }
+  dial.touched = true;
+  if (a === 'now') dial.goTo(Date.now() - T0);
+  else if (a === 'centre') dial.recentre();
+  else if (a === 'narrow' || a === 'widen') dial.widen(a === 'widen' ? 0.05 : -0.05);
   else if (a === 'fig') { showFig = !showFig; bar.querySelector('[data-act="fig"]').setAttribute('aria-pressed', String(showFig)); }
   else if (a === 'st') { spacetime = !spacetime; bar.querySelector('[data-act="st"]').setAttribute('aria-pressed', String(spacetime)); }
   else if (a === 'help') help.hidden = !help.hidden;
@@ -563,7 +480,7 @@ bar.addEventListener('click', e => { const b = e.target.closest('button'); if (b
 help.addEventListener('click', () => { help.hidden = true; });
 goDate.addEventListener('change', () => {                      // a date, read in UTC as the dial's fields are
   const t = Date.parse(goDate.value + 'T00:00:00Z'); if (!isFinite(t)) return;
-  touched = true; index = clamp(t - T0, 0, N - 1); recentre(); force = true;
+  dial.touched = true; dial.goTo(t - T0); force = true;
 });
 addEventListener('resize', () => { force = true; });
 requestAnimationFrame(step);
