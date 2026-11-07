@@ -18,6 +18,7 @@ them. Open any of them straight in a browser, locally or on the site.
 |---|---|
 | [geometry.html](https://reportbase.github.io/calendar/geometry.html) | The navigation dial beside its figure: centre, circle, tangent and hyperbola, with g, the flip, the octaves and the shape being expressed as the needle sweeps. |
 | [dial-demo.html](https://reportbase.github.io/calendar/dial-demo.html) | The dial reused: `Dial.mount` over 2⁵³ − 1 numbered records, and nothing else. |
+| [horizon.html](https://reportbase.github.io/calendar/horizon.html) | The horizon: the dial holding a thumb instead of a count, over a road of posts without end. Within one thumb the posts read in proportion, past it as ratios (one in 2, 4, 8 …); a steady push walks out by a steady ratio and never reaches 90°. The quarter turn's 256 cells are painted by the first post each meets; the writer's count shows how many each covers, without end in the last. |
 
 ### The Dial class — [dial.js](dial.js)
 
@@ -36,6 +37,9 @@ dial.goTo(5e8); dial.widen(0.1);                // and read dial.index, dial.hea
 A page that shares its canvas with something else (as geometry.html does with its figure) makes `new Dial(opts)`,
 calls `layout({ cx, cy, R })`, `step(now)` and `draw(ctx, now)` each frame, and routes the hands to `press`, `drag`,
 `release`, `pinchStart`, `pinchTo`, `wheel`, `key` and `keyUp`. The options are listed at the top of dial.js.
+
+Given `H` (a thumb) instead of `count`, the dial has no end: it turns from home toward a horizon it never reaches, the
+record is H · tan θ, and the wheel changes the thumb with the needle held still (horizon.html).
 
 ## Archived dials — [archive/](archive/)
 
