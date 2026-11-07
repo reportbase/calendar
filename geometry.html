@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The dial's geometry</title>
-<!-- THE DIAL AND ITS FIGURE, SIDE BY SIDE. The dial is the navigation dial of city-dial.html (gold
-     needle pushes, blue needle points, the radius sets the window) on dial.html's list, a century of
+<!-- THE DIAL AND ITS FIGURE, SIDE BY SIDE. The dial is the navigation dial of archive/city-dial.html (gold
+     needle pushes, blue needle points, the radius sets the window) on archive/dial.html's list, a century of
      milliseconds. Beside it, drawn from the same state, is the figure the dial is made of: a centre O,
      a unit circle, the tangent line at its apex A, and the unit hyperbola that touches the same line.
 
@@ -29,6 +29,20 @@
      which on the dial is a move of the radius. On this dial h runs up the axis and v runs sideways; the
      paper draws h across and v up.
 
+     THE TURN LAYS HEAT, NOT ADDRESSES (7 Nov 2026; Tom: "the big recent  is that cauchy is a heat map, not addresses.
+     how does that affect the dials.   geometry.html. is our most recent dial."). The list's records are the writer's:
+     counted, each with its index, the list's length known. What the needle's turn gives is HEAT over them: the blue
+     at θ lands at centre + unit·tan θ, so the turn spent per record is dθ/ds = cos²θ in units of home's, the Cauchy as
+     a heat map: hottest at home, where a small turn moves one unit; exactly half at the corner (cos² 45° = ½); cooling
+     to nothing at the horizon, where a hair of turn crosses the whole window. In the push it is dθ/dζ = sech ζ (= cos θ),
+     the same heat seen in the gold's coordinate. g is the share of the turn already passed, the heat summed from home;
+     the arctangent is the writer's formula for it. The arc's shading is that heat. The circle in the figure is the
+     writer's picture of the turn (one length held whole), not anything the reader holds.
+
+     USABILITY (7 Nov 2026; Tom: "geometry.html is the best dial, archive the rest.  it would be nice to improve the
+     usabiity of the geometry.html."): the other dials went to archive/. Everything that was a key now has a button too
+     (the bar, top right): now, centre, the window narrower and wider, go to a date, the figure shown or hidden (hidden,
+     the dial takes the whole screen), spacetime, and help. A hint on the dial says how to move until the first touch.
      VOCABULARY (GEOMETRY.md): geometry names first, other fields' names in brackets. θ is the circular
      angle [latitude; the angle whose sine is v/c]. ζ is the hyperbolic angle [rapidity; Mercator height].
      tan θ = sinh ζ is the tangent [proper velocity; gnomonic distance]. The horizon is θ = 90°
@@ -39,7 +53,7 @@
      pinch: the radius. On the figure: drag P, T, H or S and everything follows; the blue stays where
      the figure leaves it. Wheel over the figure zooms the figure only.
      Keys: ← → push the gold at 45° · ↑ ↓ radius · h blue home · t today · n readout · [ ] the shape's b ·
-     s the spacetime reading on and off.
+     s the spacetime reading on and off · f the figure · g go to a date · ? help.
 
      THE FIGURE READ AS SPACETIME (21 Oct 2026; Tom: "yes, add it", to reading the figure as the spacetime of a reader
      under constant thrust; calendar RELATIVITY.md, "The held push"). Holding the gold adds ζ at a steady rate on the
@@ -77,11 +91,44 @@
   #nums .k{color:var(--gold);white-space:nowrap} #nums .v{color:#f1efe6;text-align:right;white-space:nowrap}
   #nums .o{color:var(--dim)} #nums .hd{grid-column:1/-1;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;font-size:10px;margin-top:4px}
   #nums .hd:first-child{margin-top:0}
+  /* THE BAR: every key's job as a button, for a hand with no keyboard; it wraps on a narrow screen */
+  #bar{position:fixed;z-index:2;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}
+  #bar[hidden]{display:none}
+  #bar button, #bar label{font:12px/1 var(--mono);color:var(--dim);background:var(--panel);cursor:pointer;
+        border:0.5px solid rgba(232,200,106,.28);border-radius:6px;padding:7px 10px;min-height:32px;box-sizing:border-box}
+  #bar label{display:flex;align-items:center;gap:6px;padding:2px 8px}
+  #bar input{font:12px var(--mono);color:var(--ink);background:transparent;border:0;color-scheme:dark;width:132px}
+  #bar button:hover, #bar label:hover{color:var(--ink);border-color:var(--gold)}
+  #bar button:focus-visible, #bar input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  #bar button[aria-pressed="true"]{color:var(--ink);border-color:rgba(232,200,106,.6)}
+  #help{position:fixed;z-index:3;left:50%;top:50%;transform:translate(-50%,-50%);max-width:min(520px,calc(100% - 32px));
+        max-height:calc(100% - 32px);overflow:auto;box-sizing:border-box;padding:16px 18px;background:rgba(18,21,28,.96);
+        border:0.5px solid rgba(232,200,106,.35);border-radius:10px;font:13px/1.55 var(--mono);color:var(--ink);cursor:pointer}
+  #help[hidden]{display:none}
+  #help b{color:var(--gold);font-weight:600} #help p{margin:0 0 8px}
+  @media (pointer: coarse){ #bar button, #bar label{min-height:40px;font-size:13px} }
 </style>
 </head>
 <body>
 <canvas id="cv"></canvas>
 <button id="numsBtn" type="button" aria-expanded="false" aria-controls="nums">readout</button>
+<div id="bar" role="toolbar" aria-label="The dial's controls">
+  <button type="button" data-act="now" title="now (t)">now</button>
+  <button type="button" data-act="centre" title="put the window on the record, the needle home (h)">centre</button>
+  <button type="button" data-act="narrow" title="a narrower window, finer (↓)" aria-label="narrower window">−</button>
+  <button type="button" data-act="widen" title="a wider window, coarser (↑)" aria-label="wider window">+</button>
+  <label title="go to a date (g)">go to <input id="goDate" type="date" min="2000-01-01" max="2099-12-31" aria-label="go to a date"></label>
+  <button type="button" data-act="fig" aria-pressed="true" title="show or hide the figure (f)">figure</button>
+  <button type="button" data-act="st" aria-pressed="true" title="the figure read as spacetime (s)">spacetime</button>
+  <button type="button" data-act="help" title="how the dial works (?)" aria-label="help">?</button>
+</div>
+<div id="help" hidden role="dialog" aria-label="How the dial works">
+  <p><b>Move.</b> Press anywhere on the dial and drag sideways: the gold needle is a speed, the farther from upright the faster the blue moves. Let go and the window rests on the record reached. ← → do the same.</p>
+  <p><b>Window.</b> Wheel, pinch, ↑ ↓ or − + make the window wider or narrower: the date's fields in teal are within one unit of the needle, blue within the window, gold out of reach.</p>
+  <p><b>Heat.</b> The shaded arc is the turn's heat, cos²θ: near upright a small turn moves one unit; at 45° (the corner) half as finely; near the horizon a hair of turn crosses the whole window.</p>
+  <p><b>Jump.</b> now, centre, or go to a date. <b>Figure.</b> Drag P, T, H or S; the wheel over it zooms it; [ ] the shape’s breadth; hide it with figure (f) for a dial the size of the screen.</p>
+  <p>Tap anywhere to close.</p>
+</div>
 <div id="nums" hidden><div id="numsHead"><span>readout</span><button id="numsClose" type="button" aria-label="Close the readout">close ✕</button></div><div id="numsBody"></div></div>
 <script>
 const PI = Math.PI, K = 5, CAP = Math.atan(2 ** K), ZMAX = Math.asinh(2 ** K);   // the window's end: the K-th corner, tan θ = 2^K
@@ -94,7 +141,8 @@ const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 let index = clamp(Date.now() - T0, 0, N - 1), centre = index, reach = 0.45, zeta = 0;
 let gold = 0, held = false, thrusting = false, springAt = -1, last = 0, figZoom = 1;
 let b = 2;                                                     // the shape's breadth ratio: v breadth over h breadth
-let spacetime = true;                                          // the figure read as spacetime: horizons, the "now" line, a source behind
+let spacetime = true;
+let showFig = true, touched = false;                           // the figure shown; the hint shown until the first touch                                          // the figure read as spacetime: horizons, the "now" line, a source behind
 const U0 = 0.55;                                               // that source's place, behind the reader (the reader starts at u = 1)
 const sweepG = () => Math.abs(theta()) / (PI / 2);             // g: the sweep as a share of the quarter turn, the side carried in it
 const shareOf = s => s <= 1 ? s : 1 / s;                       // the smaller part over the larger: v/h before the corner, h/v past it
@@ -129,6 +177,7 @@ const nums = document.getElementById('nums'), numsBody = document.getElementById
 let W = 0, H = 0, D = 0, Lay = null, lastKey = '', force = true;
 function setNums(on){                                         // open or close the readout; the dial re-lays itself either way
   nums.hidden = !on; numsBtn.hidden = on; numsBtn.setAttribute('aria-expanded', String(on));
+  document.getElementById('bar').hidden = on;                   // the open readout takes the top; closed, the bar comes back
   updateNums(); force = true;
 }
 numsBtn.addEventListener('click', () => setNums(true));
@@ -136,15 +185,19 @@ nums.addEventListener('click', () => setNums(false));                   // a tap
 addEventListener('keydown', e => { if (e.key === 'Escape' && !nums.hidden) setNums(false); });
 function layout(){
   const land = W >= H * 1.05;
-  const dial = land ? { x: 0, y: 0, w: W / 2, h: H } : { x: 0, y: H * 0.5, w: W, h: H * 0.5 };
-  const fig  = land ? { x: W / 2, y: 0, w: W / 2, h: H } : { x: 0, y: 0, w: W, h: H * 0.5 };
+  const dial = !showFig ? { x: 0, y: 0, w: W, h: H } : land ? { x: 0, y: 0, w: W / 2, h: H } : { x: 0, y: H * 0.5, w: W, h: H * 0.5 };
+  const fig  = !showFig ? { x: W, y: H, w: 0, h: 0 } : land ? { x: W / 2, y: 0, w: W / 2, h: H } : { x: 0, y: 0, w: W, h: H * 0.5 };
   // the button sits in the dial's corner; the open panel takes the top of the screen, never more than
   // the screen, and scrolls inside itself when it is longer. Only beside the dial does it push the dial down.
   nums.style.left = numsBtn.style.left = (dial.x + 14) + 'px'; numsBtn.style.top = (dial.y + 14) + 'px';
   nums.style.top = '14px'; nums.style.maxWidth = Math.max(200, (land ? dial.w : W) - 28) + 'px';
-  const top = (land && !nums.hidden) ? nums.offsetHeight + 40 : 40;
+  // the bar sits along the top of the dial's own box, right of the readout button, so it never covers the figure
+  const bar = document.getElementById('bar');
+  bar.style.top = (dial.y + 14) + 'px'; bar.style.left = (dial.x + 110) + 'px'; bar.style.right = (W - dial.x - dial.w + 14) + 'px';
+  const top = (land && !nums.hidden) ? nums.offsetHeight + 40 : nums.hidden ? bar.offsetHeight + 34 : 40;
   dial.cx = dial.x + dial.w / 2; dial.cy = dial.y + dial.h - 86;
   dial.R = Math.max(40, Math.min(dial.w * 0.44, dial.cy - dial.y - top));
+  dial.cy -= Math.max(0, dial.cy - dial.y - top - dial.R) / 2;   // a dial narrower than its box sits in the middle of the room left
   fig.ox = fig.x + fig.w / 2; fig.oy = fig.y + fig.h - 46;
   fig.L = Math.max(10, Math.min(fig.w / 3.4, (fig.h - 90) / 3.2)) * figZoom;
   Lay = { dial, fig };
@@ -180,6 +233,18 @@ function drawDial(g){
   ctx.strokeStyle = 'rgba(201,199,190,.18)'; ctx.lineWidth = 1;                 // the horizon: 90°, never reached
   ctx.beginPath(); ctx.moveTo(cx - R - 14, cy); ctx.lineTo(cx + R + 14, cy); ctx.stroke();
   ctx.strokeStyle = 'rgba(232,200,106,.22)'; ctx.beginPath(); ctx.arc(cx, cy, R, -PI, 0); ctx.stroke();
+  // THE HEAT: the turn per record, cos²θ, shaded just outside the arc; full at home, half at the corner, none at the horizon
+  ctx.lineCap = 'butt'; ctx.lineWidth = 9;
+  for (let i = 0; i < 120; i++) {
+    const a0 = -PI / 2 + PI * i / 120, a1 = a0 + PI / 120, h = Math.cos((a0 + a1) / 2) ** 2;
+    ctx.strokeStyle = 'rgba(232,200,106,' + (0.04 + 0.62 * h).toFixed(3) + ')';
+    ctx.beginPath(); ctx.arc(cx, cy, R + 9, a0 - PI / 2, a1 - PI / 2 + 0.002); ctx.stroke();
+  }
+  ctx.lineCap = 'round';
+  { const mono = getComputedStyle(document.body).getPropertyValue('--mono');
+    ctx.font = '11px ' + mono; ctx.fillStyle = DIM; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.fillText('heat 1', cx, cy - R - 20);
+    for (const sg of [-1, 1]) ctx.fillText('½', cx + sg * (R + 24) * Math.SQRT1_2, cy - (R + 24) * Math.SQRT1_2); }
   const rr = Math.max(8, R * reach);                                           // the rung: where the radius is
   ctx.strokeStyle = GOLD; ctx.globalAlpha = 0.55; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.arc(cx, cy, rr, -PI, 0); ctx.stroke(); ctx.globalAlpha = 1;
@@ -204,7 +269,12 @@ function drawDial(g){
   ctx.font = '19px ' + getComputedStyle(document.body).getPropertyValue('--mono'); line(date, cx, cy + 30);
   ctx.font = '15px ' + getComputedStyle(document.body).getPropertyValue('--mono'); line(time, cx, cy + 52);
   ctx.font = '12px ' + getComputedStyle(document.body).getPropertyValue('--mono'); ctx.fillStyle = DIM; ctx.textAlign = 'center';
-  ctx.fillText('g ' + sweepG().toFixed(3) + ' · window ' + fmtDur(s) + ' · unit ' + fmtDur(unit(s)) + ' · r ' + reach.toFixed(3), cx, cy + 74);
+  ctx.fillText('g ' + sweepG().toFixed(3) + ' · window ' + fmtDur(s) + ' · unit ' + fmtDur(unit(s)) + ' · heat ' + (Math.cos(theta()) ** 2).toFixed(3), cx, cy + 74);
+  if (!touched) {                                               // the hint, until the first touch
+    ctx.font = '13px ' + getComputedStyle(document.body).getPropertyValue('--mono'); ctx.fillStyle = INK;
+    ctx.fillText('press and drag sideways to move', cx, cy - R * 0.74);
+    ctx.fillStyle = DIM; ctx.fillText('wheel or pinch: the window · ? for help', cx, cy - R * 0.74 + 18);
+  }
 }
 
 // ── THE FIGURE: centre, circle, tangent, hyperbola — the dial's own geometry ──────────────────────
@@ -225,7 +295,7 @@ function drawFigure(){
   ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox, f.y); ctx.stroke(); ctx.setLineDash([]);
   ctx.strokeStyle = 'rgba(232,200,106,.55)'; ctx.lineWidth = 1.5;               // the tangent line at the apex
   ctx.beginPath(); ctx.moveTo(f.x, oy - s); ctx.lineTo(f.x + f.w, oy - s); ctx.stroke();
-  ctx.strokeStyle = GOLD; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(ox, oy, s, -PI, 0); ctx.stroke();   // the circle: addresses, no breadth expressed
+  ctx.strokeStyle = GOLD; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(ox, oy, s, -PI, 0); ctx.stroke();   // the circle: the turn, held whole (the writer's picture), no breadth expressed
   ctx.setLineDash([2, 6]); ctx.strokeStyle = 'rgba(232,200,106,.45)'; ctx.lineWidth = 1;   // the corner, v = h, both sides
   ctx.beginPath(); ctx.moveTo(...fp(2.2, -2.2)); ctx.lineTo(ox, oy); ctx.lineTo(...fp(2.2, 2.2)); ctx.stroke(); ctx.setLineDash([]);
   // g = 0 IS THE UNIT CIRCLE, g = 1 THE SHAPE FULLY EXPRESSED. The sweep carries the circle into the
@@ -377,6 +447,9 @@ function updateNums(){
     row('sin θ = tanh ζ', f(Math.tanh(z), 4), 'S · [v/c; Klein-disc radius]') +
     row('sec θ = cosh ζ', f(Math.cosh(z), 4), 'H · [Lorentz γ; Mercator stretch]') +
     row('log₂ |tan θ|', t ? f(Math.log2(Math.abs(t)), 2) : '—', 'corners passed · [octaves]') +
+    '<span class="hd">the heat · [the Cauchy as a heat map]</span>' +
+    row('cos²θ', f(Math.cos(th) ** 2, 4), 'the turn per record, against home\'s · 1 home · ½ the corner · 0 the horizon') +
+    row('sech ζ', f(1 / Math.cosh(z), 4), 'the turn per push · = cos θ') +
     gRows(Math.abs(t)) +
     '<span class="hd">read as spacetime · [a reader under constant thrust]</span>' +
     row('the "now"', 'O–H', 'the line from O through H: a uniformly accelerated reader\'s simultaneity') +
@@ -396,12 +469,12 @@ function draw(now){
     W = w; H = h; D = d; cv.width = back.width = W * D; cv.height = back.height = H * D; force = true;
   }
   const g = liveGold(now);
-  const key = [Math.round(index), zeta.toFixed(7), g.toFixed(5), reach.toFixed(5), figZoom.toFixed(4), b.toFixed(4), W, H, nums.hidden, spacetime].join();
+  const key = [Math.round(index), zeta.toFixed(7), g.toFixed(5), reach.toFixed(5), figZoom.toFixed(4), b.toFixed(4), W, H, nums.hidden, spacetime, showFig, touched].join();
   if (key === lastKey && !force) return;
   lastKey = key;
   updateNums(); if (force) layout(); force = false;
   ctx.setTransform(D, 0, 0, D, 0, 0); ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
-  drawFigure(); drawDial(g);
+  if (showFig) drawFigure(); drawDial(g);
   vis.globalCompositeOperation = 'copy'; vis.drawImage(back, 0, 0);
 }
 function step(now){
@@ -427,7 +500,7 @@ const touching = new Map(); let mode = null, which = 'P', pinch = null, x0 = 0, 
 const fingers = () => { const [a, b] = [...touching.values()]; return Math.max(8, Math.hypot(a.x - b.x, a.y - b.y)); };
 function letGo(){ if (mode === 'dial') { held = false; if (thrusting) springAt = performance.now(); thrusting = false; recentre(); } }
 cv.addEventListener('pointerdown', e => {
-  cv.setPointerCapture(e.pointerId); touching.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  touched = true; cv.setPointerCapture(e.pointerId); touching.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (touching.size === 2) { letGo(); mode = 'pinch'; pinch = { d0: fingers(), r0: reach }; return; }   // two fingers: the radius
   if (touching.size > 2) return;
   const [x, y] = local(e); x0 = x; y0 = y;
@@ -446,7 +519,7 @@ const up = e => { touching.delete(e.pointerId);
   letGo(); mode = null; };
 cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
 cv.addEventListener('wheel', e => {
-  const [x, y] = local(e), f = e.deltaMode === 1 ? 16 : 1;
+  touched = true; const [x, y] = local(e), f = e.deltaMode === 1 ? 16 : 1;
   if (inBox(Lay.fig, x, y)) { figZoom = clamp(figZoom * Math.exp(-e.deltaY * f * 0.0015), 0.2, 8); force = true; }   // the figure's own zoom
   else {
     if (e.deltaX) setZeta(zeta + e.deltaX * f / 2000);
@@ -456,6 +529,9 @@ cv.addEventListener('wheel', e => {
   e.preventDefault();
 }, { passive: false });
 addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') { if (e.key === 'Escape') e.target.blur(); return; }   // typing a date is not steering
+  touched = true;
+  if (!help.hidden && e.key !== '?') { help.hidden = true; if (e.key === 'Escape') return; }
   if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.repeat) {
     mode = 'dial'; held = true; thrusting = true; springAt = -1; gold = (e.key === 'ArrowLeft' ? -1 : 1) * PI / 4; }
   if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { reach = clamp(reach + (e.key === 'ArrowUp' ? 0.02 : -0.02), 0, 1); rezoom(); read(); }
@@ -463,10 +539,32 @@ addEventListener('keydown', e => {
   if (e.key === 't') { index = clamp(Date.now() - T0, 0, N - 1); recentre(); }
   if (e.key === 'n') setNums(nums.hidden);
   if (e.key === '[' || e.key === ']') b = clamp(b * 2 ** (e.key === ']' ? 0.25 : -0.25), 1 / 8, 8);
-  if (e.key === 's') { spacetime = !spacetime; force = true; }
+  if (e.key === 's') act('st');
+  if (e.key === 'f') act('fig');
+  if (e.key === 'g') { e.preventDefault(); goDate.focus(); }
+  if (e.key === '?') act('help');
   if (e.key.startsWith('Arrow')) e.preventDefault();
 });
-addEventListener('keyup', e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { letGo(); mode = null; } });
+addEventListener('keyup', e => { if (e.target.tagName === 'INPUT') return; if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { letGo(); mode = null; } });
+
+// ── THE BAR: each key's job as a button ──────────────────────────────────────────────────────────
+const bar = document.getElementById('bar'), help = document.getElementById('help'), goDate = document.getElementById('goDate');
+function act(a){
+  touched = true;
+  if (a === 'now') { index = clamp(Date.now() - T0, 0, N - 1); recentre(); }
+  else if (a === 'centre') recentre();
+  else if (a === 'narrow' || a === 'widen') { reach = clamp(reach + (a === 'widen' ? 0.05 : -0.05), 0, 1); rezoom(); read(); }
+  else if (a === 'fig') { showFig = !showFig; bar.querySelector('[data-act="fig"]').setAttribute('aria-pressed', String(showFig)); }
+  else if (a === 'st') { spacetime = !spacetime; bar.querySelector('[data-act="st"]').setAttribute('aria-pressed', String(spacetime)); }
+  else if (a === 'help') help.hidden = !help.hidden;
+  force = true;
+}
+bar.addEventListener('click', e => { const b = e.target.closest('button'); if (b) act(b.dataset.act); });
+help.addEventListener('click', () => { help.hidden = true; });
+goDate.addEventListener('change', () => {                      // a date, read in UTC as the dial's fields are
+  const t = Date.parse(goDate.value + 'T00:00:00Z'); if (!isFinite(t)) return;
+  touched = true; index = clamp(t - T0, 0, N - 1); recentre(); force = true;
+});
 addEventListener('resize', () => { force = true; });
 requestAnimationFrame(step);
 </script>

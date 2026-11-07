@@ -2,8 +2,10 @@
 
 A navigation dial for very long lists, and the geometry it is made of. The dial reads a list through a tangent lens: its
 needle's angle from the apex is the sweep **g** (0 at home, ½ at the corner, 1 at the horizon), the value is the
-tangent, and the radius sets the window as a power of the list's length. The pages here are the dial, its geometry,
-a calendar built on it, and standalone demos of ideas from the wider project.
+tangent, and the radius sets the window as a power of the list's length. The turn lays heat over the list, not
+addresses: the needle's turn per record is cos²θ, finest at home and half at the corner (the Cauchy, as a heat map);
+the records' own indices are the writer's. The dial is [geometry.html](geometry.html); earlier dials are archived, and
+standalone demos of ideas from the wider project follow.
 
 **Live site: https://reportbase.github.io/calendar/** (the index links every page)
 
@@ -15,10 +17,17 @@ in a browser, locally or on the site.
 | Page | |
 |---|---|
 | [geometry.html](https://reportbase.github.io/calendar/geometry.html) | The navigation dial beside its figure: centre, circle, tangent and hyperbola, with g, the flip, the octaves and the shape being expressed as the needle sweeps. |
-| [dial-calendar.html](https://reportbase.github.io/calendar/dial-calendar.html) | The dial as a calendar: the scale rests on second, minute, hour, day, week, month and year, and notes are marks on the arc. |
-| [calendar.html](https://reportbase.github.io/calendar/calendar.html) | The fisheye calendar: years, months, days and half hours as strips, with a note per half hour. |
-| [dial.html](https://reportbase.github.io/calendar/dial.html) | The minimal dial: a century of milliseconds on one half-disc. |
-| [city-dial.html](https://reportbase.github.io/calendar/city-dial.html) | The dial over a road and a city generated from the address, on a list of 2⁵³ − 1 records. |
+
+## Archived dials — [archive/](archive/)
+
+Earlier dials, kept as they were. Since 7 November 2026 geometry.html is the dial.
+
+| Page | |
+|---|---|
+| [archive/dial-calendar.html](https://reportbase.github.io/calendar/archive/dial-calendar.html) | The dial as a calendar: the scale rests on second, minute, hour, day, week, month and year, and notes are marks on the arc. |
+| [archive/calendar.html](https://reportbase.github.io/calendar/archive/calendar.html) | The fisheye calendar: years, months, days and half hours as strips, with a note per half hour. |
+| [archive/dial.html](https://reportbase.github.io/calendar/archive/dial.html) | The minimal dial: a century of milliseconds on one half-disc. |
+| [archive/city-dial.html](https://reportbase.github.io/calendar/archive/city-dial.html) | The dial over a road and a city generated from the address, on a list of 2⁵³ − 1 records. |
 
 ## Demos — [demos/](demos/)
 

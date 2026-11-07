@@ -314,7 +314,7 @@ Tom: "proceed", on the second item: acceleration, where physics has a real horiz
 - Hyperbolic motion and the Rindler horizon (Rindler 1966): an observer at constant proper acceleration a (c = 1) has a
   horizon a distance 1/a behind it.
 - Wander's MOT run 3: uniform acceleration is one level per ln 2/a of proper time.
-- `city-dial.html`'s step: `zeta += tan(theta) * THRUST * dt` per frame. Holding the gold at a fixed angle adds rapidity
+- `archive/city-dial.html`'s step: `zeta += tan(theta) * THRUST * dt` per frame. Holding the gold at a fixed angle adds rapidity
   at a constant rate on the reader's own clock.
 
 **Predictions** (written at 13:32 MDT, before any computation):
