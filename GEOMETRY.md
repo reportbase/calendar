@@ -67,7 +67,7 @@ This is Kepler's auxiliary circle construction, with t the eccentric anomaly. Cl
 It differs from the mix **m** (§2.1), which weights the whole shape the same in every direction. Here the expression grows with the sweep.
 
 Two consequences, both checked numerically:
-- `dial.html`'s lens, `atan(tan a / K)` with K = 4, is the angle of the ray to Q for b = ¼.
+- `archive/dial.html`'s lens, `atan(tan a / K)` with K = 4, is the angle of the ray to Q for b = ¼.
 - The ray to Q meets the tangent line at b · tan t, which is b times the circle's reading. That is §2.3's Cauchy of scale b, an offset of log₂ b octaves, and on the dial a move of the radius by log₂ b octaves.
 
 `geometry.html` draws P, Q, the gap between them and the arc Q has traced (`[` `]` change b).
