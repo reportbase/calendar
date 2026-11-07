@@ -9,14 +9,33 @@ standalone demos of ideas from the wider project follow.
 
 **Live site: https://reportbase.github.io/calendar/** (the index links every page)
 
-Every page is a single self-contained HTML file with no build step and no dependencies. Open any of them straight
-in a browser, locally or on the site.
+Every page is a single HTML file with no build step and no dependencies; the dial pages load `dial.js` from beside
+them. Open any of them straight in a browser, locally or on the site.
 
 ## The dial
 
 | Page | |
 |---|---|
 | [geometry.html](https://reportbase.github.io/calendar/geometry.html) | The navigation dial beside its figure: centre, circle, tangent and hyperbola, with g, the flip, the octaves and the shape being expressed as the needle sweeps. |
+| [dial-demo.html](https://reportbase.github.io/calendar/dial-demo.html) | The dial reused: `Dial.mount` over 2⁵³ − 1 numbered records, and nothing else. |
+
+### The Dial class — [dial.js](dial.js)
+
+The dial is a class any page can use: a classic script, so `<script src="dial.js"></script>` works from disk or the
+site. A page that is only the dial:
+
+```js
+const dial = Dial.mount(canvas, {
+  count: 1e9,                                   // the list's length: records 0 … count − 1
+  index: 0,                                     // where to start
+  label: i => [[['#' + Math.round(i), 1]]],     // a record as lines of [text, step] parts, coloured by step
+});
+dial.goTo(5e8); dial.widen(0.1);                // and read dial.index, dial.heat(), dial.sweep() …
+```
+
+A page that shares its canvas with something else (as geometry.html does with its figure) makes `new Dial(opts)`,
+calls `layout({ cx, cy, R })`, `step(now)` and `draw(ctx, now)` each frame, and routes the hands to `press`, `drag`,
+`release`, `pinchStart`, `pinchTo`, `wheel`, `key` and `keyUp`. The options are listed at the top of dial.js.
 
 ## Archived dials — [archive/](archive/)
 
