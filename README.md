@@ -19,6 +19,7 @@ them. Open any of them straight in a browser, locally or on the site.
 | [geometry.html](https://reportbase.github.io/calendar/geometry.html) | The navigation dial beside its figure: centre, circle, tangent and hyperbola, with g, the flip, the octaves and the shape being expressed as the needle sweeps. |
 | [dial-demo.html](https://reportbase.github.io/calendar/dial-demo.html) | The dial reused: `Dial.mount` over 2⁵³ − 1 numbered records, and nothing else. |
 | [horizon.html](https://reportbase.github.io/calendar/horizon.html) | The horizon: the dial holding a thumb instead of a count, over a road of posts without end. Within one thumb the posts read in proportion, past it as ratios (one in 2, 4, 8 …); a steady push walks out by a steady ratio and never reaches 90°. The quarter turn's 256 cells are painted by the first post each meets; the writer's count shows how many each covers, without end in the last. |
+| [dome.html](https://reportbase.github.io/calendar/dome.html) | The dome: the horizon dial with one more degree of freedom, `dome.js`. One thumb above a floor without end, looking down: home is straight down, the rim the horizon all round; lean to walk out in any heading, in proportion within one thumb and as ratios past it. Lambert's equal-area disc in 48 rings × 96 turns, each cell painted by what its middle direction meets; the heat, cos³α, as dashed rings. |
 
 ### The Dial class — [dial.js](dial.js)
 
