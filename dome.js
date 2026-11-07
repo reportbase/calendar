@@ -44,6 +44,10 @@ class Dome {
     this.label = o.label || null;
     this.decorate = o.decorate || null;
     this.underlay = o.underlay || null;              // (ctx, dome): draws the floor in place of the cells
+    this.lay = o.lay === 'inplace' ? 'inplace' : 'area';      // how the dome is laid on the disc (see THE DISC)
+    this.pan = o.pan || null;                                   // (dx, dy) in floor units: drags move the floor itself (see PAN)
+    this.tap = o.tap || null;                                   // (x, y) in floor units: a tap on the floor
+    this.vx = 0; this.vy = 0; this.flingAt = -1; this.trail = [];
     this.fonts = o.fonts || [18, 12, 12];
     this.c = Object.assign({ bg: '#0b0d12', floor: '#161a22', gold: '#e8c86a', teal: '#1D9E75', blue: '#6aa8e8', ink: '#c9c7be', dim: '#7f8590' }, o.colours || {});
     this.hint = o.hint === false ? null : o.hint || ['press and lean to walk out', 'wheel or pinch: the thumb'];
@@ -66,18 +70,29 @@ class Dome {
   home(){ this.zx = 0; this.zy = 0; }
   setH(h){ this.H = clamp(h, 1e-6, 1e9); }                     // the blue keeps its direction; the floor slides under it
 
-  // ── THE DISC (Lambert's equal-area map of the hemisphere about home) ─────────────────────────
-  toDisc(alpha, phi){ const { cx, cy, R } = this.box, r = R * SQ2 * Math.sin(alpha / 2); return [cx + r * Math.cos(phi), cy - r * Math.sin(phi)]; }
+  // ── THE DISC ─────────────────────────────────────────────────────────────────────────────────
+  // 'area' (the default): Lambert's equal-area map of the hemisphere about home, equal room for equal directions.
+  // 'inplace' (7 Nov 2026; Tom, of the map dome: "its heavily distorted and does not move very well."): the in-place lay of
+  // the floor, s = ρ/H = tan α: r = s/2 within one thumb (the floor in proportion, an undistorted map filling the middle
+  // half of the radius) and 1 − 1/(2s) past it, the horizon at the rim; smooth at the thumb. Only past one thumb is the
+  // floor squeezed, each doubling of distance half the room of the last.
+  rOfAlpha(a){ const R = this.box.R;
+    if (this.lay === 'inplace') { const s = Math.tan(a); return R * (s <= 1 ? s / 2 : 1 - 1 / (2 * s)); }
+    return R * SQ2 * Math.sin(a / 2); }
+  alphaOfR(r){ const u = clamp(r / this.box.R, 0, 1);
+    if (this.lay === 'inplace') return Math.atan(u <= 0.5 ? 2 * u : 1 / (2 * Math.max(1e-12, 1 - u)));
+    return 2 * Math.asin(clamp(u / SQ2, 0, 1)); }
+  toDisc(alpha, phi){ const { cx, cy } = this.box, r = this.rOfAlpha(alpha); return [cx + r * Math.cos(phi), cy - r * Math.sin(phi)]; }
   fromDisc(x, y){                                              // a screen point → (α, φ), or null off the dome
     const { cx, cy, R } = this.box, dx = x - cx, dy = cy - y, r = Math.hypot(dx, dy);
     if (r > R) return null;
-    return { alpha: 2 * Math.asin(clamp(r / (R * SQ2), 0, 1)), phi: Math.atan2(dy, dx) };
+    return { alpha: this.alphaOfR(r), phi: Math.atan2(dy, dx) };
   }
+  floorOf(x, y){ const p = this.fromDisc(x, y); return p ? this.floorAt(p.alpha, p.phi) : null; }   // a screen point → the floor, from home
   floorAt(alpha, phi){ const rho = this.H * Math.tan(alpha); return [rho * Math.cos(phi), rho * Math.sin(phi)]; }
-  ringR(k){ return this.box.R * Math.sqrt(k / this.rings); }  // equal-share rings: equal area on the disc
-  alphaOfR(r){ return 2 * Math.asin(clamp(r / (this.box.R * SQ2), 0, 1)); }
+  ringR(k){ return this.rOfAlpha(Math.acos(clamp(1 - k / this.rings, 0, 1))); }   // equal-share rings: 1 − cos α in steps
   cellAt(alpha, phi){                                          // the cell holding a direction
-    const r = this.box.R * SQ2 * Math.sin(alpha / 2), k = Math.min(this.rings - 1, Math.floor((r / this.box.R) ** 2 * this.rings));
+    const k = Math.min(this.rings - 1, Math.floor((1 - Math.cos(alpha)) * this.rings));
     const s = Math.floor(((phi / (2 * PI)) % 1 + 1) % 1 * this.sectors) % this.sectors;
     return { ring: k, sector: s };
   }
@@ -95,22 +110,53 @@ class Dome {
   }
   step(now){
     const dt = Math.min(0.05, (now - (this.last || now)) / 1000); this.last = now;
-    if (this.held && this.leaning) {
+    if (this.pan && this.flingAt >= 0) {                        // a flung floor coasts, slowed in proportion to its speed
+      const t = (now - this.flingAt) / 1000, f = Math.exp(-t / 0.325);
+      if (f < 0.02) this.flingAt = -1; else this.pan(this.vx * f * dt, this.vy * f * dt);
+    }
+    if (this.pan && this.held && this._keyLean) {               // the arrows glide the floor, a thumb a second
+      const m = Math.hypot(this.lx, this.ly); if (m) this.pan(this.lx / m * this.H * dt, this.ly / m * this.H * dt);
+      return;
+    }
+    if (this.held && this.leaning && !this.pan) {
       const m = Math.hypot(this.lx, this.ly); if (!m) return;
       const rate = Math.tan(Math.min(m, this.CAP)) * this.thrust * dt;   // the lean's angle m, its tangent the rate
       this.setZeta(this.zx + rate * this.lx / m, this.zy + rate * this.ly / m);
     }
   }
-  press(x, y){ this.touched = true; this.held = true; this.leaning = false; this.springAt = -1; this._x0 = x; this._y0 = y; }
+  // PAN (the map dome): a drag moves the floor itself, the floor point pressed staying under the finger (whatever the lay,
+  // so a press near the horizon carries a long way); let go moving and it coasts; a tap without moving is a tap on the
+  // floor. A press past 85° holds nothing, so the horizon is never grabbed.
+  press(x, y){ this.touched = true; this.held = true; this.leaning = false; this.springAt = -1; this._x0 = x; this._y0 = y;
+    if (this.pan) { this.flingAt = -1; const p = this.fromDisc(x, y); this._grab = p && p.alpha < 85 * PI / 180 ? this.floorAt(p.alpha, p.phi) : null; this.trail = []; } }
   drag(x, y){                                                  // the lean: from where the finger pressed, a quarter of the dome to the K-th corner
     if (!this.held) return;
+    if (this.pan) {
+      if (!this.leaning && Math.hypot(x - this._x0, y - this._y0) > 6) this.leaning = true;
+      if (!this.leaning || !this._grab) return;
+      const p = this.fromDisc(x, y); if (!p || p.alpha > 85 * PI / 180) return;
+      const f = this.floorAt(p.alpha, p.phi), dx = this._grab[0] - f[0], dy = this._grab[1] - f[1];
+      this.pan(dx, dy); this._grab = f;
+      const t = performance.now(); this.trail.push([t, dx, dy]); while (this.trail.length && t - this.trail[0][0] > 100) this.trail.shift();
+      return;
+    }
     const dx = x - this._x0, dy = this._y0 - y, d = Math.hypot(dx, dy);
     if (!this.leaning && d > 6) this.leaning = true;
     if (!this.leaning) return;
     const m = Math.min(d / (this.box.R * 0.5), 1) * this.CAP;
     this.lx = d ? m * dx / d : 0; this.ly = d ? m * dy / d : 0;
   }
-  release(){ if (!this.held) return; this.held = false; if (this.leaning) this.springAt = performance.now(); this.leaning = false; }
+  release(){
+    if (!this.held) return; this.held = false;
+    if (this.pan) {
+      if (!this.leaning && this.tap) { const f = this.floorOf(this._x0, this._y0); if (f) this.tap(f[0], f[1]); }
+      else if ((this.trail = this.trail.filter(q => performance.now() - q[0] <= 100)).length > 1) {   // the speed of the last tenth of a second, then a coast; a finger held still before letting go throws nothing
+        const ms = performance.now() - this.trail[0][0], sx = this.trail.reduce((s, q) => s + q[1], 0), sy = this.trail.reduce((s, q) => s + q[2], 0);
+        if (ms > 0) { this.vx = sx / ms * 1000; this.vy = sy / ms * 1000; this.flingAt = performance.now(); }
+      }
+      this.leaning = false; return;
+    }
+    if (this.leaning) this.springAt = performance.now(); this.leaning = false; }
   pinchStart(){ this.release(); this._h0 = this.H; }
   pinchTo(ratio){ this.setH(this._h0 * ratio); }
   wheel(e){ this.touched = true; const f = e.deltaMode === 1 ? 16 : 1; if (e.deltaY) this.setH(this.H * 2 ** ((e.ctrlKey ? -e.deltaY / 50 : e.deltaY / 100) * f)); }
@@ -118,14 +164,14 @@ class Dome {
     const k = e.key, dir = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] }[k];
     if (dir) {
       this.touched = true;
-      if (!e.repeat) { this.held = true; this.leaning = true; this.springAt = -1; const m = PI / 4; this.lx = dir[0] * m; this.ly = dir[1] * m; }
+      if (!e.repeat) { this.held = true; this.leaning = true; this._keyLean = true; this.flingAt = -1; this.springAt = -1; const m = PI / 4; this.lx = dir[0] * m; this.ly = dir[1] * m; }
       return true;
     }
     if (k === '+' || k === '=' || k === '-' || k === '_') { this.touched = true; this.setH(this.H * (k === '+' || k === '=' ? 2 : 0.5)); return true; }
     if (k === 'h') { this.touched = true; this.home(); return true; }
     return false;
   }
-  keyUp(e){ if (/^Arrow/.test(e.key)) { this.release(); return true; } return false; }
+  keyUp(e){ if (/^Arrow/.test(e.key)) { this._keyLean = false; if (this.pan) { this.held = false; this.leaning = false; } else this.release(); return true; } return false; }
 
   // ── DRAWING ───────────────────────────────────────────────────────────────────────────────────
   layout(box){ this.box = box; }
@@ -152,14 +198,14 @@ class Dome {
     const words = [];
     // the heat: rings where cos³α is ½, ¼, ⅛ (directions per unit of floor, against home's), named down the left
     [[0.5, 'heat ½'], [0.25, 'heat ¼'], [0.125, 'heat ⅛']].forEach(([h, t], i) => {
-      const a = Math.acos(Math.cbrt(h)), r = R * SQ2 * Math.sin(a / 2), ang = PI + 0.5 - i * 0.28;
+      const a = Math.acos(Math.cbrt(h)), r = this.rOfAlpha(a), ang = PI + 0.5 - i * 0.28;
       ctx.setLineDash([3, 5]); ctx.strokeStyle = 'rgba(232,200,106,.6)'; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * PI); ctx.stroke(); ctx.setLineDash([]);
       words.push([t, cx + r * Math.cos(ang), cy - r * Math.sin(ang), 'rgba(232,200,106,.9)']);
     });
     // the thumb: one thumb out (45°, the corner) solid, then one in 2, 4, 8, named down the right, each a little lower
     [[1, 'one thumb'], [2, 'one in 2'], [4, 'one in 4'], [8, 'one in 8']].forEach(([x, t], i) => {
-      const a = Math.atan(x), r = R * SQ2 * Math.sin(a / 2), ang = 0.62 - i * 0.24;
+      const a = Math.atan(x), r = this.rOfAlpha(a), ang = 0.62 - i * 0.24;
       ctx.strokeStyle = x === 1 ? 'rgba(232,200,106,.95)' : 'rgba(232,200,106,.45)'; ctx.lineWidth = x === 1 ? 1.6 : 1;
       ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * PI); ctx.stroke();
       words.push([t, cx + r * Math.cos(ang), cy - r * Math.sin(ang), x === 1 ? C.gold : 'rgba(232,200,106,.9)']);
