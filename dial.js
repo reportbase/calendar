@@ -31,7 +31,15 @@
      sizeText(n)     a count of records as words, for the info line (default: 1.2k, 3.4M …)
      fonts     the lines' sizes in px (default [19, 15])    mono  the font family (default the page's --mono, or monospace)
      colours   { bg, gold, teal, blue, ink, dim }           hint  the first-use hint: false, or its two lines
-     onChange(dial)  called when the record, ζ or the radius moves                                                  */
+     onChange(dial)  called when the record, ζ or the radius moves
+     info(dial)      the line under the record (default: g, the window, the unit, the heat)
+
+   THE THUMB IN PLACE OF THE COUNT (7 Nov 2026; Tom: "i'm thinking we could use the dial to browse the cauchy horizon.",
+   then "proceed"). Give `H` (a thumb, in the list's own units) instead of `count`, and the list has no end: the needle
+   turns from home (θ = 0) toward a horizon (θ = 90°) it never reaches, and the record is H · tan θ = H · sinh ζ,
+   measured from home with no window and no recentring. One thumb out is the corner; far out, each ln 2 of ζ is one more
+   "one in two", so a steady push walks out by a steady ratio. The wheel, a pinch or ↑ ↓ change the thumb, keeping the
+   needle where it is: what lies under it slides. ζ stops where a double still holds the record (tan θ = 10^15).        */
 (function (root) {
 'use strict';
 const PI = Math.PI;
@@ -46,11 +54,15 @@ function plainSize(n){                                          // a count of re
 
 class Dial {
   constructor(o = {}){
-    if (!(o.count >= 1)) throw new Error('Dial: count, the list\'s length, is needed');
-    this.count = o.count;
+    this.thumb = o.H > 0;                                       // the thumb's mode: no count, no end, no window
+    if (!this.thumb && !(o.count >= 1)) throw new Error('Dial: count (the list\'s length) or H (a thumb) is needed');
+    this.count = this.thumb ? Infinity : o.count;
+    this.H = this.thumb ? o.H : 0;
     this.K = o.K || 5;
-    this.CAP = Math.atan(2 ** this.K);                          // the window's end: the K-th corner, tan θ = 2^K
-    this.ZMAX = Math.asinh(2 ** this.K);
+    this.CAP = Math.atan(2 ** this.K);                          // the gold's widest push: the K-th corner, tan θ = 2^K
+    this.ZMAX = this.thumb ? Math.asinh(1e15) : Math.asinh(2 ** this.K);   // the window's end, or as far as a double holds
+    this.ZMIN = this.thumb ? 0 : -this.ZMAX;                    // the thumb's mode turns one way from home: a quarter turn
+    this.info = o.info || null;
     this.thrust = o.thrust || 0.4;
     this.springMs = 150; this.tapPx = 6;
     this.label = o.label || (i => [[[String(Math.round(i)), 1]]]);
@@ -60,22 +72,25 @@ class Dial {
     this.c = Object.assign({}, COLOURS, o.colours || {});
     this.hint = o.hint === false ? null : Array.isArray(o.hint) ? o.hint : ['press and drag sideways to move', 'wheel or pinch: the window'];
     this.onChange = o.onChange || null;
-    this.index = clamp(o.index || 0, 0, this.count - 1);
+    this.index = this.thumb ? 0 : clamp(o.index || 0, 0, this.count - 1);
     this.centre = this.index; this.reach = o.reach != null ? o.reach : 0.45; this.zeta = 0;
     this.gold = 0; this.held = false; this.thrusting = false; this.springAt = -1; this.last = 0;
     this.touched = false;                                       // the hint shows until the first touch
     this.box = { cx: 0, cy: 0, R: 1 };
+    if (this.thumb && o.index > 0) this.zeta = Math.asinh(o.index / this.H);
     this.recentre();
   }
 
   // ── THE READING ───────────────────────────────────────────────────────────────────────────────
-  span(){ return Math.max(1, Math.pow(this.count, this.reach)); }   // the radius is a logarithm: window = count^r
-  unit(s = this.span()){ return s / 2 / 2 ** this.K; }             // one unit = the 45° corner
+  span(){ return this.thumb ? 2 * this.H * 2 ** this.K : Math.max(1, Math.pow(this.count, this.reach)); }   // window = count^r
+  unit(s = this.span()){ return s / 2 / 2 ** this.K; }             // one unit = the 45° corner (the thumb, in its mode)
   theta(){ return Math.atan(Math.sinh(this.zeta)); }                // θ = gd(ζ)
   sweep(){ return Math.abs(this.theta()) / (PI / 2); }              // g: the sweep as a share of the quarter turn
   heat(){ return Math.cos(this.theta()) ** 2; }                     // the turn per record, against home's
-  read(){ this.index = clamp(this.centre + this.unit() * Math.sinh(this.zeta), 0, this.count - 1); this._changed(); }
+  read(){ if (this.thumb) { this.index = this.H * Math.sinh(this.zeta); this._changed(); return; }
+    this.index = clamp(this.centre + this.unit() * Math.sinh(this.zeta), 0, this.count - 1); this._changed(); }
   recentre(){                                                  // the window onto the record; ζ keeps only what the ends force
+    if (this.thumb) { this.read(); return; }                     // from home, with no window: nothing to recentre
     const s = this.span(); this.centre = clamp(this.index, s / 2, this.count - s / 2);
     this.zeta = clamp(Math.asinh((this.index - this.centre) / this.unit(s)), -this.ZMAX, this.ZMAX); this._changed();
   }
@@ -85,10 +100,14 @@ class Dial {
     else this.recentre();
     this.read();
   }
-  setZeta(z){ this.zeta = clamp(z, -this.ZMAX, this.ZMAX); this.read(); }
+  setZeta(z){ this.zeta = clamp(z, this.ZMIN, this.ZMAX); this.read(); }
   setReach(r){ this.reach = clamp(r, 0, 1); this.rezoom(); }
-  widen(d){ this.setReach(this.reach + d); }
-  goTo(i){ this.index = clamp(i, 0, this.count - 1); this.recentre(); }
+  setH(h){ this.H = clamp(h, 1e-9, 1e12); this.read(); }        // a new thumb: the needle stays, what is under it slides
+  widen(d){ if (this.thumb) this.setH(this.H * 2 ** (d * 25)); else this.setReach(this.reach + d); }
+  goTo(i){
+    if (this.thumb) { this.setZeta(Math.asinh(Math.max(0, i) / this.H)); return; }
+    this.index = clamp(i, 0, this.count - 1); this.recentre();
+  }
   _changed(){ if (this.onChange) this.onChange(this); }
 
   // ── MOTION ────────────────────────────────────────────────────────────────────────────────────
@@ -102,7 +121,7 @@ class Dial {
     if (this.held && this.thrusting) this.setZeta(this.zeta + Math.tan(this.gold) * this.thrust * dt);
   }
   stateKey(now){                                               // what the drawing depends on, to skip frames where nothing moved
-    return [Math.round(this.index), this.zeta.toFixed(7), this.liveGold(now).toFixed(5), this.reach.toFixed(5), this.touched].join();
+    return [this.index.toPrecision(12), this.zeta.toFixed(7), this.liveGold(now).toFixed(5), this.reach.toFixed(5), this.H, this.touched].join();
   }
 
   // ── HANDS (in the canvas's own pixels) ───────────────────────────────────────────────────────
@@ -114,12 +133,12 @@ class Dial {
     if (this.thrusting) this.aim(x, y);
   }
   release(){ if (!this.held) return; this.held = false; if (this.thrusting) this.springAt = performance.now(); this.thrusting = false; this.recentre(); }
-  pinchStart(){ this.release(); this._r0 = this.reach; }
-  pinchTo(ratio){ this.setReach(this._r0 + Math.log2(ratio) * 0.25); }   // the fingers' spread over where they began
+  pinchStart(){ this.release(); this._r0 = this.reach; this._h0 = this.H; }
+  pinchTo(ratio){ if (this.thumb) this.setH(this._h0 * ratio); else this.setReach(this._r0 + Math.log2(ratio) * 0.25); }   // the fingers' spread over where they began
   wheel(e){                                                    // as city-dial: pushed away closes the radius; a trackpad pinch opens with the fingers
     this.touched = true; const f = e.deltaMode === 1 ? 16 : 1;
     if (e.deltaX) this.setZeta(this.zeta + e.deltaX * f / 2000);
-    if (e.deltaY) this.setReach(this.reach + (e.ctrlKey ? -e.deltaY / 200 : e.deltaY / 400) * f);
+    if (e.deltaY) { const r = (e.ctrlKey ? -e.deltaY / 200 : e.deltaY / 400) * f; if (this.thumb) this.setH(this.H * 2 ** (r * 4)); else this.setReach(this.reach + r); }
   }
   key(e){                                                      // ← → push the gold at 45° · ↑ ↓ the radius · h home; true if taken
     const k = e.key;
@@ -129,13 +148,13 @@ class Dial {
       return true;
     }
     if (k === 'ArrowUp' || k === 'ArrowDown') { this.touched = true; this.widen(k === 'ArrowUp' ? 0.02 : -0.02); return true; }
-    if (k === 'h') { this.touched = true; this.recentre(); return true; }
+    if (k === 'h') { this.touched = true; if (this.thumb) this.setZeta(0); else this.recentre(); return true; }
     return false;
   }
   keyUp(e){ if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { this.release(); return true; } return false; }
 
   // ── DRAWING ───────────────────────────────────────────────────────────────────────────────────
-  layout(box){ this.box = box; }                               // { cx, cy, R }: the hub and the arc's radius, in pixels
+  layout(box){ this.box = box; }                               // { cx, cy, R, tx? }: the hub, the arc's radius, the text's middle
   band(mag){ const s = this.span(); return mag <= this.unit(s) ? this.c.teal : mag <= s / 2 ? this.c.blue : this.c.gold; }
   _font(ctx){ return this.mono || (typeof document !== 'undefined' && getComputedStyle(document.body).getPropertyValue('--mono').trim()) || 'monospace'; }
   _needle(ctx, cx, cy, a, r, colour, width){
@@ -144,31 +163,34 @@ class Dial {
   }
   _line(ctx, parts, cx, y){
     const w = parts.reduce((t, [s]) => t + ctx.measureText(s).width, 0); let x = cx - w / 2;
-    for (const [s, mag] of parts) { ctx.fillStyle = this.band(mag); ctx.fillText(s, x, y); x += ctx.measureText(s).width; }
+    for (const [s, mag, col] of parts) { ctx.fillStyle = col || this.band(mag); ctx.fillText(s, x, y); x += ctx.measureText(s).width; }
   }
   draw(ctx, now = performance.now()){
-    const { cx, cy, R } = this.box, C = this.c, K = this.K, mono = this._font(ctx), g = this.liveGold(now);
+    const { cx, cy, R } = this.box, tx = this.box.tx != null ? this.box.tx : cx, C = this.c, K = this.K, mono = this._font(ctx), g = this.liveGold(now);
     ctx.save();
     ctx.lineCap = 'round';
     ctx.strokeStyle = 'rgba(201,199,190,.18)'; ctx.lineWidth = 1;                 // the horizon: 90°, never reached
-    ctx.beginPath(); ctx.moveTo(cx - R - 14, cy); ctx.lineTo(cx + R + 14, cy); ctx.stroke();
-    ctx.strokeStyle = 'rgba(232,200,106,.22)'; ctx.beginPath(); ctx.arc(cx, cy, R, -PI, 0); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx - (this.thumb ? 14 : R + 14), cy); ctx.lineTo(cx + R + 14, cy); ctx.stroke();
+    ctx.strokeStyle = 'rgba(232,200,106,.22)'; ctx.beginPath(); ctx.arc(cx, cy, R, this.thumb ? -PI / 2 : -PI, 0); ctx.stroke();
     // THE HEAT: the turn per record, cos²θ, shaded just outside the arc; full at home, half at the corner, none at the horizon
     ctx.lineCap = 'butt'; ctx.lineWidth = 9;
-    for (let i = 0; i < 120; i++) {
-      const a0 = -PI / 2 + PI * i / 120, a1 = a0 + PI / 120, h = Math.cos((a0 + a1) / 2) ** 2;
+    const lo = this.thumb ? 0 : -PI / 2, n = this.thumb ? 60 : 120;      // the thumb's mode: home to the horizon only
+    for (let i = 0; i < n; i++) {
+      const a0 = lo + (PI / 2 - lo) * i / n, a1 = a0 + (PI / 2 - lo) / n, h = Math.cos((a0 + a1) / 2) ** 2;
       ctx.strokeStyle = 'rgba(232,200,106,' + (0.04 + 0.62 * h).toFixed(3) + ')';
       ctx.beginPath(); ctx.arc(cx, cy, R + 9, a0 - PI / 2, a1 - PI / 2 + 0.002); ctx.stroke();
     }
     ctx.lineCap = 'round';
     ctx.font = '11px ' + mono; ctx.fillStyle = C.dim; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-    ctx.fillText('heat 1', cx, cy - R - 20);
-    for (const sg of [-1, 1]) ctx.fillText('½', cx + sg * (R + 24) * Math.SQRT1_2, cy - (R + 24) * Math.SQRT1_2);
-    const rr = Math.max(8, R * this.reach);                                       // the rung: where the radius is
+    if (this.thumb) { ctx.textAlign = 'left'; ctx.fillText('heat 1', cx + 6, cy - R - 20); ctx.textAlign = 'center'; }
+    else ctx.fillText('heat 1', cx, cy - R - 20);
+    for (const sg of this.thumb ? [1] : [-1, 1]) ctx.fillText('½', cx + sg * (R + 24) * Math.SQRT1_2, cy - (R + 24) * Math.SQRT1_2);
+    if (this.thumb) ctx.fillText('horizon', cx + R + 10, cy - 8);
+    const rr = this.thumb ? R * 0.45 : Math.max(8, R * this.reach);                // the rung: where the radius is
     ctx.strokeStyle = C.gold; ctx.globalAlpha = 0.55; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(cx, cy, rr, -PI, 0); ctx.stroke(); ctx.globalAlpha = 1;
+    ctx.beginPath(); ctx.arc(cx, cy, rr, this.thumb ? -PI / 2 : -PI, 0); ctx.stroke(); ctx.globalAlpha = 1;
     // the edges both ways from the corner: tan θ = 2, 4 … 2^K (gold) and ½, ¼ … 2^−K (teal); the flip carries each onto its mirror
-    for (let k = -K; k <= K; k++) for (const sg of [-1, 1]) {
+    for (let k = -K; k <= K; k++) for (const sg of this.thumb ? [1] : [-1, 1]) {
       const a = sg * Math.atan(2 ** k), sx = Math.sin(a), sy = Math.cos(a);
       ctx.strokeStyle = k === 0 ? C.gold : k > 0 ? 'rgba(232,200,106,.6)' : 'rgba(29,158,117,.75)'; ctx.lineWidth = k === 0 ? 2 : 1.2;
       ctx.beginPath(); ctx.moveTo(cx + (rr - 7) * sx, cy - (rr - 7) * sy); ctx.lineTo(cx + (rr + 7) * sx, cy - (rr + 7) * sy); ctx.stroke();
@@ -187,19 +209,20 @@ class Dial {
     let y = cy + 30;
     lines.forEach((parts, i) => {
       const px = this.fonts[Math.min(i, this.fonts.length - 1)];
-      ctx.font = px + 'px ' + mono; this._line(ctx, parts, cx, y); y += px + 3;
+      ctx.font = px + 'px ' + mono; this._line(ctx, parts, tx, y); y += px + 3;
     });
     ctx.font = '12px ' + mono; ctx.fillStyle = C.dim; ctx.textAlign = 'center';
-    ctx.fillText('g ' + this.sweep().toFixed(3) + ' · window ' + this.sizeText(s) + ' · unit ' + this.sizeText(this.unit(s)) + ' · heat ' + this.heat().toFixed(3), cx, y + 3);
+    ctx.fillText(this.info ? this.info(this) : 'g ' + this.sweep().toFixed(3) + ' · window ' + this.sizeText(s) + ' · unit ' + this.sizeText(this.unit(s)) + ' · heat ' + this.heat().toFixed(3), tx, y + 3);
     if (this.hint && !this.touched) {                                             // the hint, until the first touch
+      const hy = this.thumb ? y + 28 : cy - R * 0.74;                             // the thumb's mode: under the readout, clear of the ring
       ctx.font = '13px ' + mono; ctx.fillStyle = C.ink;
-      ctx.fillText(this.hint[0], cx, cy - R * 0.74);
-      if (this.hint[1]) { ctx.fillStyle = C.dim; ctx.fillText(this.hint[1], cx, cy - R * 0.74 + 18); }
+      ctx.fillText(this.hint[0], tx, hy);
+      if (this.hint[1]) { ctx.fillStyle = C.dim; ctx.fillText(this.hint[1], tx, hy + 18); }
     }
     ctx.restore();
   }
   // the room the drawing takes under the hub, for a page laying the dial out
-  belowHub(){ return 30 + this.fonts.reduce((t, px) => t + px + 3, 0) + 20; }
+  belowHub(){ return 30 + this.fonts.reduce((t, px) => t + px + 3, 0) + 20 + (this.thumb && this.hint ? 40 : 0); }
 
   // ── A PAGE THAT IS ONLY THE DIAL ─────────────────────────────────────────────────────────────
   // The dial fills the canvas, takes its hands and keys, and draws itself each frame something moved. Returns the
@@ -212,6 +235,11 @@ class Dial {
     const spread = () => { const [a, b] = [...touching.values()]; return Math.max(8, Math.hypot(a.x - b.x, a.y - b.y)); };
     const layout = () => {
       const top = o.top || 24, cy = H - d.belowHub();
+      if (d.thumb) {                                             // a quarter turn: the hub on the left, the quarter filling the room
+        const pad = 16, lab = Math.min(90, W * 0.18), R = Math.max(40, Math.min(W - 2 * pad - lab, cy - top));
+        d.layout({ cx: pad + Math.max(0, (W - 2 * pad - lab - R) / 2), cy: cy - Math.max(0, cy - top - R) / 2, R, tx: W / 2 });
+        return;
+      }
       const R = Math.max(40, Math.min(W * 0.44, cy - top));
       d.layout({ cx: W / 2, cy: cy - Math.max(0, cy - top - R) / 2, R });
     };

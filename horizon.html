@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The horizon</title>
+<!-- THE HORIZON (7 Nov 2026; Tom: "i'm thinking we could use the dial to browse the cauchy horizon.     any ideas?", then
+     "proceed"). dial.js in the thumb's mode, over a road of posts without end: a post every unit from home, each its own
+     colour, made from its number and never stored. No count: the dial holds a thumb, H, and reads each post by its
+     direction, tan θ = d/H. Within one thumb the posts are read in proportion ("0.42 of the thumb"); past it, as ratios
+     ("one in 3.2"), and a steady push walks out by a steady ratio, ln 2 of ζ for each "one in two". The horizon, 90°, is
+     never reached: the heat band shows why, the turn per post cooling to nothing there.
+
+     THE READER'S FINENESS, NOT THE WRITER'S COUNT. The quarter turn is cut into K = 256 cells (the reader's fineness, a
+     count only a writer or a machine makes of it). Each cell is painted by the first post its directions meet; that is all
+     the reader has. "The writer's count" (w) shows what a writer holds instead: how many posts each cell covers, one or
+     none near home, more past the corner, and without end in the last cell. The road could stop at a million posts or
+     never: the reader's cells and paint are the same either way, which is "K, not N" (wander's essay 16).
+
+     THE THUMB IS THE ZOOM. The wheel, a pinch or ↑ ↓ change H. The needle stays where it points; the posts slide along
+     the fixed cells, half of the cells always within one thumb (R693, on a dial).
+
+     Keys: ← → push the gold · ↑ ↓ the thumb · h home · w the writer's count · ? help.
+     The words follow wander's rules: the thumb with H; ratios for the reader's far field, thumbs counted for the
+     writer's; heat and paint for the reader, cells and counts only where a writer counts. -->
+<style>
+  :root{--bg:#0b0d12;--panel:#12151c;--gold:#e8c86a;--ink:#c9c7be;--dim:#7f8590;--mono:"SF Mono",Menlo,Consolas,monospace}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);overflow:hidden;overscroll-behavior:none;
+            touch-action:none;user-select:none;-webkit-user-select:none}
+  canvas{display:block;width:100%;height:100%;cursor:crosshair}
+  #bar{position:fixed;z-index:2;top:14px;right:14px;left:14px;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}
+  #bar button{font:12px/1 var(--mono);color:var(--dim);background:var(--panel);cursor:pointer;min-height:32px;
+        border:0.5px solid rgba(232,200,106,.28);border-radius:6px;padding:7px 10px}
+  #bar button:hover{color:var(--ink);border-color:var(--gold)}
+  #bar button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  #bar button[aria-pressed="true"]{color:var(--ink);border-color:rgba(232,200,106,.6)}
+  #help{position:fixed;z-index:3;left:50%;top:50%;transform:translate(-50%,-50%);max-width:min(520px,calc(100% - 32px));
+        max-height:calc(100% - 32px);overflow:auto;box-sizing:border-box;padding:16px 18px;background:rgba(18,21,28,.96);
+        border:0.5px solid rgba(232,200,106,.35);border-radius:10px;font:13px/1.55 var(--mono);color:var(--ink);cursor:pointer}
+  #help[hidden]{display:none}
+  #help b{color:var(--gold);font-weight:600} #help p{margin:0 0 8px}
+  @media (pointer: coarse){ #bar button{min-height:40px;font-size:13px} }
+</style>
+</head>
+<body>
+<canvas id="cv" aria-label="A dial over a road of posts without end, read from home toward its horizon"></canvas>
+<div id="bar" role="toolbar" aria-label="The horizon's controls">
+  <button type="button" data-act="home" title="back to home (h)">home</button>
+  <button type="button" data-act="narrow" title="a smaller thumb (↓)" aria-label="smaller thumb">thumb −</button>
+  <button type="button" data-act="widen" title="a larger thumb (↑)" aria-label="larger thumb">thumb +</button>
+  <button type="button" data-act="writer" aria-pressed="false" title="what a writer holds: how many posts each cell covers (w)">the writer's count</button>
+  <button type="button" data-act="help" title="how it works (?)" aria-label="help">?</button>
+</div>
+<div id="help" hidden role="dialog" aria-label="How the horizon works">
+  <p><b>Walk out.</b> Press and drag to the right: the gold needle is a speed, and the blue walks out along the road. Drag left to come back. Held at 45° it walks one "one in two" every 1.7 s; nearer the horizon, faster. It never gets there.</p>
+  <p><b>The thumb.</b> Wheel, pinch, ↑ ↓ or thumb − + change H. The needle stays; the posts slide under it, and half the cells always lie within one thumb.</p>
+  <p><b>What you see.</b> The outer ring is the quarter turn in 256 cells, each painted by the first post it meets. The heat band says how much turn each post gets: all of it at home, half at the corner, none at the horizon.</p>
+  <p><b>The writer's count.</b> How many posts each cell covers: at most one near home, more past the corner, and without end in the last. The reader's cells are the same whatever the count.</p>
+  <p>Tap anywhere to close.</p>
+</div>
+<script src="dial.js"></script>
+<script>
+const PI = Math.PI, K = 256;                                    // the reader's fineness: cells in the quarter turn
+const hue = n => (n * 0.6180339887) % 1 * 360;                  // a post's colour, from its number alone
+const postCol = (n, a = 1) => 'hsla(' + hue(n).toFixed(1) + ',62%,62%,' + a + ')';
+let writer = false;
+
+// a cell's posts: those n ≥ 1 with H·tan(a0) ≤ n < H·tan(a1); the last cell runs to the horizon
+function cellOf(k, H){
+  const t0 = k === 0 ? 0 : H * Math.tan(k * PI / 2 / K), first = Math.max(1, Math.ceil(t0 - 1e-9));
+  if (k === K - 1) return { first, n: Infinity };
+  const t1 = H * Math.tan((k + 1) * PI / 2 / K);
+  return { first, n: Math.max(0, Math.ceil(t1 - 1e-9) - first) };
+}
+const cellAt = th => Math.min(K - 1, Math.floor(th / (PI / 2) * K));
+const big = n => n === Infinity ? 'without end' : n >= 1e15 ? n.toExponential(2) : Math.round(n).toLocaleString('en');
+function ratio(x){ return x >= 1e6 ? x.toExponential(2) : x >= 100 ? Math.round(x).toLocaleString('en') : x.toFixed(x >= 10 ? 1 : 2); }
+
+// the record's lines: the reader's reading first, then the cell, then (asked for) the writer's
+function label(d, dial){
+  const s = d / dial.H, th = dial.theta(), k = cellAt(th), c = cellOf(k, dial.H);
+  const read = d === 0 ? [['home', 0, '#f1efe6']]
+    : s <= 1 ? [[ratio(s) + ' of the thumb', 0, '#1D9E75'], [' · in proportion', 0, '#7f8590']]
+    : [['one in ' + ratio(s), 0, '#e8c86a'], [' · a ratio', 0, '#7f8590']];
+  const paint = 'cell ' + (k + 1) + ' of ' + K + (c.n ? ', painted by its first post' : ', no post');
+  const lines = [read, [[paint, 0, c.n ? postCol(c.first) : '#7f8590']]];
+  lines.push(writer ? [['writer: ' + big(d) + ' units out · the cell covers ' + big(c.n) + ' post' + (c.n === 1 ? '' : 's'), 0, '#c9c7be']]
+                    : [['w: the writer\'s count', 0, '#7f8590']]);
+  return lines;
+}
+const info = dial => 'heat ' + dial.heat().toFixed(3) + ' · g ' + dial.sweep().toFixed(3) + ' · thumb H = ' + ratio(dial.H) + ' unit' + (dial.H === 1 ? '' : 's');
+
+// the ring of cells, the posts one by one where they stand apart, and the ratio marks
+function ring(ctx, dial){
+  const { cx, cy, R } = dial.box, r0 = R * 0.66, r1 = R * 0.78, H = dial.H, mono = getComputedStyle(document.body).getPropertyValue('--mono');
+  ctx.save(); ctx.lineCap = 'butt';
+  for (let k = 0; k < K; k++) {
+    const c = cellOf(k, H), a = (k + 0.5) * PI / 2 / K, sx = Math.sin(a), sy = Math.cos(a);
+    let len = r1 - r0;
+    if (writer) len = c.n === 0 ? 0 : c.n === Infinity ? R * 0.2 : Math.min(R * 0.2, (r1 - r0) * 0.25 * (1 + Math.log10(c.n)));
+    if (!c.n) { ctx.strokeStyle = 'rgba(127,133,144,.25)'; ctx.lineWidth = 1; len = Math.max(3, writer ? 3 : 4); }
+    else { ctx.strokeStyle = writer ? 'rgba(201,199,190,.75)' : postCol(c.first, 0.95); ctx.lineWidth = Math.max(1, R * PI / 2 / K * 0.8); }
+    ctx.beginPath(); ctx.moveTo(cx + r0 * sx, cy - r0 * sy); ctx.lineTo(cx + (r0 + len) * sx, cy - (r0 + len) * sy); ctx.stroke();
+  }
+  // posts one by one near home, while they stand apart in turn
+  for (let n = 1; n < 400; n++) {
+    const a = Math.atan(n / H), gap = Math.atan((n + 1) / H) - a;
+    if (gap < PI / 2 / K) break;
+    ctx.fillStyle = postCol(n); ctx.beginPath(); ctx.arc(cx + (r0 - 9) * Math.sin(a), cy - (r0 - 9) * Math.cos(a), 3, 0, 2 * PI); ctx.fill();
+  }
+  // the reader's marks: the corner one thumb out, then one in 2, 4, 8, and within it a half, a quarter
+  ctx.font = '11px ' + mono; ctx.textBaseline = 'middle';
+  for (const [x, t] of [[1, 'one thumb'], [2, 'one in 2'], [4, 'one in 4'], [8, 'one in 8'], [0.5, 'half a thumb']]) {
+    const a = Math.atan(x), rl = r1 + 18;
+    ctx.fillStyle = x === 1 ? '#e8c86a' : x > 1 ? 'rgba(232,200,106,.75)' : 'rgba(29,158,117,.9)';
+    ctx.textAlign = 'left';
+    ctx.save(); ctx.translate(cx + rl * Math.sin(a), cy - rl * Math.cos(a)); ctx.rotate(a - PI / 2); ctx.fillText(t, 0, 0); ctx.restore();
+  }
+  ctx.restore();
+}
+
+const cv = document.getElementById('cv');
+const narrow = innerWidth < 520;
+const dial = Dial.mount(cv, { H: 8, index: 3, label, info, fonts: narrow ? [16, 12, 11] : [19, 13, 12], top: narrow ? 104 : 70,
+  hint: ['press and drag right to walk out', 'wheel or pinch: the thumb · ? for help'], afterDraw: ring });
+window.__horizon = { dial, cellOf, cellAt, K, label: () => label(dial.index, dial), writer: () => writer };
+
+// ── THE BAR AND THE KEYS ────────────────────────────────────────────────────────────────────────
+const bar = document.getElementById('bar'), help = document.getElementById('help');
+function act(a){
+  dial.touched = true;
+  if (a === 'home') dial.setZeta(0);
+  else if (a === 'narrow' || a === 'widen') dial.setH(dial.H * (a === 'widen' ? 2 : 0.5));
+  else if (a === 'writer') { writer = !writer; bar.querySelector('[data-act="writer"]').setAttribute('aria-pressed', String(writer)); }
+  else if (a === 'help') help.hidden = !help.hidden;
+  dial.redraw();
+}
+bar.addEventListener('click', e => { const b = e.target.closest('button'); if (b) act(b.dataset.act); });
+help.addEventListener('click', () => { help.hidden = true; });
+addEventListener('keydown', e => {
+  if (!help.hidden && e.key !== '?') { help.hidden = true; if (e.key === 'Escape') return; }
+  if (e.key === 'w') act('writer');
+  if (e.key === '?') act('help');
+});
+</script>
+</body>
+</html>
