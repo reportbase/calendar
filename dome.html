@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The dome</title>
+<!-- THE DOME (7 Nov 2026; Tom: "what about a dome dial?", then "yes"). dome.js over a floor without end, seen from one
+     thumb above it, looking down: posts on every whole point of the floor, each its own colour from its two numbers, and a
+     road every 64 units each way, made from position and never stored. Home is straight down, the middle; the rim is the
+     horizon all round. Press and lean to walk the blue out in any heading: within one thumb of home the floor is read in
+     proportion, past it as ratios (one in 2, 4, 8), and a steady lean walks out by a steady ratio, never reaching the rim.
+
+     The dome is Lambert's equal-area disc about home, cut into 48 rings of equal share × 96 turns: the reader's cells, each
+     painted by what its middle direction meets. Near home a cell is a small patch of floor and the posts show one by one;
+     past a few thumbs a cell's one ray stands for more floor than it can see, and the paint is a sample: the far field
+     shimmers as the thumb changes. The dashed rings are the heat, directions per unit of floor, cos³α: half at 37.5°.
+     "The writer's count" (w) says how much floor the cell under the blue covers, without end in the last ring.
+
+     Keys: ← → ↑ ↓ lean · + − the thumb · h home · w the writer's count · ? help. Words after wander's rules: the thumb with
+     H; ratios for the reader's far field; heat and paint for the reader, cells and counts only where a writer counts. -->
+<style>
+  :root{--bg:#0b0d12;--panel:#12151c;--gold:#e8c86a;--ink:#c9c7be;--dim:#7f8590;--mono:"SF Mono",Menlo,Consolas,monospace}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);overflow:hidden;overscroll-behavior:none;
+            touch-action:none;user-select:none;-webkit-user-select:none}
+  canvas{display:block;width:100%;height:100%;cursor:crosshair}
+  #bar{position:fixed;z-index:2;top:14px;right:14px;left:14px;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}
+  #bar button{font:12px/1 var(--mono);color:var(--dim);background:var(--panel);cursor:pointer;min-height:32px;
+        border:0.5px solid rgba(232,200,106,.28);border-radius:6px;padding:7px 10px}
+  #bar button:hover{color:var(--ink);border-color:var(--gold)}
+  #bar button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  #bar button[aria-pressed="true"]{color:var(--ink);border-color:rgba(232,200,106,.6)}
+  #help{position:fixed;z-index:3;left:50%;top:50%;transform:translate(-50%,-50%);max-width:min(520px,calc(100% - 32px));
+        max-height:calc(100% - 32px);overflow:auto;box-sizing:border-box;padding:16px 18px;background:rgba(18,21,28,.96);
+        border:0.5px solid rgba(232,200,106,.35);border-radius:10px;font:13px/1.55 var(--mono);color:var(--ink);cursor:pointer}
+  #help[hidden]{display:none}
+  #help b{color:var(--gold);font-weight:600} #help p{margin:0 0 8px}
+  @media (pointer: coarse){ #bar button{min-height:40px;font-size:13px} }
+</style>
+</head>
+<body>
+<canvas id="cv" aria-label="A dome dial over a floor without end, seen from one thumb above it"></canvas>
+<div id="bar" role="toolbar" aria-label="The dome's controls">
+  <button type="button" data-act="home" title="back to home, straight down (h)">home</button>
+  <button type="button" data-act="narrow" title="a smaller thumb (−)" aria-label="smaller thumb">thumb −</button>
+  <button type="button" data-act="widen" title="a larger thumb (+)" aria-label="larger thumb">thumb +</button>
+  <button type="button" data-act="writer" aria-pressed="false" title="what a writer holds: where on the floor, and how much floor the cell covers (w)">the writer's count</button>
+  <button type="button" data-act="help" title="how it works (?)" aria-label="help">?</button>
+</div>
+<div id="help" hidden role="dialog" aria-label="How the dome works">
+  <p><b>Where you stand.</b> One thumb above a floor without end, looking down. The middle of the dome is straight down; the rim is the horizon all round.</p>
+  <p><b>Walk out.</b> Press anywhere and lean the way you want to go: the gold arrow is a speed, the farther the lean the faster. Let go and the blue stays. ← → ↑ ↓ lean at 45°. The blue never reaches the rim.</p>
+  <p><b>The thumb.</b> Wheel, pinch, + − change it. The blue keeps its direction and the floor slides under it.</p>
+  <p><b>What you see.</b> Within one thumb (the solid gold ring) the floor is in proportion and the posts show one by one. Past it each cell's one ray stands for more floor than it can see: the paint is a sample. The dashed rings are the heat, cos³α: half at 37.5°, a quarter at 50.5°.</p>
+  <p>Tap anywhere to close.</p>
+</div>
+<script src="dome.js"></script>
+<script>
+const PI = Math.PI, POST_R = 0.16, TILE = 8, ROAD = 64, ROAD_W = 1.2;
+let writer = false;
+const hueOf = (i, j) => ((i * 0.6180339887 + j * 0.7548776662) % 1 + 1) % 1 * 360;
+// what a floor point shows: a small post at every whole point, a road every 64 units each way, and under them tiles
+// 8 units square in two shades, each tile tinted by its own two numbers (the writer's grid, which the reader sees squashed
+// toward the rim, and past a few thumbs only as a sample)
+const ROADC = '#5a5f6b';
+function paint(x, y){
+  const i = Math.round(x), j = Math.round(y);
+  if ((x - i) ** 2 + (y - j) ** 2 <= POST_R * POST_R) return 'hsl(' + hueOf(i, j).toFixed(1) + ',70%,66%)';
+  const rx = ((x % ROAD) + ROAD) % ROAD, ry = ((y % ROAD) + ROAD) % ROAD;
+  if (Math.min(rx, ROAD - rx) < ROAD_W / 2 || Math.min(ry, ROAD - ry) < ROAD_W / 2) return ROADC;
+  const ti = Math.floor(x / TILE), tj = Math.floor(y / TILE);
+  return 'hsl(' + hueOf(ti, tj).toFixed(1) + ',22%,' + ((ti + tj) & 1 ? 15 : 22) + '%)';
+}
+const what = c => c === ROADC ? 'a road' : /,70%,/.test(c) ? 'a post' : 'a tile of floor';
+const num = x => Math.abs(x) >= 1e6 ? x.toExponential(2) : Math.abs(x) >= 100 ? Math.round(x).toLocaleString('en') : x.toFixed(Math.abs(x) >= 10 ? 1 : 2);
+const big = n => n === Infinity ? 'without end' : n >= 1e6 ? n.toExponential(2) : Math.round(n).toLocaleString('en');
+function label(d){
+  const f = d.floor(), s = f.rho / d.H, head = ((f.heading * 180 / PI) % 360 + 360) % 360;
+  const read = f.rho === 0 ? [['home, straight down', '#f1efe6']]
+    : s <= 1 ? [[num(s) + ' of the thumb', '#1D9E75'], [' · in proportion · heading ' + head.toFixed(0) + '°', '#7f8590']]
+    : [['one in ' + num(s), '#e8c86a'], [' · a ratio · heading ' + head.toFixed(0) + '°', '#7f8590']];
+  const c = d.cellAt(f.alpha, f.heading), seen = paint(f.x, f.y);
+  const cell = [['cell ' + (c.ring + 1) + ' of ' + d.rings + ' rings · ', '#7f8590'], [what(seen) + ' under the blue', /,70%,/.test(seen) || seen === ROADC ? seen : '#c9c7be']];
+  const w = writer ? [['writer: (' + num(f.x) + ', ' + num(f.y) + ') · the cell covers ' + big(d.cellFloorArea(c.ring)) + ' units² of floor', '#c9c7be']]
+                   : [["w: the writer's count", '#7f8590']];
+  const info = [['heat ' + d.heat(f.alpha).toFixed(3) + ' · thumb H = ' + num(d.H) + ' units', '#7f8590']];
+  return [read, cell, w, info];
+}
+// posts one by one near home, where they stand apart on the disc
+function posts(ctx, d){
+  const { R } = d.box, M = Math.min(400, Math.ceil(d.H * 4));
+  for (let i = -M; i <= M; i++) for (let j = -M; j <= M; j++) {
+    const rho = Math.hypot(i, j), a = Math.atan(rho / d.H);
+    const px = d.box.R * Math.SQRT2 * Math.cos(a / 2) / 2 * d.H / (d.H * d.H + rho * rho);   // a unit of floor in pixels there
+    if (px < 5) continue;
+    const [x, y] = d.toDisc(a, Math.atan2(j, i));
+    ctx.fillStyle = 'hsl(' + hueOf(i, j).toFixed(1) + ',60%,62%)';
+    ctx.beginPath(); ctx.arc(x, y, Math.min(4, Math.max(1.5, px * POST_R)), 0, 2 * PI); ctx.fill();
+  }
+}
+const narrow = innerWidth < 520;
+const dome = Dome.mount(document.getElementById('cv'), { H: 8, at: [3, 2], paint, label, fonts: narrow ? [15, 11, 11, 11] : [18, 12, 12, 12],
+  top: narrow ? 92 : 46, hint: ['press and lean to walk out', 'wheel or pinch: the thumb · ? for help'], decorate: posts });
+window.__dome = { dome, paint, label: () => label(dome), writer: () => writer };
+
+const bar = document.getElementById('bar'), help = document.getElementById('help');
+function act(a){
+  dome.touched = true;
+  if (a === 'home') dome.home();
+  else if (a === 'narrow' || a === 'widen') dome.setH(dome.H * (a === 'widen' ? 2 : 0.5));
+  else if (a === 'writer') { writer = !writer; bar.querySelector('[data-act="writer"]').setAttribute('aria-pressed', String(writer)); }
+  else if (a === 'help') help.hidden = !help.hidden;
+  dome.redraw();
+}
+bar.addEventListener('click', e => { const b = e.target.closest('button'); if (b) act(b.dataset.act); });
+help.addEventListener('click', () => { help.hidden = true; });
+addEventListener('keydown', e => {
+  if (!help.hidden && e.key !== '?') { help.hidden = true; if (e.key === 'Escape') return; }
+  if (e.key === 'w') act('writer');
+  if (e.key === '?') act('help');
+});
+</script>
+</body>
+</html>
