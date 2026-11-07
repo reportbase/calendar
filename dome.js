@@ -23,6 +23,8 @@
    a colour for a floor point, or null for bare floor. Near home a cell is a small patch of floor; far out one cell's
    middle ray stands for a floor without end, so the far cells are a sample, not a picture.
 
+   A page may draw the floor itself (`underlay(ctx, dome)`, in place of the cells), as dome-map.html does with map tiles.
+
    USE.  const dome = Dome.mount(canvas, { H: 8, paint: (x, y) => …, label: dome => [[[text, colour], …], …] });
          dome.floor() → { x, y, rho, heading, alpha }; dome.setH(h); dome.goTo(x, y); dome.home(); dome.redraw()      */
 (function (root) {
@@ -41,6 +43,7 @@ class Dome {
     this.paint = o.paint || (() => null);
     this.label = o.label || null;
     this.decorate = o.decorate || null;
+    this.underlay = o.underlay || null;              // (ctx, dome): draws the floor in place of the cells
     this.fonts = o.fonts || [18, 12, 12];
     this.c = Object.assign({ bg: '#0b0d12', floor: '#161a22', gold: '#e8c86a', teal: '#1D9E75', blue: '#6aa8e8', ink: '#c9c7be', dim: '#7f8590' }, o.colours || {});
     this.hint = o.hint === false ? null : o.hint || ['press and lean to walk out', 'wheel or pinch: the thumb'];
@@ -131,8 +134,9 @@ class Dome {
   draw(ctx, now = performance.now()){
     const { cx, cy, R } = this.box, C = this.c, mono = this._mono(), tx = this.box.tx != null ? this.box.tx : cx;
     ctx.save();
-    // the cells, each painted by what its middle direction meets on the floor
-    for (let k = 0; k < this.rings; k++) {
+    // the cells, each painted by what its middle direction meets on the floor; or the page draws the floor itself
+    if (this.underlay) this.underlay(ctx, this);
+    else for (let k = 0; k < this.rings; k++) {
       const r0 = this.ringR(k), r1 = this.ringR(k + 1), am = this.alphaOfR((r0 + r1) / 2);
       for (let s = 0; s < this.sectors; s++) {
         const p0 = 2 * PI * s / this.sectors, p1 = 2 * PI * (s + 1) / this.sectors, [fx, fy] = this.floorAt(am, (p0 + p1) / 2);
