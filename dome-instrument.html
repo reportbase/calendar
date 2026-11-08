@@ -25,6 +25,10 @@
      never arrives, the dial's horizon heard; and the disc is laid by "room" (every note the same area), so the inner octaves
      are wide enough to play; "width" keeps every octave the same width.
 
+     LOOP, CHORDS, JUST (8 Nov 2026; Tom: "2"). "rec" records what is played and, pressed again, loops it under what comes
+     next; "chord" makes one finger a triad, a seventh or fifths built on the scale (turning round the dome transposes it);
+     "equal"/"just" tunes the notes in equal steps or at whole-number ratios to the tonic.
+
      Words after wander's rules: the thumb names H (here the tonic); the far field as ratios. A page of its own, not on
      dome.js: an instrument wants a voice per finger, which the dome's lean and pan do not give. -->
 <style>
@@ -56,12 +60,17 @@
   <button type="button" data-act="wave" title="the voice's colour">voice</button>
   <button type="button" data-act="shepard" aria-pressed="false" title="every octave at once: round the spiral rises for ever">endless</button>
   <button type="button" data-act="lay" title="every note the same room, or every octave the same width">room</button>
+  <button type="button" data-act="just" title="equal temperament, or just intonation (whole-number ratios to the tonic)">equal</button>
+  <button type="button" data-act="chord" title="one finger, one note or a whole chord on the scale (c)">single</button>
+  <button type="button" data-act="rec" title="record, then loop what was played (r)">rec</button>
+  <button type="button" data-act="clear" title="stop and clear the loop">clear</button>
   <button type="button" data-act="help" title="how to play (?)" aria-label="help">?</button>
 </div>
 <div id="help" hidden role="dialog" aria-label="How to play the dome">
   <p><b>Round is the note, out is the octave.</b> The twelve notes go clockwise from the top. The gold ring, one thumb out, is the tonic's octave; each ring out is an octave higher, each ring in an octave lower, the middle the lowest.</p>
   <p><b>Play.</b> Press and hold anywhere: it sounds while held and follows your finger. Several fingers play a chord. Draw a finger round and outward and the pitch climbs without a step.</p>
   <p><b>Endless</b> sounds every octave at once, loudest in the middle, so a note is heard by its name alone: go round and round the spiral and it rises for ever, never arriving, the dial's horizon heard. <b>Room</b> gives every note the same area (the low notes room to play); <b>width</b> gives every octave the same width.</p>
+  <p><b>Chord</b> (c): one finger plays a triad, a seventh or fifths built on the scale; turn it round the dome and it moves key. <b>Equal / just</b>: equal steps, or whole-number ratios to the tonic (3/2, 5/4 …). <b>Rec</b> (r) records what you play; press it again and it loops under you; <b>clear</b> stops it.</p>
   <p><b>Snap</b> holds each voice to the lit notes of the scale; off, it glides. <b>Keys</b> a s d f g h j k l play the scale up from the tonic, z x an octave down or up, space stops.</p>
   <p>Tap anywhere to close.</p>
 </div>
@@ -72,6 +81,15 @@ const SCALES = [['major', [0, 2, 4, 5, 7, 9, 11]], ['minor', [0, 2, 3, 5, 7, 8, 
 const WAVES = ['triangle', 'sine', 'sawtooth', 'square'];
 let tonic = 57, scaleI = 0, snap = true, waveI = 0, keyOct = 0, shepard = false, lay = 'room';  // tonic as a MIDI number: 57 is A3, 220 Hz
 const hz = m => 440 * 2 ** ((m - 69) / 12);
+// JUST (8 Nov 2026; Tom: "2", developing the instrument): the twelve notes at whole-number ratios to the tonic (five-limit:
+// 16/15, 9/8, 6/5, 5/4, 4/3, 45/32, 3/2, 8/5, 5/3, 9/5, 15/8), a glide between two notes even in log-frequency between them.
+const JI = [1, 16 / 15, 9 / 8, 6 / 5, 5 / 4, 4 / 3, 45 / 32, 3 / 2, 8 / 5, 5 / 3, 9 / 5, 15 / 8, 2];
+let just = false;
+function freqOf(p){                                              // semitones above the tonic → Hz, by the tuning in use
+  if (!just) return hz(tonic + p);
+  const n = Math.floor(p / 12), c = p - 12 * n, i = Math.min(11, Math.floor(c)), t = c - i;
+  return hz(tonic) * 2 ** n * JI[i] * (JI[i + 1] / JI[i]) ** t;
+}
 const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
 let W = 0, H = 0, D = 1, cx = 0, cy = 0, R = 1;
 
@@ -114,14 +132,14 @@ function audio(){
 const SH_N = 8, SH_C = 330, SH_W = 1.25, SH_BASE = 27.5;          // partials, the bell's middle (Hz), its width (octaves)
 const shepardWeight = f => Math.exp(-((Math.log2(f / SH_C)) ** 2) / (2 * SH_W * SH_W));
 function partialsOf(p){                                         // [frequency, weight] for each partial
-  if (!shepard) return [[hz(tonic + p), 1]];
-  const f = hz(tonic + p), fb = f / 2 ** Math.floor(Math.log2(f / SH_BASE)), out = [];
+  if (!shepard) return [[freqOf(p), 1]];
+  const f = freqOf(p), fb = f / 2 ** Math.floor(Math.log2(f / SH_BASE)), out = [];
   for (let k = 0; k < SH_N; k++) { const fk = fb * 2 ** k; out.push([fk, shepardWeight(fk) * 0.45]); }
   return out;
 }
 const VOICES = new Map();                                       // id → { p, f, parts: [{ osc, g }], env, filt }
 function voiceOn(id, p){
-  const a = audio(), v = { p, f: hz(tonic + p), parts: [] };
+  const a = audio(), v = { p, f: freqOf(p), parts: [] };
   if (a) {
     v.env = a.createGain(); v.env.gain.value = 0; v.env.gain.setTargetAtTime(0.22, a.currentTime, 0.012);
     v.filt = a.createBiquadFilter(); v.filt.type = 'lowpass'; v.filt.frequency.value = shepard ? 12000 : Math.min(9000, v.f * 6);
@@ -135,8 +153,8 @@ function voiceOn(id, p){
   VOICES.set(id, v); draw();
 }
 function voiceTo(id, p){
-  const v = VOICES.get(id); if (!v || v.p === p) return;
-  v.p = p; v.f = hz(tonic + p);
+  const v = VOICES.get(id); if (!v || (v.p === p && !voiceTo.force)) return;
+  v.p = p; v.f = freqOf(p);
   if (v.parts.length) {
     const t = A.currentTime, ps = partialsOf(p), jump = Math.abs(v.parts[0].osc.frequency.value / ps[0][0] - 1) > 0.3;
     ps.forEach(([f, w], k) => { const q = v.parts[k]; if (!q) return;
@@ -152,13 +170,58 @@ function voiceOff(id){
   draw();
 }
 function allOff(){ for (const id of [...VOICES.keys()]) voiceOff(id); }
+function retune(){ voiceTo.force = true; for (const [id, v] of VOICES) voiceTo(id, v.p); voiceTo.force = false; }   // the tonic or tuning changed
+
+// CHORDS (8 Nov 2026): one finger, a whole chord, its root where the finger is. With snap, built on the scale (every other
+// scale note above the root: a triad, a seventh); gliding, the major triad's intervals. A chord's shape is the same at
+// every root, so turning round the dome transposes it and going out moves it an octave.
+const CHORDS = ['single', 'triad', 'seventh', 'fifths'];
+let chordI = 0;
+function chordOf(p){
+  const kind = CHORDS[chordI]; if (kind === 'single') return [p];
+  if (kind === 'fifths') return [p, p + 7, p + 12];
+  const sc = SCALES[scaleI][1], c = ((Math.round(p) % 12) + 12) % 12, j = sc.indexOf(c), n = kind === 'seventh' ? 4 : 3;
+  if (!snap || j < 0 || sc.length < 5) return kind === 'seventh' ? [p, p + 4, p + 7, p + 10] : [p, p + 4, p + 7];
+  const out = [];
+  for (let k = 0; k < n; k++) { const jj = j + 2 * k, s = sc[jj % sc.length] + 12 * Math.floor(jj / sc.length); out.push(p + s - c); }
+  return out;
+}
+
+// THE LOOP (8 Nov 2026): rec records what is played (each voice's start, moves and end, timed), rec again closes the loop
+// and plays it round and round under whatever is played over it; clear stops it.
+let recState = 'idle', recT0 = 0, recLen = 0, recEv = [], loopT0 = 0, loopLast = 0;
+const now = () => performance.now();
+function log(type, id, p){ if (recState === 'rec') recEv.push({ t: now() - recT0, type, id, p }); }
+// what a hand plays: a chord's voices under one id, recorded when recording
+function playOn(id, p, quiet){ chordOf(p).forEach((q, k) => voiceOn(id + '#' + k, q)); if (!quiet) log('on', id, p); }
+function playTo(id, p, quiet){ chordOf(p).forEach((q, k) => voiceTo(id + '#' + k, q)); if (!quiet) log('to', id, p); }
+function playOff(id, quiet){ for (const k of [...VOICES.keys()]) if (k.startsWith(id + '#')) voiceOff(k); if (!quiet) log('off', id); }
+const playing = id => [...VOICES.keys()].some(k => k.startsWith(id + '#'));
+function recToggle(){
+  if (recState === 'idle' || recState === 'loop') { loopStop(); recState = 'rec'; recT0 = now(); recEv = []; }
+  else if (recState === 'rec') {
+    recLen = now() - recT0;
+    for (const id of new Set(recEv.map(e => e.id))) if (playing(id)) recEv.push({ t: recLen - 1, type: 'off', id });   // held at the end: let go
+    if (recEv.length && recLen > 200) { recState = 'loop'; loopT0 = now(); loopLast = 0; requestAnimationFrame(loopStep); } else recState = 'idle';
+  }
+}
+function loopStop(){ recState = recState === 'loop' ? 'idle' : recState; for (const k of [...VOICES.keys()]) if (k.startsWith('L')) voiceOff(k); }
+function loopStep(){
+  if (recState !== 'loop') return;
+  const t = (now() - loopT0) % recLen, wrapped = t < loopLast;
+  for (const e of recEv) if (wrapped ? (e.t > loopLast || e.t <= t) : (e.t > loopLast && e.t <= t)) {
+    const id = 'L' + e.id;
+    if (e.type === 'on') playOn(id, e.p, true); else if (e.type === 'to') playTo(id, e.p, true); else playOff(id, true);
+  }
+  loopLast = t; requestAnimationFrame(loopStep);
+}
 
 // ── DRAWING ────────────────────────────────────────────────────────────────────────────────────
 function layout(){
   const w = Math.round(cv.clientWidth), h = Math.round(cv.clientHeight), d = Math.min(2, devicePixelRatio || 1);
   W = w; H = h; D = d; cv.width = W * D; cv.height = H * D;
-  const top = W < 520 ? 104 : 60, bottom = 100;
-  R = Math.max(60, Math.min(W / 2 - 16, (H - top - bottom) / 2)); cx = W / 2; cy = top + (H - top - bottom) / 2;
+  const top = document.getElementById('bar').getBoundingClientRect().bottom + 30, bottom = 100;   // below the bar, however many rows it wraps to
+  R = Math.max(60, Math.min(W / 2 - 30, (H - top - bottom) / 2)); cx = W / 2; cy = top + (H - top - bottom) / 2;
 }
 function draw(){
   const mono = getComputedStyle(document.body).getPropertyValue('--mono');
@@ -204,44 +267,53 @@ function draw(){
     ctx.fillStyle = '#f1efe6'; ctx.beginPath(); ctx.arc(x, y, 7, 0, 2 * PI); ctx.fill();
     names.push(nameOf(v.p) + ' ' + v.f.toFixed(1) + ' Hz');
   }
-  ctx.font = '15px ' + mono; ctx.fillStyle = '#f1efe6';
-  ctx.fillText(names.length ? names.join('  ·  ') : 'press and hold: round is the note, out is the octave', W / 2, H - 46);
-  ctx.font = '12px ' + mono; ctx.fillStyle = '#7f8590';
-  ctx.fillText('tonic ' + nameOf(0) + ' ' + hz(tonic).toFixed(1) + ' Hz · ' + SCALES[scaleI][0] + ' · ' + (snap ? 'snap' : 'glide') + ' · ' + (shepard ? 'endless (every octave at once)' : WAVES[waveI]) + ' · keys a–l, z x octave', W / 2, H - 24);
+  const small = W < 520;
+  ctx.font = (small ? 13 : 15) + 'px ' + mono; ctx.fillStyle = '#f1efe6';
+  ctx.fillText(names.length ? names.join('  ·  ') : small ? 'round: the note · out: the octave' : 'press and hold: round is the note, out is the octave', W / 2, H - 46);
+  ctx.font = (small ? 10 : 12) + 'px ' + mono; ctx.fillStyle = '#7f8590';
+  ctx.fillText('tonic ' + nameOf(0) + ' ' + hz(tonic).toFixed(1) + ' Hz · ' + SCALES[scaleI][0] + ' · ' + (snap ? 'snap' : 'glide') + ' · ' + (shepard ? 'endless (every octave at once)' : WAVES[waveI]) + (just ? ' · just' : '') + (CHORDS[chordI] !== 'single' ? ' · ' + CHORDS[chordI] : '') + (recState === 'rec' ? ' · recording' : recState === 'loop' ? ' · looping ' + (recLen / 1000).toFixed(1) + ' s' : '') + ' · keys a–l', W / 2, H - 24);
 }
 
 // ── HANDS ──────────────────────────────────────────────────────────────────────────────────────
 const local = e => { const b = cv.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
 cv.addEventListener('pointerdown', e => {
   const [x, y] = local(e); if (Math.hypot(x - cx, y - cy) > R + 30) return;
-  cv.setPointerCapture(e.pointerId); voiceOn('p' + e.pointerId, pitchAt(x, y));
+  cv.setPointerCapture(e.pointerId); playOn('p' + e.pointerId, pitchAt(x, y));
 });
-cv.addEventListener('pointermove', e => { if (VOICES.has('p' + e.pointerId)) voiceTo('p' + e.pointerId, pitchAt(...local(e))); });
-for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) cv.addEventListener(ev, e => voiceOff('p' + e.pointerId));
+cv.addEventListener('pointermove', e => { if (playing('p' + e.pointerId)) playTo('p' + e.pointerId, pitchAt(...local(e))); });
+for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) cv.addEventListener(ev, e => { if (playing('p' + e.pointerId)) playOff('p' + e.pointerId); });
 const KEYS = 'asdfghjkl';
 addEventListener('keydown', e => {
   if (!help.hidden && e.key !== '?') { help.hidden = true; if (e.key === 'Escape') return; }
   if (e.repeat) return;
   const i = KEYS.indexOf(e.key.toLowerCase());
-  if (i >= 0) { const sc = SCALES[scaleI][1], deg = sc[i % sc.length] + 12 * Math.floor(i / sc.length) + 12 * keyOct; voiceOn('k' + e.key.toLowerCase(), deg); }
+  if (i >= 0) { const sc = SCALES[scaleI][1], deg = sc[i % sc.length] + 12 * Math.floor(i / sc.length) + 12 * keyOct; playOn('k' + e.key.toLowerCase(), deg); }
   else if (e.key === 'z') { keyOct = Math.max(-OCT, keyOct - 1); draw(); }
   else if (e.key === 'x') { keyOct = Math.min(OCT - 1, keyOct + 1); draw(); }
-  else if (e.key === ' ') { allOff(); e.preventDefault(); }
+  else if (e.key === ' ') { loopStop(); allOff(); e.preventDefault(); }
+  else if (e.key === 'r') act('rec');
+  else if (e.key === 'c') act('chord');
   else if (e.key === '?') act('help');
 });
-addEventListener('keyup', e => voiceOff('k' + e.key.toLowerCase()));
+addEventListener('keyup', e => { const id = 'k' + e.key.toLowerCase(); if (playing(id)) playOff(id); });
 addEventListener('blur', allOff);
 
 const bar = document.getElementById('bar'), help = document.getElementById('help');
 function act(a){
   if (a === 'down' || a === 'up') { tonic += a === 'up' ? 1 : -1;                // every voice sounding moves with it
-    for (const v of VOICES.values()) { v.f = hz(tonic + v.p); if (v.osc) v.osc.frequency.setTargetAtTime(v.f, A.currentTime, 0.01); } }
+    retune(); }
   else if (a === 'scale') { scaleI = (scaleI + 1) % SCALES.length; bar.querySelector('[data-act="scale"]').textContent = SCALES[scaleI][0]; }
   else if (a === 'snap') { snap = !snap; bar.querySelector('[data-act="snap"]').setAttribute('aria-pressed', String(snap)); }
   else if (a === 'shepard') { allOff(); shepard = !shepard; bar.querySelector('[data-act="shepard"]').setAttribute('aria-pressed', String(shepard)); }
   else if (a === 'lay') { lay = lay === 'room' ? 'width' : 'room'; bar.querySelector('[data-act="lay"]').textContent = lay === 'room' ? 'room' : 'width'; }
-  else if (a === 'wave') { waveI = (waveI + 1) % WAVES.length; bar.querySelector('[data-act="wave"]').textContent = WAVES[waveI]; for (const v of VOICES.values()) if (v.osc) v.osc.type = WAVES[waveI]; }
+  else if (a === 'wave') { waveI = (waveI + 1) % WAVES.length; bar.querySelector('[data-act="wave"]').textContent = WAVES[waveI]; if (!shepard) for (const v of VOICES.values()) for (const q of v.parts) q.osc.type = WAVES[waveI]; }
+  else if (a === 'just') { just = !just; bar.querySelector('[data-act="just"]').textContent = just ? 'just' : 'equal'; retune(); }
+  else if (a === 'chord') { chordI = (chordI + 1) % CHORDS.length; bar.querySelector('[data-act="chord"]').textContent = CHORDS[chordI]; }
+  else if (a === 'rec') recToggle();
+  else if (a === 'clear') { loopStop(); recState = 'idle'; recEv = []; }
   else if (a === 'help') help.hidden = !help.hidden;
+  const rb = bar.querySelector('[data-act="rec"]'); rb.textContent = recState === 'rec' ? '■ stop rec' : recState === 'loop' ? '↻ looping · rec' : 'rec';
+  rb.setAttribute('aria-pressed', String(recState !== 'idle'));
   draw();
 }
 bar.addEventListener('click', e => { const b = e.target.closest('button'); if (b) act(b.dataset.act); });
@@ -250,7 +322,7 @@ bar.querySelector('[data-act="scale"]').textContent = SCALES[scaleI][0];
 bar.querySelector('[data-act="wave"]').textContent = WAVES[waveI];
 addEventListener('resize', () => { layout(); draw(); });
 layout(); draw();
-window.__instrument = { partialsOf, act, rOfP, pitchAt, xyOfP, hz, voices: () => [...VOICES.values()].map(v => ({ p: v.p, f: v.f, name: nameOf(v.p) })), box: () => ({ cx, cy, R }), state: () => ({ tonic, scale: SCALES[scaleI][0], snap }) };
+window.__instrument = { freqOf, chordOf, rec: () => ({ state: recState, n: recEv.length, len: recLen }), partialsOf, act, rOfP, pitchAt, xyOfP, hz, voices: () => [...VOICES.values()].map(v => ({ p: v.p, f: v.f, name: nameOf(v.p) })), box: () => ({ cx, cy, R }), state: () => ({ tonic, scale: SCALES[scaleI][0], snap }) };
 </script>
 </body>
 </html>
