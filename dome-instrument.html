@@ -20,6 +20,11 @@
      the spiral. Keys a s d f g h j k l play the scale up from the tonic, z x move them an octave down or up; space stops
      every voice. The tonic, the scale and the voice's colour are on the bar. Web Audio, nothing loaded.
 
+     ENDLESS, AND ROOM FOR THE LOW NOTES (8 Nov 2026; Tom, after a comparison with other instruments: "yes"). "endless" makes
+     every voice a Shepard tone (all octaves at once under a bell in log-frequency), so round the spiral rises for ever and
+     never arrives, the dial's horizon heard; and the disc is laid by "room" (every note the same area), so the inner octaves
+     are wide enough to play; "width" keeps every octave the same width.
+
      Words after wander's rules: the thumb names H (here the tonic); the far field as ratios. A page of its own, not on
      dome.js: an instrument wants a voice per finger, which the dome's lean and pan do not give. -->
 <style>
@@ -49,11 +54,14 @@
   <button type="button" data-act="scale" title="the scale lit on the spiral">scale</button>
   <button type="button" data-act="snap" aria-pressed="true" title="hold each voice to the scale's notes, or glide">snap</button>
   <button type="button" data-act="wave" title="the voice's colour">voice</button>
+  <button type="button" data-act="shepard" aria-pressed="false" title="every octave at once: round the spiral rises for ever">endless</button>
+  <button type="button" data-act="lay" title="every note the same room, or every octave the same width">room</button>
   <button type="button" data-act="help" title="how to play (?)" aria-label="help">?</button>
 </div>
 <div id="help" hidden role="dialog" aria-label="How to play the dome">
   <p><b>Round is the note, out is the octave.</b> The twelve notes go clockwise from the top. The gold ring, one thumb out, is the tonic's octave; each ring out is an octave higher, each ring in an octave lower, the middle the lowest.</p>
   <p><b>Play.</b> Press and hold anywhere: it sounds while held and follows your finger. Several fingers play a chord. Draw a finger round and outward and the pitch climbs without a step.</p>
+  <p><b>Endless</b> sounds every octave at once, loudest in the middle, so a note is heard by its name alone: go round and round the spiral and it rises for ever, never arriving, the dial's horizon heard. <b>Room</b> gives every note the same area (the low notes room to play); <b>width</b> gives every octave the same width.</p>
   <p><b>Snap</b> holds each voice to the lit notes of the scale; off, it glides. <b>Keys</b> a s d f g h j k l play the scale up from the tonic, z x an octave down or up, space stops.</p>
   <p>Tap anywhere to close.</p>
 </div>
@@ -62,14 +70,18 @@ const PI = Math.PI, OCT = 3;                                    // octaves eithe
 const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
 const SCALES = [['major', [0, 2, 4, 5, 7, 9, 11]], ['minor', [0, 2, 3, 5, 7, 8, 10]], ['pentatonic', [0, 2, 4, 7, 9]], ['blues', [0, 3, 5, 6, 7, 10]], ['chromatic', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]]];
 const WAVES = ['triangle', 'sine', 'sawtooth', 'square'];
-let tonic = 57, scaleI = 0, snap = true, waveI = 0, keyOct = 0;  // tonic as a MIDI number: 57 is A3, 220 Hz
+let tonic = 57, scaleI = 0, snap = true, waveI = 0, keyOct = 0, shepard = false, lay = 'room';  // tonic as a MIDI number: 57 is A3, 220 Hz
 const hz = m => 440 * 2 ** ((m - 69) / 12);
 const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
 let W = 0, H = 0, D = 1, cx = 0, cy = 0, R = 1;
 
 // ── THE LAY: pitch on the disc, in semitones above the tonic (p), and back ───────────────────────
 // radius: the tonic's octave starts at the thumb's ring, rT = R/2; each octave the same width, w = R / (2·OCT)
-const rOfP = p => R / 2 + (p / 12) * R / (2 * OCT);
+// 'room' (default, 8 Nov 2026; Tom: "yes", to giving the inner octaves more space): every note the same area of the disc,
+// r = R·√u with u the share of the octaves below; the inner octaves widen, the outer narrow, and the low notes are no longer
+// crammed into the middle. 'width': every octave the same width, the reader's lay, its rings mirrored in the thumb's.
+const uOfP = p => (p / 12 + OCT) / (2 * OCT);
+const rOfP = p => lay === 'room' ? R * Math.sqrt(Math.max(0, uOfP(p))) : R / 2 + (p / 12) * R / (2 * OCT);
 const angOfC = c => -PI / 2 + c / 12 * 2 * PI;                  // clockwise from the top (screen angle)
 function pitchAt(x, y){                                         // a point on the disc → semitones above the tonic, on the spiral
   const dx = x - cx, dy = y - cy, r = Math.hypot(dx, dy);
@@ -77,7 +89,7 @@ function pitchAt(x, y){                                         // a point on th
   if (snap) { const sc = SCALES[scaleI][1]; let best = 0, bd = 99;
     for (const s of sc.concat(sc.map(v => v + 12), sc.map(v => v - 12))) { const dd = Math.abs(s - c); if (dd < bd) { bd = dd; best = s; } }
     c = (best + 12) % 12; }
-  const turns = (r - R / 2) / (R / (2 * OCT));                 // octaves from the thumb's ring, by distance alone
+  const turns = lay === 'room' ? 2 * OCT * (r / R) ** 2 - OCT : (r - R / 2) / (R / (2 * OCT));   // octaves from the thumb's ring, by distance alone
   const n = Math.round(turns - c / 12);                         // the turn of the spiral nearest the finger
   return Math.max(-12 * OCT, Math.min(12 * OCT, 12 * n + c));
 }
@@ -93,26 +105,50 @@ function audio(){
   const comp = A.createDynamicsCompressor(); master.connect(comp); comp.connect(A.destination);
   return A;
 }
-const VOICES = new Map();                                       // id → { p, osc, gain, filt }
+// A voice is partials, each an oscillator through its own gain, summed through the voice's envelope. Plain: one partial
+// at the pitch, through a low-pass. SHEPARD (8 Nov 2026; Tom: "yes", to an endless rise): eight partials an octave apart
+// at fb·2^k, fb the pitch's note brought down to the bottom octave, each weighted by a bell in log-frequency about 330 Hz,
+// so a note is heard as its chroma alone, and going round the spiral rises for ever: as the pitch climbs, every partial
+// climbs, the top ones fading out and new ones fading in below. When the note passes the top of the dial and fb halves,
+// each oscillator takes its lower neighbour's frequency and weight at once, and the sum does not change.
+const SH_N = 8, SH_C = 330, SH_W = 1.25, SH_BASE = 27.5;          // partials, the bell's middle (Hz), its width (octaves)
+const shepardWeight = f => Math.exp(-((Math.log2(f / SH_C)) ** 2) / (2 * SH_W * SH_W));
+function partialsOf(p){                                         // [frequency, weight] for each partial
+  if (!shepard) return [[hz(tonic + p), 1]];
+  const f = hz(tonic + p), fb = f / 2 ** Math.floor(Math.log2(f / SH_BASE)), out = [];
+  for (let k = 0; k < SH_N; k++) { const fk = fb * 2 ** k; out.push([fk, shepardWeight(fk) * 0.45]); }
+  return out;
+}
+const VOICES = new Map();                                       // id → { p, f, parts: [{ osc, g }], env, filt }
 function voiceOn(id, p){
-  const a = audio(), v = { p, f: hz(tonic + p) };
+  const a = audio(), v = { p, f: hz(tonic + p), parts: [] };
   if (a) {
-    v.osc = a.createOscillator(); v.osc.type = WAVES[waveI]; v.osc.frequency.value = v.f;
-    v.filt = a.createBiquadFilter(); v.filt.type = 'lowpass'; v.filt.frequency.value = Math.min(9000, v.f * 6);
-    v.gain = a.createGain(); v.gain.gain.value = 0; v.gain.gain.setTargetAtTime(0.22, a.currentTime, 0.012);
-    v.osc.connect(v.filt); v.filt.connect(v.gain); v.gain.connect(master); v.osc.start();
+    v.env = a.createGain(); v.env.gain.value = 0; v.env.gain.setTargetAtTime(0.22, a.currentTime, 0.012);
+    v.filt = a.createBiquadFilter(); v.filt.type = 'lowpass'; v.filt.frequency.value = shepard ? 12000 : Math.min(9000, v.f * 6);
+    v.filt.connect(v.env); v.env.connect(master);
+    for (const [f, w] of partialsOf(p)) {
+      const osc = a.createOscillator(), g = a.createGain();
+      osc.type = shepard ? 'sine' : WAVES[waveI]; osc.frequency.value = f; g.gain.value = w;
+      osc.connect(g); g.connect(v.filt); osc.start(); v.parts.push({ osc, g });
+    }
   }
   VOICES.set(id, v); draw();
 }
 function voiceTo(id, p){
   const v = VOICES.get(id); if (!v || v.p === p) return;
   v.p = p; v.f = hz(tonic + p);
-  if (v.osc) { const t = A.currentTime; v.osc.frequency.setTargetAtTime(v.f, t, snap ? 0.008 : 0.03); v.filt.frequency.setTargetAtTime(Math.min(9000, v.f * 6), t, 0.03); }
+  if (v.parts.length) {
+    const t = A.currentTime, ps = partialsOf(p), jump = Math.abs(v.parts[0].osc.frequency.value / ps[0][0] - 1) > 0.3;
+    ps.forEach(([f, w], k) => { const q = v.parts[k]; if (!q) return;
+      if (jump) { q.osc.frequency.cancelScheduledValues(t); q.osc.frequency.setValueAtTime(f, t); q.g.gain.cancelScheduledValues(t); q.g.gain.setValueAtTime(w, t); }
+      else { q.osc.frequency.setTargetAtTime(f, t, snap ? 0.008 : 0.03); q.g.gain.setTargetAtTime(w, t, 0.03); } });
+    if (!shepard) v.filt.frequency.setTargetAtTime(Math.min(9000, v.f * 6), t, 0.03);
+  }
   draw();
 }
 function voiceOff(id){
   const v = VOICES.get(id); if (!v) return; VOICES.delete(id);
-  if (v.osc) { const t = A.currentTime; v.gain.gain.cancelScheduledValues(t); v.gain.gain.setTargetAtTime(0, t, 0.08); v.osc.stop(t + 0.6); }
+  if (v.env) { const t = A.currentTime; v.env.gain.cancelScheduledValues(t); v.env.gain.setTargetAtTime(0, t, 0.08); for (const q of v.parts) q.osc.stop(t + 0.6); }
   draw();
 }
 function allOff(){ for (const id of [...VOICES.keys()]) voiceOff(id); }
@@ -171,7 +207,7 @@ function draw(){
   ctx.font = '15px ' + mono; ctx.fillStyle = '#f1efe6';
   ctx.fillText(names.length ? names.join('  ·  ') : 'press and hold: round is the note, out is the octave', W / 2, H - 46);
   ctx.font = '12px ' + mono; ctx.fillStyle = '#7f8590';
-  ctx.fillText('tonic ' + nameOf(0) + ' ' + hz(tonic).toFixed(1) + ' Hz · ' + SCALES[scaleI][0] + ' · ' + (snap ? 'snap' : 'glide') + ' · ' + WAVES[waveI] + ' · keys a–l, z x octave', W / 2, H - 24);
+  ctx.fillText('tonic ' + nameOf(0) + ' ' + hz(tonic).toFixed(1) + ' Hz · ' + SCALES[scaleI][0] + ' · ' + (snap ? 'snap' : 'glide') + ' · ' + (shepard ? 'endless (every octave at once)' : WAVES[waveI]) + ' · keys a–l, z x octave', W / 2, H - 24);
 }
 
 // ── HANDS ──────────────────────────────────────────────────────────────────────────────────────
@@ -202,6 +238,8 @@ function act(a){
     for (const v of VOICES.values()) { v.f = hz(tonic + v.p); if (v.osc) v.osc.frequency.setTargetAtTime(v.f, A.currentTime, 0.01); } }
   else if (a === 'scale') { scaleI = (scaleI + 1) % SCALES.length; bar.querySelector('[data-act="scale"]').textContent = SCALES[scaleI][0]; }
   else if (a === 'snap') { snap = !snap; bar.querySelector('[data-act="snap"]').setAttribute('aria-pressed', String(snap)); }
+  else if (a === 'shepard') { allOff(); shepard = !shepard; bar.querySelector('[data-act="shepard"]').setAttribute('aria-pressed', String(shepard)); }
+  else if (a === 'lay') { lay = lay === 'room' ? 'width' : 'room'; bar.querySelector('[data-act="lay"]').textContent = lay === 'room' ? 'room' : 'width'; }
   else if (a === 'wave') { waveI = (waveI + 1) % WAVES.length; bar.querySelector('[data-act="wave"]').textContent = WAVES[waveI]; for (const v of VOICES.values()) if (v.osc) v.osc.type = WAVES[waveI]; }
   else if (a === 'help') help.hidden = !help.hidden;
   draw();
@@ -212,7 +250,7 @@ bar.querySelector('[data-act="scale"]').textContent = SCALES[scaleI][0];
 bar.querySelector('[data-act="wave"]').textContent = WAVES[waveI];
 addEventListener('resize', () => { layout(); draw(); });
 layout(); draw();
-window.__instrument = { pitchAt, xyOfP, hz, voices: () => [...VOICES.values()].map(v => ({ p: v.p, f: v.f, name: nameOf(v.p) })), box: () => ({ cx, cy, R }), state: () => ({ tonic, scale: SCALES[scaleI][0], snap }) };
+window.__instrument = { partialsOf, act, rOfP, pitchAt, xyOfP, hz, voices: () => [...VOICES.values()].map(v => ({ p: v.p, f: v.f, name: nameOf(v.p) })), box: () => ({ cx, cy, R }), state: () => ({ tonic, scale: SCALES[scaleI][0], snap }) };
 </script>
 </body>
 </html>
