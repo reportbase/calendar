@@ -7,7 +7,8 @@
 <!-- THE DIAL, REUSED (7 Nov 2026; Tom: "move the dial into a javacript class so that it an be reused."). The whole page is
      dial.js's Dial.mount over a list of 2^53 − 1 numbered records: no figure, no readout, only what a page reusing the
      dial has to write itself, a count and how to show a record. Press and drag sideways to move, wheel or pinch for the
-     window, ← → ↑ ↓ and h on the keys. -->
+     window, ← → ↑ ↓ and h on the keys. The record's digits sit in groups of three, each on its own box, green while it
+     changes in the window; a click on a group sets the window to that group's range. -->
 <style>
   html,body{margin:0;height:100%;background:#0b0d12;overflow:hidden;overscroll-behavior:none;touch-action:none;
             user-select:none;-webkit-user-select:none;--mono:"SF Mono",Menlo,Consolas,monospace}
@@ -18,13 +19,23 @@
 <canvas id="cv" aria-label="A navigation dial over 2^53 − 1 records"></canvas>
 <script src="dial.js"></script>
 <script>
-// a record as its digits in groups of three, each group coloured by the step it names (1, 1000, 1000², …)
-function digits(i){
-  const s = String(Math.round(i)), parts = [];
-  for (let e = 0, end = s.length; end > 0; e += 3, end -= 3) parts.unshift([s.slice(Math.max(0, end - 3), end) + (e ? ',' : ''), 1000 ** e]);
-  return [parts, [['record of ' + Number.MAX_SAFE_INTEGER.toLocaleString('en'), Infinity]]];
+// a record as its digits in groups of three (7 Nov 2026; Tom: "the number on the bottom should be green for the numbers that
+// are changing. Only show the number on bottom, not the readout text. each number should have its own background.
+// clicking a number should change the zoom to that number."): each group on a box of its own, green while the window is
+// wide enough for it to change (its step within half the window), and a click on a group sets the window to that group's
+// whole range (1000 of its steps), so it and every finer group roll as the dial moves and every coarser one holds.
+const GREEN = '#4ade80', INK = '#c9c7be';
+function digits(i, dial){
+  const s = String(Math.round(i)), parts = [], half = dial.span() / 2;
+  for (let e = 0, end = s.length; end > 0; e += 3, end -= 3) {
+    const mag = 10 ** e, on = mag <= half;           // the group's step: e is the digits to its right
+    parts.unshift([s.slice(Math.max(0, end - 3), end), mag, on ? GREEN : INK, on ? 'rgba(74,222,128,.14)' : 'rgba(255,255,255,.06)']);
+  }
+  return [parts];
 }
-window.__dial = Dial.mount(document.getElementById('cv'), { count: Number.MAX_SAFE_INTEGER, index: 2 ** 52, reach: 0.4, label: digits, fonts: [19, 12] });
+window.__dial = Dial.mount(document.getElementById('cv'), { count: Number.MAX_SAFE_INTEGER, index: 2 ** 52, reach: 0.4,
+  label: digits, fonts: [22], info: false, hint: false, partBoxes: true,
+  onPart: (part, dial) => { dial.setSpan(part[1] * 1000); dial.redraw(); } });
 </script>
 </body>
 </html>

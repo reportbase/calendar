@@ -62,7 +62,8 @@ class Dial {
     this.CAP = Math.atan(2 ** this.K);                          // the gold's widest push: the K-th corner, tan θ = 2^K
     this.ZMAX = this.thumb ? Math.asinh(1e15) : Math.asinh(2 ** this.K);   // the window's end, or as far as a double holds
     this.ZMIN = this.thumb ? 0 : -this.ZMAX;                    // the thumb's mode turns one way from home: a quarter turn
-    this.info = o.info || null;
+    this.info = o.info === false ? false : o.info || null;   // false: no line under the record
+    this.partBoxes = !!o.partBoxes;                             // each part of the record on a box of its own (partAt finds one)
     this.thrust = o.thrust || 0.4;
     this.springMs = 150; this.tapPx = 6;
     this.label = o.label || (i => [[[String(Math.round(i)), 1]]]);
@@ -161,10 +162,22 @@ class Dial {
     ctx.strokeStyle = colour; ctx.lineWidth = width;
     ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + r * Math.sin(a), cy - r * Math.cos(a)); ctx.stroke();
   }
-  _line(ctx, parts, cx, y){
-    const w = parts.reduce((t, [s]) => t + ctx.measureText(s).width, 0); let x = cx - w / 2;
-    for (const [s, mag, col] of parts) { ctx.fillStyle = col || this.band(mag); ctx.fillText(s, x, y); x += ctx.measureText(s).width; }
+  _line(ctx, parts, cx, y, px){
+    const gap = this.partBoxes ? 16 : 0, w = parts.reduce((t, [s]) => t + ctx.measureText(s).width, 0) + gap * Math.max(0, parts.length - 1);
+    let x = cx - w / 2;
+    for (const part of parts) {
+      const [s, mag, col] = part, pw = ctx.measureText(s).width;
+      if (this.partBoxes) {                                    // each part on a box of its own, which a click can find
+        const box = { x: x - 5, y: y - px * 0.95, w: pw + 10, h: px * 1.3, part };
+        ctx.fillStyle = part[3] || 'rgba(255,255,255,.07)'; ctx.strokeStyle = 'rgba(232,200,106,.25)'; ctx.lineWidth = 1;
+        ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(box.x, box.y, box.w, box.h, 5); else ctx.rect(box.x, box.y, box.w, box.h); ctx.fill(); ctx.stroke();
+        this._boxes.push(box);
+      }
+      ctx.fillStyle = col || this.band(mag); ctx.fillText(s, x, y); x += pw + gap;
+    }
   }
+  partAt(x, y){ for (const b of this._boxes || []) if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) return b.part; return null; }
+  setSpan(s){ this.setReach(Math.log(Math.max(1, s)) / Math.log(this.count)); }   // a window of s records
   draw(ctx, now = performance.now()){
     const { cx, cy, R } = this.box, tx = this.box.tx != null ? this.box.tx : cx, C = this.c, K = this.K, mono = this._font(ctx), g = this.liveGold(now);
     ctx.save();
@@ -207,12 +220,13 @@ class Dial {
     const lines = this.label(this.index, this) || [], s = this.span();
     ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
     let y = cy + 30;
+    this._boxes = [];
     lines.forEach((parts, i) => {
       const px = this.fonts[Math.min(i, this.fonts.length - 1)];
-      ctx.font = px + 'px ' + mono; this._line(ctx, parts, tx, y); y += px + 3;
+      ctx.font = px + 'px ' + mono; this._line(ctx, parts, tx, y, px); y += px + (this.partBoxes ? 9 : 3);
     });
     ctx.font = '12px ' + mono; ctx.fillStyle = C.dim; ctx.textAlign = 'center';
-    ctx.fillText(this.info ? this.info(this) : 'g ' + this.sweep().toFixed(3) + ' · window ' + this.sizeText(s) + ' · unit ' + this.sizeText(this.unit(s)) + ' · heat ' + this.heat().toFixed(3), tx, y + 3);
+    if (this.info !== false) ctx.fillText(this.info ? this.info(this) : 'g ' + this.sweep().toFixed(3) + ' · window ' + this.sizeText(s) + ' · unit ' + this.sizeText(this.unit(s)) + ' · heat ' + this.heat().toFixed(3), tx, y + 3);
     if (this.hint && !this.touched) {                                             // the hint, until the first touch
       const hy = this.thumb ? y + 28 : cy - R * 0.74;                             // the thumb's mode: under the readout, clear of the ring
       ctx.font = '13px ' + mono; ctx.fillStyle = C.ink;
@@ -262,7 +276,9 @@ class Dial {
       canvas.setPointerCapture(e.pointerId); touching.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (touching.size === 2) { d.pinchStart(); spread0 = spread(); mode = 'pinch'; return; }
       if (touching.size > 2) return;
-      const [x, y] = local(e); d.press(x, y); mode = 'dial';
+      const [x, y] = local(e), part = o.onPart && d.partAt(x, y);
+      if (part) { o.onPart(part, d); d.touched = true; mode = null; return; }   // a click on a part of the record is the page's
+      d.press(x, y); mode = 'dial';
     });
     on(canvas, 'pointermove', e => {
       if (!touching.has(e.pointerId)) return; touching.set(e.pointerId, { x: e.clientX, y: e.clientY });
