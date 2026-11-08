@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The dome, played</title>
+<!-- THE DOME, PLAYED (8 Nov 2026; Tom: "how could we turn this into a muslical instrument?", then "yes" to the dome as a
+     pitch spiral). The dial reads its far field as ratios, one in 2, 4, 8, and a ratio of 2 is an octave; so the dome is a
+     pitch spiral (Drobisch's helix, Shepard's, seen from above).
+
+     THE LAY. Home is the middle, the horizon the rim. The thumb's ring, one thumb out, is the tonic. Every octave gets the
+     same width (the reader's lay, a doubling the same room wherever it falls): three octaves inward by halvings toward
+     home, three outward by doublings toward the horizon, each the mirror of the other in the thumb's ring (s ↦ 1/s). Round
+     the dome, the twelve notes of the octave clockwise from the top, like hours. Pitch is log₂(f/f₀) = c/12 + n: the
+     heading gives c, the note; the distance picks n, the octave, as the turn of the spiral nearest the finger. So the
+     notes lie on one spiral, twelve to a turn, and a finger drawn round and outward rises without a step.
+
+     PLAYING. Each finger (or the mouse) is a voice that sounds while it is held and follows it: round for the note, out
+     for the octave. "Snap" holds it to the scale's notes (equal temperament); off, it glides. The scale's notes are lit on
+     the spiral. Keys a s d f g h j k l play the scale up from the tonic, z x move them an octave down or up; space stops
+     every voice. The tonic, the scale and the voice's colour are on the bar. Web Audio, nothing loaded.
+
+     Words after wander's rules: the thumb names H (here the tonic); the far field as ratios. A page of its own, not on
+     dome.js: an instrument wants a voice per finger, which the dome's lean and pan do not give. -->
+<style>
+  :root{--bg:#0b0d12;--panel:#12151c;--gold:#e8c86a;--ink:#c9c7be;--dim:#7f8590;--mono:"SF Mono",Menlo,Consolas,monospace}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);overflow:hidden;overscroll-behavior:none;
+            touch-action:none;user-select:none;-webkit-user-select:none}
+  canvas{display:block;width:100%;height:100%;cursor:pointer}
+  #bar{position:fixed;z-index:2;top:14px;right:14px;left:14px;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}
+  #bar button{font:12px/1 var(--mono);color:var(--dim);background:var(--panel);cursor:pointer;min-height:32px;
+        border:0.5px solid rgba(232,200,106,.28);border-radius:6px;padding:7px 10px}
+  #bar button:hover{color:var(--ink);border-color:var(--gold)}
+  #bar button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  #bar button[aria-pressed="true"]{color:var(--ink);border-color:rgba(232,200,106,.6)}
+  #help{position:fixed;z-index:3;left:50%;top:50%;transform:translate(-50%,-50%);max-width:min(520px,calc(100% - 32px));
+        max-height:calc(100% - 32px);overflow:auto;box-sizing:border-box;padding:16px 18px;background:rgba(18,21,28,.96);
+        border:0.5px solid rgba(232,200,106,.35);border-radius:10px;font:13px/1.55 var(--mono);color:var(--ink);cursor:pointer}
+  #help[hidden]{display:none}
+  #help b{color:var(--gold);font-weight:600} #help p{margin:0 0 8px}
+  @media (pointer: coarse){ #bar button{min-height:40px;font-size:13px} }
+</style>
+</head>
+<body>
+<canvas id="cv" aria-label="A pitch spiral on a dome: round for the note, out for the octave"></canvas>
+<div id="bar" role="toolbar" aria-label="The instrument's controls">
+  <button type="button" data-act="down" title="the tonic a semitone down" aria-label="tonic down">tonic −</button>
+  <button type="button" data-act="up" title="the tonic a semitone up" aria-label="tonic up">tonic +</button>
+  <button type="button" data-act="scale" title="the scale lit on the spiral">scale</button>
+  <button type="button" data-act="snap" aria-pressed="true" title="hold each voice to the scale's notes, or glide">snap</button>
+  <button type="button" data-act="wave" title="the voice's colour">voice</button>
+  <button type="button" data-act="help" title="how to play (?)" aria-label="help">?</button>
+</div>
+<div id="help" hidden role="dialog" aria-label="How to play the dome">
+  <p><b>Round is the note, out is the octave.</b> The twelve notes go clockwise from the top. The gold ring, one thumb out, is the tonic's octave; each ring out is an octave higher, each ring in an octave lower, the middle the lowest.</p>
+  <p><b>Play.</b> Press and hold anywhere: it sounds while held and follows your finger. Several fingers play a chord. Draw a finger round and outward and the pitch climbs without a step.</p>
+  <p><b>Snap</b> holds each voice to the lit notes of the scale; off, it glides. <b>Keys</b> a s d f g h j k l play the scale up from the tonic, z x an octave down or up, space stops.</p>
+  <p>Tap anywhere to close.</p>
+</div>
+<script>
+const PI = Math.PI, OCT = 3;                                    // octaves either side of the tonic's ring
+const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
+const SCALES = [['major', [0, 2, 4, 5, 7, 9, 11]], ['minor', [0, 2, 3, 5, 7, 8, 10]], ['pentatonic', [0, 2, 4, 7, 9]], ['blues', [0, 3, 5, 6, 7, 10]], ['chromatic', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]]];
+const WAVES = ['triangle', 'sine', 'sawtooth', 'square'];
+let tonic = 57, scaleI = 0, snap = true, waveI = 0, keyOct = 0;  // tonic as a MIDI number: 57 is A3, 220 Hz
+const hz = m => 440 * 2 ** ((m - 69) / 12);
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+let W = 0, H = 0, D = 1, cx = 0, cy = 0, R = 1;
+
+// ── THE LAY: pitch on the disc, in semitones above the tonic (p), and back ───────────────────────
+// radius: the tonic's octave starts at the thumb's ring, rT = R/2; each octave the same width, w = R / (2·OCT)
+const rOfP = p => R / 2 + (p / 12) * R / (2 * OCT);
+const angOfC = c => -PI / 2 + c / 12 * 2 * PI;                  // clockwise from the top (screen angle)
+function pitchAt(x, y){                                         // a point on the disc → semitones above the tonic, on the spiral
+  const dx = x - cx, dy = y - cy, r = Math.hypot(dx, dy);
+  let c = ((Math.atan2(dy, dx) + PI / 2) / (2 * PI) * 12 % 12 + 12) % 12;   // the note, 0 … 12, round from the top
+  if (snap) { const sc = SCALES[scaleI][1]; let best = 0, bd = 99;
+    for (const s of sc.concat(sc.map(v => v + 12), sc.map(v => v - 12))) { const dd = Math.abs(s - c); if (dd < bd) { bd = dd; best = s; } }
+    c = (best + 12) % 12; }
+  const turns = (r - R / 2) / (R / (2 * OCT));                 // octaves from the thumb's ring, by distance alone
+  const n = Math.round(turns - c / 12);                         // the turn of the spiral nearest the finger
+  return Math.max(-12 * OCT, Math.min(12 * OCT, 12 * n + c));
+}
+const xyOfP = p => { const c = ((p % 12) + 12) % 12, r = rOfP(p), a = angOfC(c); return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; };
+const nameOf = p => { const m = Math.round(tonic + p); return NAMES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1); };
+
+// ── THE VOICES ─────────────────────────────────────────────────────────────────────────────────
+let A = null, master = null;
+function audio(){
+  if (A) { if (A.state === 'suspended') A.resume(); return A; }
+  const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null;
+  A = new AC(); master = A.createGain(); master.gain.value = 0.5;
+  const comp = A.createDynamicsCompressor(); master.connect(comp); comp.connect(A.destination);
+  return A;
+}
+const VOICES = new Map();                                       // id → { p, osc, gain, filt }
+function voiceOn(id, p){
+  const a = audio(), v = { p, f: hz(tonic + p) };
+  if (a) {
+    v.osc = a.createOscillator(); v.osc.type = WAVES[waveI]; v.osc.frequency.value = v.f;
+    v.filt = a.createBiquadFilter(); v.filt.type = 'lowpass'; v.filt.frequency.value = Math.min(9000, v.f * 6);
+    v.gain = a.createGain(); v.gain.gain.value = 0; v.gain.gain.setTargetAtTime(0.22, a.currentTime, 0.012);
+    v.osc.connect(v.filt); v.filt.connect(v.gain); v.gain.connect(master); v.osc.start();
+  }
+  VOICES.set(id, v); draw();
+}
+function voiceTo(id, p){
+  const v = VOICES.get(id); if (!v || v.p === p) return;
+  v.p = p; v.f = hz(tonic + p);
+  if (v.osc) { const t = A.currentTime; v.osc.frequency.setTargetAtTime(v.f, t, snap ? 0.008 : 0.03); v.filt.frequency.setTargetAtTime(Math.min(9000, v.f * 6), t, 0.03); }
+  draw();
+}
+function voiceOff(id){
+  const v = VOICES.get(id); if (!v) return; VOICES.delete(id);
+  if (v.osc) { const t = A.currentTime; v.gain.gain.cancelScheduledValues(t); v.gain.gain.setTargetAtTime(0, t, 0.08); v.osc.stop(t + 0.6); }
+  draw();
+}
+function allOff(){ for (const id of [...VOICES.keys()]) voiceOff(id); }
+
+// ── DRAWING ────────────────────────────────────────────────────────────────────────────────────
+function layout(){
+  const w = Math.round(cv.clientWidth), h = Math.round(cv.clientHeight), d = Math.min(2, devicePixelRatio || 1);
+  W = w; H = h; D = d; cv.width = W * D; cv.height = H * D;
+  const top = W < 520 ? 104 : 60, bottom = 100;
+  R = Math.max(60, Math.min(W / 2 - 16, (H - top - bottom) / 2)); cx = W / 2; cy = top + (H - top - bottom) / 2;
+}
+function draw(){
+  const mono = getComputedStyle(document.body).getPropertyValue('--mono');
+  ctx.setTransform(D, 0, 0, D, 0, 0); ctx.fillStyle = '#0b0d12'; ctx.fillRect(0, 0, W, H);
+  // the twelve notes' wedges, the scale's lit
+  const sc = SCALES[scaleI][1].map(s => s % 12);
+  for (let c = 0; c < 12; c++) {
+    const a0 = angOfC(c - 0.5), a1 = angOfC(c + 0.5), lit = sc.includes(((c) % 12 + 12) % 12), hue = c * 30;
+    ctx.fillStyle = lit ? 'hsla(' + hue + ',55%,45%,.20)' : 'hsla(' + hue + ',20%,30%,.07)';
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, R, a0, a1); ctx.closePath(); ctx.fill();
+  }
+  // the octave rings: the tonic's (the thumb) gold, doublings out and halvings in
+  ctx.font = '11px ' + mono; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (let k = -OCT; k <= OCT; k++) {
+    const r = rOfP(12 * k); if (r <= 2) continue;
+    ctx.strokeStyle = k === 0 ? 'rgba(232,200,106,.95)' : 'rgba(232,200,106,.3)'; ctx.lineWidth = k === 0 ? 2 : 1;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * PI); ctx.stroke();
+  }
+  ctx.strokeStyle = 'rgba(201,199,190,.35)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, R, 0, 2 * PI); ctx.stroke();
+  // the spiral, every semitone from the bottom to the top
+  ctx.strokeStyle = 'rgba(201,199,190,.35)'; ctx.lineWidth = 1.2; ctx.beginPath();
+  for (let p = -12 * OCT; p <= 12 * OCT; p += 0.1) { const [x, y] = xyOfP(p); p === -12 * OCT ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+  ctx.stroke();
+  // the scale's notes on it, the tonic's larger
+  for (let p = -12 * OCT; p <= 12 * OCT; p++) {
+    const c = ((p % 12) + 12) % 12; if (!sc.includes(c)) continue;
+    const [x, y] = xyOfP(p), t = c === 0;
+    ctx.fillStyle = 'hsl(' + c * 30 + ',60%,' + (t ? 70 : 58) + '%)';
+    ctx.beginPath(); ctx.arc(x, y, t ? 5.5 : 3.5, 0, 2 * PI); ctx.fill();
+  }
+  // the note names round the rim
+  ctx.font = '13px ' + mono;
+  for (let c = 0; c < 12; c++) {
+    const a = angOfC(c), m = tonic + c, x = cx + (R + 16) * Math.cos(a), y = cy + (R + 16) * Math.sin(a);
+    ctx.fillStyle = sc.includes(c) ? '#f1efe6' : '#7f8590'; ctx.fillText(NAMES[((m % 12) + 12) % 12], x, y);
+  }
+  ctx.font = '11px ' + mono; ctx.fillStyle = 'rgba(232,200,106,.9)'; ctx.fillText('one thumb · the tonic', cx, cy - R / 2 - 10);
+  // the voices sounding
+  const names = [];
+  for (const v of VOICES.values()) {
+    const [x, y] = xyOfP(v.p), c = ((Math.round(v.p) % 12) + 12) % 12;
+    ctx.fillStyle = 'hsla(' + c * 30 + ',80%,65%,.25)'; ctx.beginPath(); ctx.arc(x, y, 22, 0, 2 * PI); ctx.fill();
+    ctx.fillStyle = '#f1efe6'; ctx.beginPath(); ctx.arc(x, y, 7, 0, 2 * PI); ctx.fill();
+    names.push(nameOf(v.p) + ' ' + v.f.toFixed(1) + ' Hz');
+  }
+  ctx.font = '15px ' + mono; ctx.fillStyle = '#f1efe6';
+  ctx.fillText(names.length ? names.join('  ·  ') : 'press and hold: round is the note, out is the octave', W / 2, H - 46);
+  ctx.font = '12px ' + mono; ctx.fillStyle = '#7f8590';
+  ctx.fillText('tonic ' + nameOf(0) + ' ' + hz(tonic).toFixed(1) + ' Hz · ' + SCALES[scaleI][0] + ' · ' + (snap ? 'snap' : 'glide') + ' · ' + WAVES[waveI] + ' · keys a–l, z x octave', W / 2, H - 24);
+}
+
+// ── HANDS ──────────────────────────────────────────────────────────────────────────────────────
+const local = e => { const b = cv.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
+cv.addEventListener('pointerdown', e => {
+  const [x, y] = local(e); if (Math.hypot(x - cx, y - cy) > R + 30) return;
+  cv.setPointerCapture(e.pointerId); voiceOn('p' + e.pointerId, pitchAt(x, y));
+});
+cv.addEventListener('pointermove', e => { if (VOICES.has('p' + e.pointerId)) voiceTo('p' + e.pointerId, pitchAt(...local(e))); });
+for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) cv.addEventListener(ev, e => voiceOff('p' + e.pointerId));
+const KEYS = 'asdfghjkl';
+addEventListener('keydown', e => {
+  if (!help.hidden && e.key !== '?') { help.hidden = true; if (e.key === 'Escape') return; }
+  if (e.repeat) return;
+  const i = KEYS.indexOf(e.key.toLowerCase());
+  if (i >= 0) { const sc = SCALES[scaleI][1], deg = sc[i % sc.length] + 12 * Math.floor(i / sc.length) + 12 * keyOct; voiceOn('k' + e.key.toLowerCase(), deg); }
+  else if (e.key === 'z') { keyOct = Math.max(-OCT, keyOct - 1); draw(); }
+  else if (e.key === 'x') { keyOct = Math.min(OCT - 1, keyOct + 1); draw(); }
+  else if (e.key === ' ') { allOff(); e.preventDefault(); }
+  else if (e.key === '?') act('help');
+});
+addEventListener('keyup', e => voiceOff('k' + e.key.toLowerCase()));
+addEventListener('blur', allOff);
+
+const bar = document.getElementById('bar'), help = document.getElementById('help');
+function act(a){
+  if (a === 'down' || a === 'up') { tonic += a === 'up' ? 1 : -1;                // every voice sounding moves with it
+    for (const v of VOICES.values()) { v.f = hz(tonic + v.p); if (v.osc) v.osc.frequency.setTargetAtTime(v.f, A.currentTime, 0.01); } }
+  else if (a === 'scale') { scaleI = (scaleI + 1) % SCALES.length; bar.querySelector('[data-act="scale"]').textContent = SCALES[scaleI][0]; }
+  else if (a === 'snap') { snap = !snap; bar.querySelector('[data-act="snap"]').setAttribute('aria-pressed', String(snap)); }
+  else if (a === 'wave') { waveI = (waveI + 1) % WAVES.length; bar.querySelector('[data-act="wave"]').textContent = WAVES[waveI]; for (const v of VOICES.values()) if (v.osc) v.osc.type = WAVES[waveI]; }
+  else if (a === 'help') help.hidden = !help.hidden;
+  draw();
+}
+bar.addEventListener('click', e => { const b = e.target.closest('button'); if (b) act(b.dataset.act); });
+help.addEventListener('click', () => { help.hidden = true; });
+bar.querySelector('[data-act="scale"]').textContent = SCALES[scaleI][0];
+bar.querySelector('[data-act="wave"]').textContent = WAVES[waveI];
+addEventListener('resize', () => { layout(); draw(); });
+layout(); draw();
+window.__instrument = { pitchAt, xyOfP, hz, voices: () => [...VOICES.values()].map(v => ({ p: v.p, f: v.f, name: nameOf(v.p) })), box: () => ({ cx, cy, R }), state: () => ({ tonic, scale: SCALES[scaleI][0], snap }) };
+</script>
+</body>
+</html>
